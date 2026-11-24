@@ -30,6 +30,10 @@ public class Combatiente {
         return estadisticasBase;
     }
 
+    public int getBonoMaximoFuriaMaldita() {
+        return 0;
+    }
+
     public Bonificaciones getBonificaciones() {
         return Bonificaciones.NINGUNA;
     }

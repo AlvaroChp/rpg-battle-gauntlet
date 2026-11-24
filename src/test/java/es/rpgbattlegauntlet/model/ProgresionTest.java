@@ -6,6 +6,7 @@ import es.rpgbattlegauntlet.config.CatalogoEnemigos;
 import es.rpgbattlegauntlet.config.CatalogoHeroes;
 import es.rpgbattlegauntlet.config.Equilibrio;
 import es.rpgbattlegauntlet.enums.EstadoTemporal;
+import es.rpgbattlegauntlet.enums.RanuraEquipo;
 import es.rpgbattlegauntlet.enums.ClaseHeroe;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +20,6 @@ import static es.rpgbattlegauntlet.enums.Calidad.*;
 import static es.rpgbattlegauntlet.enums.Categoria.*;
 import static es.rpgbattlegauntlet.enums.ClaseHeroe.*;
 import static es.rpgbattlegauntlet.enums.Dificultad.PRUEBAS;
-import static es.rpgbattlegauntlet.enums.PotenciaPergamino.PODEROSO;
 import static es.rpgbattlegauntlet.enums.TipoEnemigo.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -43,7 +43,7 @@ class ProgresionTest {
         assertThrows(IllegalArgumentException.class, () -> partida.invertir(arquero.getId(), FUE, 4));
         partida.invertir(arquero.getId(), FUE, 2);
         partida.equipar(arquero.getId(), arco.id());
-        assertEquals(arco, arquero.getEquipo().get(ARMAS));
+        assertEquals(arco, arquero.getEquipo().get(RanuraEquipo.ARMAS));
         assertEquals(1, arquero.getPuntos());
         var inicial = objeto(partida, "arco_corto");
         int oro = partida.getOro();
@@ -51,22 +51,22 @@ class ProgresionTest {
         assertEquals(oro + inicial.precioVenta(), partida.getOro());
         assertFalse(partida.getInventario().contains(inicial));
         assertTrue(partida.getOfertas().stream().anyMatch(oferta -> oferta.objeto() == inicial));
-        partida.desequipar(arquero.getId(), ARMADURAS);
+        partida.desequipar(arquero.getId(), RanuraEquipo.ARMADURAS);
         var armaduraInicial = objeto(partida, "ligera_basica");
         oro = partida.getOro();
         partida.vender(armaduraInicial.id());
         assertEquals(oro + armaduraInicial.precioVenta(), partida.getOro());
         assertFalse(partida.getInventario().contains(armaduraInicial));
         assertTrue(partida.getOfertas().stream().anyMatch(oferta -> oferta.objeto() == armaduraInicial));
-        assertThrows(IllegalArgumentException.class, () -> partida.desequipar(arquero.getId(), ARMAS));
-        assertSame(arco, arquero.getEquipo().get(ARMAS));
+        assertThrows(IllegalArgumentException.class, () -> partida.desequipar(arquero.getId(), RanuraEquipo.ARMAS));
+        assertSame(arco, arquero.getEquipo().get(RanuraEquipo.ARMAS));
         assertEquals("flecha_de_alcance", arquero.habilidadArma().id());
 
         partida.comprar("daga", null);
         var daga = objeto(partida, "daga");
         assertThrows(IllegalArgumentException.class, () -> partida.equipar(arquero.getId(), daga.id()));
         assertSame(daga, objeto(partida, "daga"));
-        assertSame(arco, arquero.getEquipo().get(ARMAS));
+        assertSame(arco, arquero.getEquipo().get(RanuraEquipo.ARMAS));
     }
 
     @Test
@@ -195,6 +195,36 @@ class ProgresionTest {
     }
 
     @Test
+    void modoPruebasTieneCatalogoIlimitadoYRecompraPorUnidad() {
+        var partida = new Partida(azar());
+        partida.seleccionarHeroes(List.of(ARQUERO, GUERRERO, MAGO));
+        var combate = partida.iniciarCombate(PRUEBAS);
+        var arquero = partida.getEquipo().getFirst();
+        partida.actuar(new AccionCombate(combate.getTurno(), arquero.getId(), "ataque_basico",
+                combate.getEnemigos().getFirst().getId()));
+
+        assertTrue(partida.tieneOroIlimitado());
+        assertEquals(0, partida.getOro());
+        partida.comprar("vara_avanzada", null);
+        partida.comprar("meteorito", null);
+        partida.comprar("meteorito", null);
+        var pergaminos = partida.getInventario().stream().filter(objeto -> objeto.codigo().equals("meteorito")).toList();
+        assertEquals(2, pergaminos.size());
+        assertNotEquals(pergaminos.get(0).id(), pergaminos.get(1).id());
+        var ofertaFija = partida.getOfertas().stream().filter(oferta -> oferta.objeto().codigo().equals("meteorito"))
+                .findFirst().orElseThrow();
+        assertNull(ofertaFija.existencias());
+
+        var pergamino = pergaminos.getFirst();
+        partida.vender(pergamino.id());
+        partida.comprar(null, pergamino.id());
+        assertTrue(partida.getInventario().contains(pergamino));
+        assertThrows(IllegalArgumentException.class, () -> partida.comprar(null, pergamino.id()));
+        assertEquals(0, partida.getOro());
+        assertFalse(trasPrimerEncuentro().tieneOroIlimitado());
+    }
+
+    @Test
     void recompraConservaIdentidadYElCatalogoFijoNoSeRepone() {
         var partida = trasPrimerEncuentro();
         partida.comprar("proyectil", null);
@@ -261,10 +291,10 @@ class ProgresionTest {
 
     @Test
     void catalogoTieneCuatroApartadosYCuatroPociones() {
-        var ofertas = new Tienda().ofertas();
+        var ofertas = new Tienda().ofertas(false);
         assertEquals(4, ofertas.stream().map(oferta -> oferta.objeto().categoria()).distinct().count());
         assertEquals(13, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == ARMAS).count());
-        assertEquals(9, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == ARMADURAS).count());
+        assertEquals(12, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == ARMADURAS).count());
         assertEquals(4, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == POCIONES).count());
         assertEquals(10, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == PERGAMINOS).count());
         assertTrue(ofertas.stream().filter(oferta -> oferta.objeto().categoria() == PERGAMINOS)
@@ -342,24 +372,37 @@ class ProgresionTest {
     }
 
     @Test
-    void curaTotalPoderosaCuraYProtegeDosTurnos() {
+    void proteccionDivinaReduceLaMitadDelDanioDuranteDosTurnos() {
         var mago = new Heroe(MAGO, new EstadisticasBase(75, 100, 4, 5, 21, 14, 9, 5, 5));
         var rival = new Combatiente(new EstadisticasBase(80, 0, 5, 4, 0, 2, 1, 0, 0));
         var combate = new Combate(List.of(mago), List.of(rival), azar());
         mago.recibirDanio(60);
-        Objeto pergamino = CatalogoObjetos.pergamino("cura_total", PODEROSO);
+        Objeto pergamino = CatalogoObjetos.pergamino("proteccion");
 
-        combate.usarConsumible(1, mago.getId(), pergamino, mago.getId());
+        combate.usarConsumible(1, mago.getId(), pergamino, null);
 
-        assertEquals(75, mago.getPvActuales());
-        assertEquals(35, mago.getReduccionDanio());
-        assertEquals(2, mago.getEstados().get(EstadoTemporal.PROTECCION_35));
+        assertEquals(15, mago.getPvActuales());
+        assertEquals(50, mago.getReduccionDanio());
+        assertEquals(2, mago.getEstados().get(EstadoTemporal.PROTECCION_50));
         combate.ejecutar(new AccionCombate(2, rival.getId(), "defender", null));
         combate.ejecutar(new AccionCombate(3, mago.getId(), "defender", null));
-        assertEquals(1, mago.getEstados().get(EstadoTemporal.PROTECCION_35));
+        assertEquals(1, mago.getEstados().get(EstadoTemporal.PROTECCION_50));
         combate.ejecutar(new AccionCombate(4, rival.getId(), "defender", null));
         combate.ejecutar(new AccionCombate(5, mago.getId(), "defender", null));
-        assertFalse(mago.getEstados().containsKey(EstadoTemporal.PROTECCION_35));
+        assertFalse(mago.getEstados().containsKey(EstadoTemporal.PROTECCION_50));
+    }
+
+    @Test
+    void dagaRitualEsBotinDelChamanPeroNoFormaParteDeSusAtaques() {
+        var daga = GeneradorBotin.tirar(CHAMAN, azar(49, 55, 35)).orElseThrow();
+
+        assertEquals("daga_ritual", daga.codigo());
+        assertEquals("sangria_ritual", daga.habilidad().id());
+        assertEquals(50, daga.habilidad().porcentajeRoboVida());
+        assertEquals(List.of(GUERRERO, PICARO), daga.getClasesCompatibles());
+        assertTrue(GeneradorBotin.habilidadesDeArmas(CHAMAN).stream()
+                .noneMatch(habilidad -> habilidad.id().equals("sangria_ritual")));
+        assertTrue(CatalogoObjetos.tienda().stream().noneMatch(objeto -> objeto.codigo().equals("daga_ritual")));
     }
 
     @Test
@@ -384,11 +427,16 @@ class ProgresionTest {
         assertEquals("Vara de chamán ritual", GeneradorBotin.tirar(CHAMAN, azar(49, 30, 85)).orElseThrow().nombre());
         assertEquals("Túnica de chamán ritual", GeneradorBotin.tirar(CHAMAN, azar(49, 65, 85)).orElseThrow().nombre());
         assertEquals("tunica_chaman", GeneradorBotin.elegirBotinRobado(CHAMAN, azar(79, 35)).codigo());
-        var meteorito = GeneradorBotin.tirar(CHAMAN, azar(49, 80, 9, 99)).orElseThrow();
-        assertEquals(PODEROSO, meteorito.potencia());
-        assertEquals(200, meteorito.efecto().cantidad());
-        assertEquals(25, meteorito.inteligenciaMinima());
-        assertEquals(400, meteorito.precioRecompra());
+        var meteorito = GeneradorBotin.tirar(CHAMAN, azar(49, 80, 9)).orElseThrow();
+        var comprado = CatalogoObjetos.tienda().stream()
+                .filter(objeto -> objeto.codigo().equals("meteorito")).findFirst().orElseThrow();
+        var robado = GeneradorBotin.elegirBotinRobado(CHAMAN, azar(80, 9));
+        assertNull(meteorito.calidad());
+        assertEquals(140, meteorito.efecto().cantidad());
+        assertEquals(comprado.efecto(), meteorito.efecto());
+        assertEquals(comprado.efecto(), robado.efecto());
+        assertEquals(22, meteorito.inteligenciaMinima());
+        assertEquals(250, meteorito.precioRecompra());
         assertTrue(GeneradorBotin.tirar(DRAGON, azar()).isEmpty());
     }
 

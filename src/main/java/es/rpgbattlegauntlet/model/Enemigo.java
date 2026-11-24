@@ -1,9 +1,11 @@
 package es.rpgbattlegauntlet.model;
 
 import es.rpgbattlegauntlet.config.CatalogoObjetos;
+import es.rpgbattlegauntlet.config.Equilibrio;
 import es.rpgbattlegauntlet.enums.TipoEnemigo;
 
 import java.util.Objects;
+import java.util.UUID;
 
 public final class Enemigo extends Combatiente {
 
@@ -12,6 +14,8 @@ public final class Enemigo extends Combatiente {
     private Objeto pocionRevitalizacion;
     private int accionesRealizadas;
     private boolean ataqueUnicoIniciado;
+    private boolean reanimacionUsada;
+    private UUID objetivoMarcado;
 
     public Enemigo(TipoEnemigo tipo, EstadisticasBase estadisticasBase) {
         this(tipo, estadisticasBase, 1.0);
@@ -28,6 +32,11 @@ public final class Enemigo extends Combatiente {
         return tipo;
     }
 
+    @Override
+    public int getBonoMaximoFuriaMaldita() {
+        return tipo == TipoEnemigo.CABALLERO_OSCURO ? Equilibrio.BONO_MAXIMO_FURIA_MALDITA : 0;
+    }
+
     public double getMultiplicadorDanio() {
         return multiplicadorDanio;
     }
@@ -42,6 +51,22 @@ public final class Enemigo extends Combatiente {
 
     void iniciarAtaqueUnico() {
         ataqueUnicoIniciado = true;
+    }
+
+    public boolean haUsadoReanimacion() {
+        return reanimacionUsada;
+    }
+
+    void registrarReanimacion() {
+        reanimacionUsada = true;
+    }
+
+    public UUID getObjetivoMarcado() {
+        return objetivoMarcado;
+    }
+
+    void marcarObjetivo(UUID objetivo) {
+        objetivoMarcado = objetivo;
     }
 
     public boolean tienePocionRevitalizacion() {

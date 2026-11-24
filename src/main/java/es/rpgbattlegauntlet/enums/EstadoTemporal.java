@@ -10,13 +10,13 @@ public enum EstadoTemporal {
     QUEMADO(0, 0, 0, 5, "quemadura"),
     CARGA_FURIA_ANIMAL(0, 0, 0),
     CARGA_INCENDIO_CENIZA(0, 0, 0),
+    CARGA_ONDA_RUNICA(0, 0, 0),
+    MARCA_ESPECTRAL(0, 0, 0),
     GUARDIA_OSEA_ACTIVA(45, 0, 0),
     GUARDIA_OSCURA_ACTIVA(55, 0, 0),
     CONTRAATAQUE_LISTO(0, 0, 0),
     DEFENSA_DEBILITADA(0, 0, 0),
-    PROTECCION_35(35, 0, 0),
-    PROTECCION_50(50, 0, 0),
-    PROTECCION_65(65, 0, 0);
+    PROTECCION_50(50, 0, 0);
 
     private final int reduccionDanio;
     private final int esquivaAdicional;

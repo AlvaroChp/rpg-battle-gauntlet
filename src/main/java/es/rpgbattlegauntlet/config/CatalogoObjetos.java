@@ -15,32 +15,26 @@ import static es.rpgbattlegauntlet.enums.TipoObjetivo.*;
 public final class CatalogoObjetos {
     private record Equipo(String codigo, String inferior, String normal, String superior, Categoria categoria,
                           Bonificaciones bonos, int fuerza, int inteligencia, int precio, Habilidad habilidad, FamiliaArma familia,
-                          boolean enTienda) {
+                          boolean enTienda, RanuraEquipo ranura, boolean dosManos) {
         Objeto plantilla(Calidad calidad) {
             String nombre = switch (calidad) {
                 case INFERIOR -> inferior;
                 case NORMAL -> normal;
                 case SUPERIOR -> superior;
             };
-            return new Objeto(null, codigo, nombre, categoria, calidad, null, false, bonos.ajustar(calidad), fuerza,
-                    inteligencia, precio, calidad.venta(precio), calidad.recompra(precio), habilidad, familia, null);
+            return new Objeto(null, codigo, nombre, categoria, calidad, false, bonos.ajustar(calidad), fuerza,
+                    inteligencia, precio, calidad.venta(precio), calidad.recompra(precio), habilidad, familia, null, ranura, dosManos);
         }
     }
 
     private record Pergamino(String codigo, String nombre, TipoConsumible tipo, TipoObjetivo objetivo,
-                             int debil, int normal, int poderoso, int inteligencia, int precio, boolean incendiario) {
-        Objeto plantilla(PotenciaPergamino potencia) {
-            int cantidad = switch (potencia) {
-                case DEBIL -> debil;
-                case NORMAL -> normal;
-                case PODEROSO -> poderoso;
-            };
-            int proteccion = tipo == TipoConsumible.PROTECCION ? cantidad
-                    : tipo == TipoConsumible.CURA_TOTAL && potencia == PotenciaPergamino.PODEROSO ? 35 : 0;
-            int venta = potencia.venta(precio);
-            return new Objeto(null, codigo, nombre, PERGAMINOS, null, potencia, false, Bonificaciones.NINGUNA,
-                    0, potencia.requisito(inteligencia), precio, venta, 2 * venta, null, null,
-                    new EfectoConsumible(tipo, objetivo, cantidad, 0, proteccion, incendiario));
+                             int cantidad, int inteligencia, int precio, boolean incendiario) {
+        Objeto plantilla() {
+            int proteccion = tipo == TipoConsumible.PROTECCION ? cantidad : 0;
+            int venta = (precio + 1) / 2;
+            return new Objeto(null, codigo, nombre, PERGAMINOS, null, false, Bonificaciones.NINGUNA,
+                    0, inteligencia, precio, venta, 2 * venta, null, null,
+                    new EfectoConsumible(tipo, objetivo, cantidad, 0, proteccion, incendiario), null, false);
         }
     }
 
@@ -49,6 +43,9 @@ public final class CatalogoObjetos {
     private static final Habilidad CORTE_AL_TENDON = new Habilidad("corte_al_tendon", "Corte al tendón",
             "Inflige daño físico con +7 de potencia y reduce la velocidad del objetivo en 4 durante un turno.",
             4, ENEMIGO, TipoEfecto.DANIO_FISICO, 7, 0, 0, 0, EstadoTemporal.RALENTIZACION, 1);
+    private static final Habilidad SANGRIA_RITUAL = new Habilidad("sangria_ritual", "Sangría ritual",
+            "Inflige daño físico con +8 de potencia. Recupera el 50 % del daño infligido como PV.",
+            5, ENEMIGO, TipoEfecto.DANIO_FISICO, 8, 0, 0, 0, null, 0, 1, 100, 50);
     private static final Habilidad CORTE_AMPLIO = habilidad("corte", "Corte amplio", 4, false, 10, 10, 0, 0);
     private static final Habilidad ESTOCADA_PRECISA = habilidad("estocada_precisa", "Estocada precisa", 4, false, 12, 30, 0, 0);
     private static final Habilidad TAJO_DEMOLEDOR = habilidad("tajo_demoledor", "Tajo demoledor", 6, false, 16, 0, 0, 30);
@@ -72,18 +69,23 @@ public final class CatalogoObjetos {
     private static final Habilidad DESCARGA_ASTRAL = habilidad("descarga_astral", "Descarga astral", 8, true, 22, 0, 0, 0);
     private static final Habilidad GARROTE = habilidad("impacto", "Impacto contundente", 5, false, 14, 0, 0, 15);
 
+    private static final Habilidad DESCARGA_FUNEBRE = habilidad(
+            "descarga_funebre", "Descarga fúnebre", 7, true, 12, 0, 0, 0);
+    private static final Habilidad SENTENCIA_ESPECTRAL = habilidad(
+            "sentencia_espectral", "Sentencia espectral", 6, false, 10, 0, 0, 25);
+
     private static final Map<String, Equipo> EQUIPOS = equipos();
     private static final List<Pergamino> PERGAMINOS_DISPONIBLES = List.of(
-            perg("proyectil", "Proyectil mágico", TipoConsumible.DANIO, ENEMIGO, 50, 65, 90, 5, 65),
-            perg("cura", "Cura", TipoConsumible.CURACION, ALIADO, 65, 90, 130, 6, 75),
-            perg("cura_mayor", "Cura mayor", TipoConsumible.CURACION, ALIADO, 90, 120, 160, 8, 100),
-            new Pergamino("llamarada", "Llamarada", TipoConsumible.DANIO, ENEMIGO, 75, 100, 140, 10, 110, true),
-            perg("ventisca", "Ventisca", TipoConsumible.DANIO, ENEMIGOS, 45, 65, 90, 12, 140),
-            perg("cura_grupal", "Cura grupal", TipoConsumible.CURACION, ALIADOS, 50, 70, 100, 14, 150),
-            perg("tormenta", "Tormenta eléctrica", TipoConsumible.DANIO, ENEMIGOS, 60, 80, 115, 15, 170),
-            perg("proteccion", "Protección divina", TipoConsumible.PROTECCION, ALIADOS, 35, 50, 65, 16, 160),
-            perg("cura_total", "Cura total", TipoConsumible.CURA_TOTAL, ALIADO, 75, 100, 100, 18, 180),
-            new Pergamino("meteorito", "Meteorito", TipoConsumible.DANIO, ENEMIGOS, 100, 140, 200, 22, 250, true)
+            perg("proyectil", "Proyectil mágico", TipoConsumible.DANIO, ENEMIGO, 65, 5, 65),
+            perg("cura", "Cura", TipoConsumible.CURACION, ALIADO, 90, 6, 75),
+            perg("cura_mayor", "Cura mayor", TipoConsumible.CURACION, ALIADO, 120, 8, 100),
+            new Pergamino("llamarada", "Llamarada", TipoConsumible.DANIO, ENEMIGO, 100, 10, 110, true),
+            perg("ventisca", "Ventisca", TipoConsumible.DANIO, ENEMIGOS, 65, 12, 140),
+            perg("cura_grupal", "Cura grupal", TipoConsumible.CURACION, ALIADOS, 70, 14, 150),
+            perg("tormenta", "Tormenta eléctrica", TipoConsumible.DANIO, ENEMIGOS, 80, 15, 170),
+            perg("proteccion", "Protección divina", TipoConsumible.PROTECCION, ALIADOS, 50, 16, 160),
+            perg("cura_total", "Cura total", TipoConsumible.CURA_TOTAL, ALIADO, 100, 18, 180),
+            new Pergamino("meteorito", "Meteorito", TipoConsumible.DANIO, ENEMIGOS, 140, 22, 250, true)
     );
 
     private static final Objeto REVITALIZACION = pocion("revitalizacion", "Poción dorada", 120,
@@ -97,7 +99,7 @@ public final class CatalogoObjetos {
     private static final List<Objeto> CATALOGO = java.util.stream.Stream.of(
             EQUIPOS.values().stream().filter(Equipo::enTienda).map(equipo -> equipo.plantilla(Calidad.NORMAL)),
             POCIONES_DISPONIBLES.stream(),
-            PERGAMINOS_DISPONIBLES.stream().map(pergamino -> pergamino.plantilla(PotenciaPergamino.NORMAL))
+            PERGAMINOS_DISPONIBLES.stream().map(Pergamino::plantilla)
     ).flatMap(java.util.function.Function.identity()).toList();
 
     private CatalogoObjetos() {
@@ -115,15 +117,15 @@ public final class CatalogoObjetos {
         return PERGAMINOS_DISPONIBLES.stream().map(Pergamino::codigo).toList();
     }
 
-    public static Objeto pergamino(String codigo, PotenciaPergamino potencia) {
+    public static Objeto pergamino(String codigo) {
         return PERGAMINOS_DISPONIBLES.stream().filter(pergamino -> pergamino.codigo().equals(codigo))
-                .findFirst().orElseThrow().plantilla(potencia).nuevaUnidad(false);
+                .findFirst().orElseThrow().plantilla().nuevaUnidad(false);
     }
 
     public static Objeto requiemDelDragon() {
-        return new Objeto(null, "requiem_dragon", "Pergamino de Dragón", PERGAMINOS, null, null, false,
+        return new Objeto(null, "requiem_dragon", "Pergamino de Dragón", PERGAMINOS, null, false,
                 Bonificaciones.NINGUNA, 0, 22, 0, 0, 0, null, null,
-                new EfectoConsumible(TipoConsumible.ANIQUILAR_DRAGON, ENEMIGO, 0, 0, 0)).nuevaUnidad(false);
+                new EfectoConsumible(TipoConsumible.ANIQUILAR_DRAGON, ENEMIGO, 0, 0, 0), null, false).nuevaUnidad(false);
     }
 
     public static Objeto equipo(String codigo, Calidad calidad, boolean inicial) {
@@ -150,6 +152,7 @@ public final class CatalogoObjetos {
             arma("daga", "Daga mellada", "Daga", "Daga afilada", 3, 0, 2, 0, 0, 40, FamiliaArma.DAGA, DAGA, true),
             arma("daga_duelo", "Daga de duelo mellada", "Daga de duelo", "Daga de duelo bruñida", 5, 0, 0, 12, 0, 95, FamiliaArma.DAGA, PUNTADA_TRAICIONERA, true),
             arma("daga_curva", "Daga curva astillada", "Daga curva", "Daga curva afilada", 6, 0, 0, 14, 0, 115, FamiliaArma.DAGA, CORTE_AL_TENDON, true),
+            arma("daga_ritual", "Daga ritual mellada", "Daga ritual", "Daga ritual consagrada", 5, 0, 3, 12, 0, 110, FamiliaArma.DAGA, SANGRIA_RITUAL, false),
             arma("espada_basica", "Espada básica mellada", "Espada básica", "Espada básica afilada", 4, 0, 0, 0, 0, 50, FamiliaArma.ESPADA, CORTE_AMPLIO, true),
             arma("arco_corto", "Arco corto astillado", "Arco corto", "Arco corto templado", 4, 0, 0, 10, 0, 60, FamiliaArma.ARCO, DISPARO_TENSO, true),
             arma("arco_goblin", "Arco goblin astillado", "Arco goblin", "Arco goblin reforzado", 5, 0, 0, 10, 0, 75, FamiliaArma.ARCO, FLECHA_ENVENENADA, false),
@@ -163,23 +166,39 @@ public final class CatalogoObjetos {
             arma("espada_pesada", "Espada pesada mellada", "Espada pesada", "Espada pesada forjada", 12, 0, 0, 18, 0, 200, FamiliaArma.ESPADA, TAJO_DEMOLEDOR, true),
             arma("vara_avanzada", "Vara avanzada agrietada", "Vara avanzada", "Vara avanzada engastada", 0, 13, 0, 0, 22, 240, FamiliaArma.VARA, DESCARGA_ASTRAL, true),
             armadura("ropa", "Ropa ligera remendada", "Ropa ligera", "Ropa ligera bordada", 2, 0, 0, 2, 0, 0, 0, 30, true),
-            armadura("capucha", "Capucha desgastada", "Capucha", "Capucha nueva", 2, 0, 0, 4, 0, 0, 0, 45, true),
+            armadura("guantes", "Guantes de cuero remendados", "Guantes de cuero", "Guantes de cuero curtido", 1, 1, 0, 0, 0, 0, 0, 45, true),
+            armadura("guantes_reforzados", "Guantes de malla abollados", "Guantes de malla", "Guantes de malla bruñidos", 2, 0, 0, 0, 0, 14, 0, 75, true),
+            armadura("capucha", "Capucha desgastada", "Capucha", "Capucha nueva", 1, 0, 0, 2, 0, 0, 0, 45, true),
+            armadura("sombrero_mago", "Sombrero de mago raído", "Sombrero de mago", "Sombrero de mago bordado",
+                    0, 1, 0, 0, 2, 0, 12, 80, true),
             armadura("tunica_aprendiz", "Túnica de aprendiz raída", "Túnica de aprendiz", "Túnica de aprendiz impecable", 2, 0, 0, 0, 3, 0, 0, 50, true),
             armadura("ligera", "Armadura ligera rasgada", "Armadura ligera", "Armadura ligera remachada", 4, 0, 0, 0, 0, 8, 0, 65, true),
             armadura("tunica_mago", "Túnica de mago raída", "Túnica de mago", "Túnica de mago impecable", 3, 0, 0, 0, 6, 0, 12, 110, true),
             armadura("tunica_chaman", "Túnica de chamán raída", "Túnica de chamán", "Túnica de chamán ritual", 4, 2, 0, 0, 7, 0, 16, 145, false),
             armadura("media", "Armadura media abollada", "Armadura media", "Armadura media ensamblada", 7, 0, -1, 0, 0, 12, 0, 120, true),
-            armadura("botas", "Botas reforzadas gastadas", "Botas reforzadas", "Botas reforzadas ligeras", 4, 0, 3, 0, 0, 10, 0, 130, true),
-            armadura("pesada", "Armadura pesada abollada", "Armadura pesada", "Armadura pesada bruñida", 12, 0, -3, 0, 0, 15, 0, 180, true),
-            armadura("casco", "Casco reforzado abollado", "Casco reforzado", "Casco reforzado templado", 10, 3, 0, 0, 0, 16, 0, 190, true),
+            armadura("botas", "Botas reforzadas gastadas", "Botas reforzadas", "Botas reforzadas ligeras", 1, 0, 2, 0, 0, 10, 0, 130, true),
+            armadura("pesada", "Armadura pesada abollada", "Armadura pesada", "Armadura pesada bruñida", 12, 0, -3, 0, 0, 16, 0, 180, true),
+            armadura("casco", "Casco reforzado abollado", "Casco reforzado", "Casco reforzado templado", 3, 1, 0, 0, 0, 16, 0, 190, true),
             armadura("pesada_basica", "Armadura pesada básica abollada", "Armadura pesada básica", "Armadura pesada básica bruñida", 8, 0, -3, 0, 0, 15, 0, 0, false),
             armadura("ligera_basica", "Armadura ligera básica rasgada", "Armadura ligera básica", "Armadura ligera básica remachada", 4, 0, 0, 0, 0, 8, 0, 0, false),
             arma("espada_esqueleto", "Espada oxidada", "Espada", "Espada afilada", 6, 0, 0, 12, 0, 80, FamiliaArma.ESPADA, CORTE_ULTRATUMBA, false),
-            armadura("escudo", "Escudo abollado", "Escudo", "Escudo reforzado", 6, 0, 0, 0, 0, 10, 0, 70, false),
+            armadura("escudo", "Escudo abollado", "Escudo", "Escudo reforzado", 2, 0, 0, 0, 0, 10, 0, 70, false),
             armadura("antigua", "Armadura antigua agrietada", "Armadura antigua", "Armadura antigua restaurada", 7, 2, -1, 0, 0, 12, 0, 100, false),
             arma("maldita", "Espada maldita mellada", "Espada maldita", "Espada maldita ritual", 14, 0, 0, 20, 0, 250, FamiliaArma.ESPADA, FILO_MALDICION, false),
             armadura("oscura", "Armadura oscura agrietada", "Armadura oscura", "Armadura oscura templada", 15, 0, -4, 0, 0, 20, 0, 300, false),
-            armadura("casco_oscuro", "Casco oscuro abollado", "Casco oscuro", "Casco oscuro grabado", 10, 5, 0, 0, 0, 16, 0, 190, false)
+            armadura("casco_oscuro", "Casco oscuro abollado", "Casco oscuro", "Casco oscuro grabado", 3, 2, 0, 0, 0, 16, 0, 190, false),
+            arma("vara_osario", "Vara de osario agrietada", "Vara de osario", "Vara de osario engastada",
+                    0, 10, 0, 0, 18, 200, FamiliaArma.VARA, DESCARGA_FUNEBRE, false),
+            armadura("capucha_funeraria", "Capucha funeraria raída", "Capucha funeraria", "Capucha funeraria bordada",
+                    1, 2, 0, 0, 0, 0, 0, 75, false),
+            armadura("guantes_runicos", "Guantes rúnicos agrietados", "Guantes rúnicos", "Guantes rúnicos grabados",
+                    1, 2, 0, 0, 0, 0, 0, 100, false),
+            armadura("coraza_runica", "Coraza rúnica agrietada", "Coraza rúnica", "Coraza rúnica restaurada",
+                    13, 0, -4, 0, 0, 20, 0, 220, false),
+            arma("hacha_espectral", "Hacha espectral mellada", "Hacha espectral", "Hacha espectral afilada",
+                    11, 0, 0, 18, 0, 210, FamiliaArma.HACHA, SENTENCIA_ESPECTRAL, false),
+            armadura("yelmo_espectral", "Yelmo espectral abollado", "Yelmo espectral", "Yelmo espectral pulido",
+                    2, 0, 0, 2, 0, 14, 0, 105, false)
         ).forEach(equipo -> equipos.put(equipo.codigo(), equipo));
         return Collections.unmodifiableMap(equipos);
     }
@@ -189,7 +208,12 @@ public final class CatalogoObjetos {
                                int precio, FamiliaArma familia, Habilidad habilidad, boolean enTienda) {
         return new Equipo(codigo, inferior, nombre, superior, ARMAS,
                 new Bonificaciones(fuerza, 0, inteligencia, 0, 0, critico, 0, 0),
-                minFuerza, minInteligencia, precio, habilidad, familia, enTienda);
+                minFuerza, minInteligencia, precio, habilidad, familia, enTienda, RanuraEquipo.ARMAS,
+                switch (familia) {
+                    case ARCO, BALLESTA, VARA, GARROTE, HACHA -> true;
+                    case ESPADA -> codigo.equals("espada_pesada") || codigo.equals("maldita");
+                    case DAGA -> false;
+                });
     }
 
     private static Equipo armadura(String codigo, String inferior, String nombre, String superior,
@@ -197,7 +221,14 @@ public final class CatalogoObjetos {
                                    int fuerza, int inteligencia, int precio, boolean enTienda) {
         return new Equipo(codigo, inferior, nombre, superior, ARMADURAS,
                 new Bonificaciones(0, defensa, 0, resistencia, velocidad, 0, esquiva, potencia),
-                fuerza, inteligencia, precio, null, null, enTienda);
+                fuerza, inteligencia, precio, null, null, enTienda,
+                switch (codigo) {
+                    case "guantes", "guantes_reforzados", "guantes_runicos" -> RanuraEquipo.GUANTES;
+                    case "botas" -> RanuraEquipo.BOTAS;
+                    case "capucha", "casco", "casco_oscuro", "capucha_funeraria", "yelmo_espectral", "sombrero_mago" -> RanuraEquipo.CABEZA;
+                    case "escudo" -> RanuraEquipo.ESCUDO;
+                    default -> RanuraEquipo.ARMADURAS;
+                }, false);
     }
 
     private static Habilidad habilidad(String id, String nombre, int pm, boolean magica, int potencia,
@@ -216,12 +247,12 @@ public final class CatalogoObjetos {
     }
 
     private static Objeto pocion(String codigo, String nombre, int precio, EfectoConsumible efecto) {
-        return new Objeto(null, codigo, nombre, POCIONES, null, null, false, Bonificaciones.NINGUNA, 0, 0, precio,
-                (precio + 1) / 2, precio, null, null, efecto);
+        return new Objeto(null, codigo, nombre, POCIONES, null, false, Bonificaciones.NINGUNA, 0, 0, precio,
+                (precio + 1) / 2, precio, null, null, efecto, null, false);
     }
 
     private static Pergamino perg(String codigo, String nombre, TipoConsumible tipo, TipoObjetivo objetivo,
-                                  int debil, int normal, int poderoso, int inteligencia, int precio) {
-        return new Pergamino(codigo, nombre, tipo, objetivo, debil, normal, poderoso, inteligencia, precio, false);
+                                  int cantidad, int inteligencia, int precio) {
+        return new Pergamino(codigo, nombre, tipo, objetivo, cantidad, inteligencia, precio, false);
     }
 }

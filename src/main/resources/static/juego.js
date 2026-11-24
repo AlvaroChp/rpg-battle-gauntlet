@@ -9,22 +9,25 @@ const nombres = {
     GUERRERO: 'Guerrero', MAGO: 'Mago', ARQUERO: 'Arquera', SANADOR: 'Sanadora', PICARO: 'Pícaro',
     GOBLIN: 'Goblin', GOBLIN_ARQUERO: 'Goblin arquero', ESQUELETO: 'Esqueleto', CHAMAN: 'Chamán', OGRO: 'Ogro',
     CABALLERO_OSCURO: 'Caballero oscuro', DRAGON: 'Dragón',
+    NIGROMANTE: 'Nigromante', GOLEM_RUNICO: 'Gólem rúnico', VERDUGO_ESPECTRAL: 'Verdugo espectral',
     ARMAS: 'Armas', ARMADURAS: 'Armaduras', POCIONES: 'Pociones', PERGAMINOS: 'Pergaminos',
-    DEBIL: 'Débil', NORMAL: 'Normal', PODEROSO: 'Poderoso', INFERIOR: 'Desgastada', SUPERIOR: 'Superior',
+    NORMAL: 'Normal', INFERIOR: 'Desgastada', SUPERIOR: 'Superior',
     DEFENSA: 'Defensa', INTERCEPTANDO: 'Listo para interceptar', BENDICION: 'Bendición', EVASION: 'Esquiva',
     RALENTIZACION: 'Ralentización', ENVENENADO: 'Veneno', QUEMADO: 'Quemadura', DEFENSA_DEBILITADA: 'Defensa debilitada',
     CARGA_FURIA_ANIMAL: 'Prepara Furia animal', CARGA_INCENDIO_CENIZA: 'Prepara Incendio de ceniza',
+    CARGA_ONDA_RUNICA: 'Prepara Onda rúnica', MARCA_ESPECTRAL: 'Marca espectral',
     GUARDIA_OSEA_ACTIVA: 'Guardia ósea', GUARDIA_OSCURA_ACTIVA: 'Guardia oscura',
-    CONTRAATAQUE_LISTO: 'Contraataque preparado', PROTECCION_35: 'Protección del 35 %',
-    PROTECCION_50: 'Protección del 50 %', PROTECCION_65: 'Protección del 65 %'
+    CONTRAATAQUE_LISTO: 'Contraataque preparado', PROTECCION_50: 'Protección del 50 %'
 };
 const iconos = { GUERRERO: '⚔', MAGO: '✦', ARQUERO: '➶', SANADOR: '✚', PICARO: '◆',
     GOBLIN: '♦', ESQUELETO: '☠', CHAMAN: '✷', OGRO: '⬟', CABALLERO_OSCURO: '♜', DRAGON: '♞' };
 const spritesCombate = {
-    GUERRERO: 'guerrero.png', MAGO: 'mago.png', ARQUERO: 'arquero.png', SANADOR: 'sanador.png',
-    PICARO: 'picaro.png',
-    GOBLIN: 'goblin.png', GOBLIN_ARQUERO: 'goblin_arquero.png', ESQUELETO: 'esqueleto.png', CHAMAN: 'chaman.png', OGRO: 'ogro.png',
-    CABALLERO_OSCURO: 'caballero_oscuro.png', DRAGON: 'dragon.png'
+    GUERRERO: 'heroes/guerrero.png', MAGO: 'heroes/mago.png', ARQUERO: 'heroes/arquero.png', SANADOR: 'heroes/sanador.png',
+    PICARO: 'heroes/picaro.png',
+    GOBLIN: 'enemigos/goblin.png', GOBLIN_ARQUERO: 'enemigos/goblin_arquero.png', ESQUELETO: 'enemigos/esqueleto.png', CHAMAN: 'enemigos/chaman.png', OGRO: 'enemigos/ogro.png',
+    CABALLERO_OSCURO: 'enemigos/caballero_oscuro.png', DRAGON: 'enemigos/dragon.png',
+    NIGROMANTE: 'enemigos/nigromante.png', GOLEM_RUNICO: 'enemigos/golem_runico.png',
+    VERDUGO_ESPECTRAL: 'enemigos/verdugo_espectral.png'
 };
 const biografias = {
     GUERRERO: {
@@ -66,6 +69,9 @@ const biografias = {
 const atributosBase = { fuerza: 'FUE', defensa: 'DEF', inteligencia: 'INT', resistencia: 'RES',
     velocidad: 'VEL', destreza: 'DES' };
 const atributos = { ...atributosBase, critico: 'Crítico', esquiva: 'Esquiva', potenciaMagica: 'Potencia mágica' };
+const ranurasEquipo = { ARMAS: 'Arma', ESCUDO: 'Escudo', CABEZA: 'Cabeza',
+    ARMADURAS: 'Torso', GUANTES: 'Guantes', BOTAS: 'Botas' };
+const clasesConEscudo = ['GUERRERO', 'PICARO'];
 const categorias = ['ARMAS', 'ARMADURAS', 'POCIONES', 'PERGAMINOS'];
 const paneles = { recompensas: 'Recompensas', estado: 'Estado', inventario: 'Inventario', equipo: 'Equipamiento', tienda: 'Tienda', nivel: 'Nivel' };
 const dificultades = { PRUEBAS: 'Pruebas', FACIL: 'Normal', DIFICIL: 'Difícil', EXPERTO: 'Experto' };
@@ -200,17 +206,23 @@ async function reproducirAcciones(eventos) {
         await animarFiguras([figuras.get(accion[0].actor)], 'accion-en-curso');
 
         const resultados = new Map();
-        for (const evento of accion) {
-            const figura = figuras.get(evento.objetivo);
-            if (!figura || !(evento.danio || evento.curacion)) continue;
-            const resultado = resultados.get(figura) ?? { danio: 0, curacion: 0 };
-            resultado.danio += evento.danio;
-            resultado.curacion += evento.curacion;
+        const sumarResultado = (id, danio, curacion, esquivado = false) => {
+            const figura = figuras.get(id);
+            if (!figura || !(danio || curacion || esquivado)) return;
+            const resultado = resultados.get(figura) ?? { danio: 0, curacion: 0, esquivado: false };
+            resultado.danio += danio;
+            resultado.curacion += curacion;
+            resultado.esquivado ||= esquivado;
             resultados.set(figura, resultado);
+        };
+        for (const evento of accion) {
+            sumarResultado(evento.objetivo, evento.danio, evento.curacion, evento.esquivado);
+            sumarResultado(evento.actor, 0, evento.curacionActor ?? 0);
         }
         const indicadores = [];
         const golpeados = [];
         const curados = [];
+        const esquivaron = [];
         for (const [figura, resultado] of resultados) {
             const indicador = document.createElement('div');
             indicador.className = 'resultado-combate';
@@ -223,12 +235,19 @@ async function reproducirAcciones(eventos) {
                 indicador.append(etiquetaResultado(`+${resultado.curacion} PV`, 'curacion'));
                 if (!resultado.danio) curados.push(figura);
             }
-            figura.querySelector('.retrato-combate').append(indicador);
+            if (resultado.esquivado) {
+                indicador.append(etiquetaResultado('Esquiva', 'esquiva'));
+                if (!resultado.danio && !resultado.curacion) esquivaron.push(figura);
+            }
+            const retrato = figura.querySelector('.retrato-combate');
+            const estados = retrato.querySelector('.estados-combate');
+            (estados ?? retrato).append(indicador);
             indicadores.push(indicador);
         }
         await Promise.all([
             animarFiguras(golpeados, 'golpe-recibido'),
-            animarFiguras(curados, 'curacion-recibida')
+            animarFiguras(curados, 'curacion-recibida'),
+            animarFiguras(esquivaron, 'esquiva-realizada')
         ]);
         indicadores.forEach(indicador => indicador.remove());
     }
@@ -266,12 +285,12 @@ function boton(texto, accion, valor = '', opciones = '') {
 function mostrar() {
     observarNombresCombate.disconnect();
     resumen.innerHTML = partida ? `
-        ${partida.ronda ? `<span>${dificultades[partida.dificultad] ?? dificultades.FACIL}</span><span>Ronda ${partida.ronda} de 10</span><span>${partida.oro} MO</span>` : ''}
+        ${partida.ronda ? `<span>${dificultades[partida.dificultad] ?? dificultades.FACIL}</span><span>Ronda ${partida.ronda} de ${partida.totalRondas}</span><span>${partida.oroIlimitado ? '∞' : partida.oro} MO</span>` : ''}
         ${boton('Reiniciar', 'reiniciar')}` : '';
     if (!partida) {
         juego.innerHTML = `<section class="inicio">
             <div class="insignia" aria-hidden="true">⚔</div><h1>RPG Battle Gauntlet</h1>
-            <p>Reúne a tres héroes, supera diez combates y derrota al dragón.</p>
+            <p>Reúne a tres héroes y derrota al dragón. Juega diez rondas o amplía el desafío a quince en Experto o Pruebas.</p>
             ${boton('Nueva partida', 'crear', '', 'class="principal"')}
         </section>`;
     } else if (partida.estado === 'SELECCION_PERSONAJES') {
@@ -285,7 +304,7 @@ function mostrar() {
         juego.innerHTML = `<section class="inicio">
             <div class="insignia" aria-hidden="true">${victoria ? '♜' : '⚔'}</div>
             <h1>${victoria ? 'Victoria' : 'Derrota'}</h1>
-            <p>${victoria ? 'El dragón ha caído. Has superado las diez rondas.' : `Tu equipo cayó en la ronda ${partida.ronda}.`}</p>
+            <p>${victoria ? `El dragón ha caído. Has superado las ${partida.totalRondas} rondas.` : `Tu equipo cayó en la ronda ${partida.ronda}.`}</p>
             ${boton('Volver a jugar', 'reiniciar', '', 'class="principal"')}
         </section>${historial()}`;
     }
@@ -315,7 +334,7 @@ function mostrarSeleccion() {
                 <h2>Cómo jugar</h2>
                 <details class="detalle-seleccion" data-detalle="guia"${detallesAbiertos.has('guia') ? ' open' : ''}>
                     <summary><span>Ver conceptos básicos</span><span>Ocultar conceptos básicos</span></summary>
-                    <p><strong>Equipo y turnos.</strong> Elige tres héroes y supera diez rondas. La velocidad (VEL) decide el orden. En cada turno puedes atacar, usar una habilidad o un objeto, o defenderte.</p>
+                    <p><strong>Equipo y turnos.</strong> Elige tres héroes y supera diez rondas, o quince en Experto o Pruebas. La velocidad (VEL) decide el orden. En cada turno puedes atacar, usar una habilidad o un objeto, o defenderte.</p>
                     <p><strong>Vida y concentración.</strong> Los Puntos de Vida (PV) son la salud de nuestro personaje. Con 0 PV, el héroe cae. Los puntos de concentración (PC) se gastan al usar habilidades. La poción roja recupera 80 PV, la verde recupera 50 PC y la azul recupera 50 PV y 30 PC. El ataque básico y Defenderse son gratuitos.</p>
                     <p><strong>Interceptar.</strong> Therakos puede gastar 4 PC para proteger el próximo golpe que reciba o ponerse en el lugar de un aliado ante un ataque individual. La postura termina al empezar su siguiente turno. Un escudo equipado eleva la reducción de Defenderse y del golpe interceptado del 40 % al 65 %.</p>
                     <p><strong>Daño físico.</strong> La fuerza (FUE) aumenta el daño y la defensa (DEF) lo reduce.</p>
@@ -338,28 +357,83 @@ function barra(etiqueta, actual, maximo, clase = '') {
 }
 
 function luchador(datos, enCampamento = false) {
+    const turnoActual = !enCampamento && partida.orden[0] === datos.id;
+    const indicarTurno = turnoActual && datos.pv > 0 && partida.heroes.some(heroe => heroe.id === datos.id);
     const sprite = spritesCombate[datos.tipo];
     const imagen = sprite
         ? `<img class="sprite-combate" src="imagenes/${sprite}" alt="">`
         : `<span class="icono" aria-hidden="true">${iconos[datos.tipo]}</span>`;
     const estados = Object.entries(datos.estados).map(([estado, turnos]) =>
-        `<small>${escapar(nombre(estado))} · ${turnos} ${turnos === 1 ? 'turno' : 'turnos'}</small>`).join('');
+        `<small>${escapar(nombre(estado))}${estado === 'MARCA_ESPECTRAL' ? '' : ` · ${turnos} ${turnos === 1 ? 'turno' : 'turnos'}`}</small>`).join('');
     return `<article class="luchador ${datos.pv === 0 ? 'caido' : ''}" data-tipo="${datos.tipo}" data-combatiente="${datos.id}">
         <div class="figura-combate">
-            <div class="retrato-combate">${imagen}${estados ? `<div class="estados-combate">${estados}</div>` : ''}</div>
+            <div class="retrato-combate">
+                ${imagen}
+                ${indicarTurno ? '<span class="indicador-turno" aria-hidden="true"></span>' : ''}
+                ${estados ? `<div class="estados-combate">${estados}</div>` : ''}
+            </div>
         </div>
-        <div class="tarjeta ${!enCampamento && partida.orden[0] === datos.id ? 'activo' : ''}">
+        <div class="tarjeta ${turnoActual ? 'activo' : ''}">
             <h3><span>${nombre(datos.tipo)}</span></h3>
             ${enCampamento ? `<small>Nivel ${datos.nivel}</small>` : ''}
             ${barra('PV', datos.pv, datos.base.pvMaximos)}${barra('PC', datos.pm, datos.base.pmMaximos, 'magia')}
             ${enCampamento ? `<small>${datos.pv > 0 ? 'En pie' : 'Fuera de combate'}</small>` : '<small class="aviso-caida">Fuera de combate</small>'}
             ${enCampamento ? `<dl class="equipo-estado">
-                ${datos.base.destreza === undefined ? '' : `<dt>Destreza</dt><dd>${datos.base.destreza}</dd>`}
-                <dt>Arma</dt><dd>${escapar(datos.equipo.ARMAS?.nombre ?? 'Sin equipar')}</dd>
-                <dt>Armadura</dt><dd>${escapar(datos.equipo.ARMADURAS?.nombre ?? 'Sin equipar')}</dd>
+                ${Object.entries(ranurasEquipo).map(([ranura, etiqueta]) =>
+                    `<dt>${etiqueta}</dt><dd>${escapar(datos.equipo[ranura]?.nombre ?? 'Sin equipar')}</dd>`).join('')}
             </dl>` : ''}
         </div>
     </article>`;
+}
+
+const iconosPorObjeto = {
+    roja: 'pociones/pocion_roja.png',
+    verde: 'pociones/pocion_verde.png',
+    azul: 'pociones/pocion_azul.png',
+    revitalizacion: 'pociones/pocion_dorada.png',
+    proyectil: 'pergaminos/proyectil_magico.png',
+    cura: 'pergaminos/cura.png',
+    cura_mayor: 'pergaminos/cura.png',
+    cura_grupal: 'pergaminos/cura.png',
+    cura_total: 'pergaminos/cura.png',
+    proteccion: 'pergaminos/proteccion_divina.png',
+    llamarada: 'pergaminos/llamarada.png',
+    ventisca: 'pergaminos/ventisca.png',
+    tormenta: 'pergaminos/tormenta_electrica.png',
+    meteorito: 'pergaminos/meteorito.png',
+    requiem_dragon: 'pergaminos/dragon.png',
+    vara_avanzada: 'armas/vara_avanzada.png?v=vara-avanzada',
+    ropa: 'armaduras/ropa_ligera.png',
+    capucha: 'armaduras/capucha.png',
+    capucha_funeraria: 'armaduras/capucha.png',
+    botas: 'armaduras/botas.png',
+    casco: 'armaduras/yelmo.png',
+    casco_oscuro: 'armaduras/yelmo.png',
+    yelmo_espectral: 'armaduras/yelmo.png',
+    escudo: 'armaduras/escudo.png',
+    sombrero_mago: 'armaduras/sombrero_mago.png',
+    tunica_aprendiz: 'armaduras/tunica_mago.png',
+    tunica_mago: 'armaduras/tunica_mago.png',
+    tunica_chaman: 'armaduras/sombrero_mago.png'
+};
+
+const iconosPorFamilia = {
+    ESPADA: 'armas/espada.png',
+    DAGA: 'armas/daga_goblin.png',
+    ARCO: 'armas/arco.png',
+    BALLESTA: 'armas/ballesta.png',
+    GARROTE: 'armas/garrote.png',
+    VARA: 'armas/vara.png'
+};
+
+const iconosPorCategoria = {
+    ARMADURAS: 'armaduras/armadura.png'
+};
+
+function iconoObjeto(objeto) {
+    const ruta = iconosPorObjeto[objeto.codigo] ?? iconosPorFamilia[objeto.familiaArma]
+        ?? iconosPorCategoria[objeto.categoria];
+    return ruta ? `<img class="icono-objeto" src="imagenes/${ruta}" alt="" width="40" height="40">` : '';
 }
 
 const nombrePergaminoDragon = 'Pergamino de Dragón';
@@ -376,12 +450,16 @@ const etiquetasCombate = { ataque_basico: 'Ataque básico', defender: 'Defenders
         fuego_chaman: 'Bola de fuego', aliento_fuego: 'Aliento de fuego', barrido: 'Ataque de área', robar: 'Robar',
         corte: 'Corte amplio', estocada_precisa: 'Estocada precisa', tajo_demoledor: 'Tajo demoledor',
         corte_ultratumba: 'Corte de ultratumba', filo_maldicion: 'Filo de la maldición',
-        estocada_rapida: 'Estocada rápida', puntada_traicionera: 'Puntada traicionera', corte_al_tendon: 'Corte al tendón',
+        estocada_rapida: 'Estocada rápida', puntada_traicionera: 'Puntada traicionera', corte_al_tendon: 'Corte al tendón', sangria_ritual: 'Sangría ritual',
         impacto: 'Impacto contundente',
         flecha_de_alcance: 'Flecha de largo alcance', destello_arcano: 'Destello arcano', descarga_astral: 'Descarga astral',
         eco_de_la_tormenta: 'Eco de la tormenta',
         flechazo_goblin: 'Flechazo goblin', flecha_envenenada: 'Flecha envenenada', veneno: 'Veneno', quemadura: 'Quemadura',
         preparar_furia_animal: 'Prepara Furia animal', furia_animal: 'Furia animal', furia_interrumpida: 'Furia animal interrumpida',
+        descarga_funebre: 'Descarga fúnebre', reanimar: 'Reanimar', puno_de_piedra: 'Puño de piedra',
+        preparar_onda_runica: 'Prepara Onda rúnica', onda_runica: 'Onda rúnica',
+        tajo_espectral: 'Tajo espectral', marcar_sentencia: 'Marca espectral', sentencia_espectral: 'Sentencia espectral',
+        barrido_espectral: 'Barrido espectral',
         preparar_incendio_ceniza: 'Prepara Incendio de ceniza', incendio_ceniza: 'Incendio de ceniza',
         'Réquiem del Dragón': nombrePergaminoDragon, 'Poción de revitalización': nombrePocionDorada };
 function textoEvento(evento) {
@@ -397,6 +475,7 @@ function textoEvento(evento) {
     if (evento.esquivado) detalles.push(`${objetivo} esquiva`);
     if (evento.danio) detalles.push(`${evento.danio} de daño${evento.critico ? ' crítico' : ''}`);
     if (evento.curacion) detalles.push(`+${evento.curacion} PV`);
+    if (evento.curacionActor) detalles.push(`${actor} recupera ${evento.curacionActor} PV`);
     if (evento.magiaRecuperada) detalles.push(`+${evento.magiaRecuperada} PC`);
     return [`${actor} · ${accion}${destino}`, ...detalles].join(' · ') + '.';
 }
@@ -447,7 +526,7 @@ function mostrarCombate() {
                 : tipo === 'REVITALIZACION' && !aliadosCaidos.length ? 'Sin aliados caídos'
                 : tipo === 'ANIQUILAR_DRAGON' && !dragonesVivos.length ? 'Requiere al dragón' : '';
             return { id: objeto.id, objetivo, objeto, avisoBloqueo,
-                texto: nombreObjeto(objeto) + (objeto.potencia ? ` · ${nombre(objeto.potencia)}` : ''), descripcion: describir(objeto) };
+                texto: nombreObjeto(objeto), descripcion: describir(objeto) };
         })
     ];
     const accion = opciones.find(opcion => opcion.id === accionElegida && !opcion.avisoBloqueo) ?? opciones[0];
@@ -463,8 +542,12 @@ function mostrarCombate() {
             .map(objetivo => `<option value="${objetivo.id}">${nombre(objetivo.tipo)} · ${apuntarACaido ? 'Fuera de combate' : `${objetivo.pv} PV`}</option>`)
             .join('')}</select></label>` : '';
     const ultimoTurno = partida.historial.at(-1)?.turno;
-    const acciones = agruparAcciones(partida.historial.filter(evento => evento.turno === ultimoTurno));
-    juego.innerHTML = `<div class="bandos escenario">
+    const eventosUltimoTurno = ultimoTurno >= partida.primerTurnoCombate
+        ? partida.historial.filter(evento => evento.turno === ultimoTurno)
+        : [];
+    const acciones = agruparAcciones(eventosUltimoTurno);
+    const escenario = Math.ceil(partida.ronda / 5);
+    juego.innerHTML = `<div class="bandos escenario" data-escenario="${escenario}">
             <div class="ultima-accion" role="status" aria-label="Última acción">${escapar(textoAccion(acciones.at(-1), acciones.at(-2)))}</div>
             <section class="rejilla" aria-label="Héroes">${partida.heroes.map(heroe => luchador(heroe)).join('')}</section>
             <section class="rejilla" aria-label="Enemigos">${partida.enemigos.map(enemigo => luchador(enemigo)).join('')}</section>
@@ -480,7 +563,10 @@ function mostrarCombate() {
                     <span>Siguientes: ${nombresDeLosSiguientesTurnos().join(' / ')}</span>
                 </p>
             </div>
-            <small>${escapar(accion.descripcion)}${accion.id === 'robar' ? ` Probabilidad: ${actor.probabilidadRobo} %.` : ''}</small>
+            <div class="detalle-accion">
+                ${accion.objeto ? iconoObjeto(accion.objeto) : ''}
+                <small>${escapar(accion.descripcion)}${accion.id === 'robar' ? ` Probabilidad: ${actor.probabilidadRobo} %.` : ''}</small>
+            </div>
         </form>${historial()}`;
     juego.querySelectorAll('.escenario .luchador h3').forEach(titulo => observarNombresCombate.observe(titulo));
 }
@@ -495,26 +581,28 @@ function describir(objeto) {
     if (tipo === 'ANIQUILAR_DRAGON') return 'Derrota al dragón de un solo golpe.';
     if (tipo === 'REVITALIZACION') return `Revive a un héroe caído con el ${cantidad} % de sus PV máximos.`;
     if (tipo === 'PROTECCION') return `${proteccion} % de reducción durante 2 turnos${grupo}`;
-    if (tipo === 'CURA_TOTAL') return `Recupera ${cantidad} % de PV máximos${proteccion ? ` · protección del ${proteccion} % durante 2 turnos` : ''}`;
+    if (tipo === 'CURA_TOTAL') return `Recupera ${cantidad} % de PV máximos`;
     return [cantidad ? `+${cantidad} PV${grupo}` : '', magia ? `+${magia} PC` : ''].filter(Boolean).join(' · ');
 }
 
 function articulo(objeto, controles, detalle = '') {
-    const variante = objeto.calidad ?? objeto.potencia;
-    const requisitos = [objeto.fuerzaMinima && `FUE ${objeto.fuerzaMinima}`,
-        objeto.inteligenciaMinima && `INT ${objeto.inteligenciaMinima}`,
+    const calidad = objeto.calidad;
+    const requisitos = [objeto.fuerzaMinima && `FUE base ${objeto.fuerzaMinima}`,
+        objeto.inteligenciaMinima && `INT base ${objeto.inteligenciaMinima}`,
         objeto.clasesCompatibles?.map(nombre).join(', ')].filter(Boolean).join(' · ');
-    return `<article class="tarjeta articulo"><h3>${escapar(nombreObjeto(objeto))}</h3>
-        ${variante ? `<small>${objeto.categoria === 'ARMAS' ? 'Calidad: ' : ''}${escapar(nombre(variante))}${objeto.inicial ? ' · Inicial' : ''}</small>` : ''}
+    return `<article class="tarjeta articulo"><div class="cabecera-objeto">${iconoObjeto(objeto)}<h3>${escapar(nombreObjeto(objeto))}</h3></div>
+        ${calidad ? `<small>${objeto.categoria === 'ARMAS' ? 'Calidad: ' : ''}${escapar(nombre(calidad))}${objeto.inicial ? ' · Inicial' : ''}</small>` : ''}
+        ${objeto.ranura ? `<small>${ranurasEquipo[objeto.ranura]}${objeto.dosManos ? ' · Dos manos' : ''}</small>` : ''}
         <small>${escapar(describir(objeto))}</small><small>Requisitos · ${requisitos || 'Ninguno'}</small>
-        ${objeto.codigo === 'escudo' ? '<small>Defenderse e Interceptar reducen el daño un 65 % con el escudo equipado.</small>' : ''}
+        ${objeto.ranura === 'ESCUDO' ? '<small>Requiere un arma de una mano. Defenderse e Interceptar reducen el daño un 65 % con el escudo equipado.</small>' : ''}
+        ${objeto.bonoMaximoFuriaMaldita ? `<small>Furia maldita · El daño físico aumenta hasta un ${objeto.bonoMaximoFuriaMaldita} % según los PV perdidos.</small>` : ''}
         ${objeto.habilidad ? `<small>${escapar(objeto.habilidad.nombre)} · ${objeto.habilidad.costePm} PC</small>` : ''}
         ${detalle}<div class="fila">${controles}</div></article>`;
 }
 
 function comparacion(objeto, heroe) {
-    const equipado = heroe.equipo[objeto.categoria];
-    if (!categorias.slice(0, 2).includes(objeto.categoria)) return '';
+    if (!objeto.ranura) return '';
+    const equipado = heroe.equipo[objeto.ranura];
     const diferencias = Object.entries(objeto.bonificaciones).map(([clave, cantidad]) =>
         [clave, cantidad - (equipado?.bonificaciones[clave] ?? 0)]).filter(([, cantidad]) => cantidad)
         .map(([clave, cantidad]) => `${cantidad > 0 ? '+' : ''}${cantidad} ${atributos[clave]}`).join(' · ');
@@ -528,14 +616,27 @@ function mostrarCampamento() {
         `<option value="${jugador.id}" ${jugador.id === heroe.id ? 'selected' : ''}>${nombre(jugador.tipo)}</option>`).join('')}</select></label></div>`;
     const botonEquipar = objeto => {
         const claseCompatible = !objeto.clasesCompatibles?.length || objeto.clasesCompatibles.includes(heroe.tipo);
-        const valido = claseCompatible && heroe.base.fuerza >= objeto.fuerzaMinima && heroe.base.inteligencia >= objeto.inteligenciaMinima;
-        return boton('Equipar', 'equipar', objeto.id, valido ? '' : 'disabled');
+        const arma = heroe.equipo.ARMAS;
+        const escudoCompatible = objeto.ranura !== 'ESCUDO' || (arma && !arma.dosManos);
+        const motivos = [];
+        if (!claseCompatible) motivos.push('El héroe no puede usar este equipo por su clase.');
+        if (!escudoCompatible) motivos.push('El escudo requiere un arma de una mano.');
+        if (heroe.base.fuerza < objeto.fuerzaMinima) {
+            motivos.push(`FUE base insuficiente (${heroe.base.fuerza}/${objeto.fuerzaMinima}).`);
+        }
+        if (heroe.base.inteligencia < objeto.inteligenciaMinima) {
+            motivos.push(`INT base insuficiente (${heroe.base.inteligencia}/${objeto.inteligenciaMinima}).`);
+        }
+        const aviso = motivos.length ? motivos.join(' ')
+            : objeto.dosManos && heroe.equipo.ESCUDO ? 'El escudo volverá al inventario.' : '';
+        return boton('Equipar', 'equipar', objeto.id, motivos.length ? 'disabled' : '')
+            + (aviso ? `<small>${escapar(aviso)}</small>` : '');
     };
     let contenido;
     if (panel === 'recompensas') {
         const recompensa = partida.recompensa;
         contenido = `<h2>Ronda ${partida.ronda} superada</h2>
-            <p>+${recompensa.oro} MO · +${recompensa.experiencia} EXP por héroe</p>
+            <p>${partida.oroIlimitado ? '' : `+${recompensa.oro} MO · `}+${recompensa.experiencia} EXP por héroe superviviente</p>
             <p class="ayuda">${recompensa.turnos} acciones · ${recompensa.supervivientes} supervivientes · ${recompensa.consumibles} consumibles usados</p>
             <h3>Botín</h3><div class="rejilla">${partida.botin.map(objeto => articulo(objeto, boton('Recoger', 'recoger', objeto.id))).join('')
                 || '<p class="ayuda">No queda botín por recoger.</p>'}</div>`;
@@ -544,7 +645,7 @@ function mostrarCampamento() {
     } else if (panel === 'inventario') {
         contenido = `<h2>Inventario</h2>${selector}<div class="rejilla">${partida.inventario.map(objeto => {
             let control = boton(`Vender por ${objeto.precioVenta} MO`, 'vender', objeto.id);
-            if (categorias.slice(0, 2).includes(objeto.categoria)) {
+            if (objeto.ranura) {
                 control = botonEquipar(objeto) + control;
             } else if (objeto.categoria === 'POCIONES') {
                 const revitaliza = objeto.efecto.tipo === 'REVITALIZACION';
@@ -555,10 +656,15 @@ function mostrarCampamento() {
             return articulo(objeto, control, comparacion(objeto, heroe));
         }).join('') || '<p class="ayuda">El inventario está vacío.</p>'}</div>`;
     } else if (panel === 'equipo') {
-        const disponibles = partida.inventario.filter(objeto => categorias.slice(0, 2).includes(objeto.categoria));
-        contenido = `<h2>Equipamiento</h2>${selector}<div class="rejilla">${categorias.slice(0, 2).map(ranura =>
-            heroe.equipo[ranura] ? articulo(heroe.equipo[ranura], ranura === 'ARMAS' ? '' : boton('Desequipar', 'desequipar', ranura))
-                : `<article class="tarjeta"><h3>${nombre(ranura)}</h3><small>Ranura vacía</small></article>`).join('')}</div>
+        const disponibles = partida.inventario.filter(objeto => objeto.ranura);
+        const posiciones = ['CABEZA', 'ARMAS', 'ARMADURAS', 'GUANTES', 'ESCUDO', 'BOTAS'];
+        contenido = `<h2>Equipamiento</h2>${selector}<div class="rejilla-equipamiento">${posiciones.map(ranura => `
+            <div class="ranura-equipo" data-ranura="${ranura}">
+                ${heroe.equipo[ranura] ? articulo(heroe.equipo[ranura], ranura === 'ARMAS' ? '' : boton('Desequipar', 'desequipar', ranura))
+                    : `<article class="tarjeta"><h3>${ranurasEquipo[ranura]}</h3><small>${ranura !== 'ESCUDO' ? 'Ranura vacía'
+                        : !clasesConEscudo.includes(heroe.tipo) ? 'Esta clase no puede equipar escudo'
+                        : heroe.equipo.ARMAS?.dosManos ? 'Ocupada por un arma de dos manos' : 'Ranura vacía'}</small></article>`}
+            </div>`).join('')}</div>
             <h3 class="fila">Armas y armaduras del inventario</h3>
             <div class="rejilla">${disponibles.map(objeto => articulo(objeto, botonEquipar(objeto), comparacion(objeto, heroe))).join('')
                 || '<p class="ayuda">El inventario no contiene armas ni armaduras.</p>'}</div>`;
@@ -566,7 +672,7 @@ function mostrarCampamento() {
         contenido = `<h2>Tienda</h2>${selector}<div class="pestanas">${categorias.map(apartado =>
             boton(nombre(apartado), 'categoria', apartado, `aria-pressed="${categoria === apartado}"`)).join('')}</div>
             <div class="rejilla">${partida.tienda.filter(({objeto}) => objeto.categoria === categoria).map(({objeto, precio, existencias}) => {
-                const disponible = existencias !== 0 && partida.oro >= precio;
+                const disponible = existencias !== 0 && (partida.oroIlimitado || partida.oro >= precio);
                 const etiqueta = objeto.id ? 'Recomprar' : 'Comprar';
                 return articulo(objeto, boton(`${etiqueta} por ${precio} MO`, objeto.id ? 'recomprar' : 'comprar',
                     objeto.id ?? objeto.codigo, disponible ? '' : 'disabled'),
@@ -610,7 +716,7 @@ document.addEventListener('click', async evento => {
         case 'categoria': categoria = valor; mostrar(); break;
         case 'recoger': await operar('recoger', { objeto: valor }); break;
         case 'equipar': await operar('equipar', { actor: heroeElegido, objeto: valor }); break;
-        case 'desequipar': await operar('desequipar', { actor: heroeElegido, categoria: valor }); break;
+        case 'desequipar': await operar('desequipar', { actor: heroeElegido, ranura: valor }); break;
         case 'comprar': await operar('comprar', { codigo: valor }); break;
         case 'recomprar': await operar('comprar', { objeto: valor }); break;
         case 'vender': await operar('vender', { objeto: valor }); break;

@@ -7,6 +7,7 @@ import es.rpgbattlegauntlet.config.CatalogoObjetos;
 import es.rpgbattlegauntlet.config.Equilibrio;
 import es.rpgbattlegauntlet.enums.Atributo;
 import es.rpgbattlegauntlet.enums.Categoria;
+import es.rpgbattlegauntlet.enums.RanuraEquipo;
 import es.rpgbattlegauntlet.enums.ClaseHeroe;
 import es.rpgbattlegauntlet.enums.Dificultad;
 import es.rpgbattlegauntlet.enums.EstadoPartida;
@@ -56,7 +57,7 @@ public final class Partida {
         }
         return switch (combate.getResultado()) {
             case EN_CURSO -> EstadoPartida.COMBATE;
-            case GANADO -> ronda == CatalogoEncuentros.totalRondas()
+            case GANADO -> ronda == getTotalRondas()
                     ? EstadoPartida.VICTORIA : EstadoPartida.ENTRE_COMBATES;
             case PERDIDO -> EstadoPartida.DERROTA;
         };
@@ -64,6 +65,10 @@ public final class Partida {
 
     public synchronized int getRonda() {
         return ronda;
+    }
+
+    public synchronized int getTotalRondas() {
+        return CatalogoEncuentros.totalRondas(dificultad);
     }
 
     public synchronized Combate getCombate() {
@@ -112,6 +117,10 @@ public final class Partida {
         return List.copyOf(eventos);
     }
 
+    public synchronized boolean tieneOroIlimitado() {
+        return dificultad == Dificultad.PRUEBAS;
+    }
+
     public synchronized int getOro() {
         return oro;
     }
@@ -125,7 +134,7 @@ public final class Partida {
     }
 
     public synchronized List<Oferta> getOfertas() {
-        return tienda.ofertas();
+        return tienda.ofertas(tieneOroIlimitado());
     }
 
     public synchronized Recompensa getRecompensa() {
@@ -151,26 +160,27 @@ public final class Partida {
     public synchronized void equipar(UUID idHeroe, UUID idObjeto) {
         exigirEstado(EstadoPartida.ENTRE_COMBATES);
         Objeto objeto = objetoEnInventario(idObjeto);
-        Objeto anterior = heroe(idHeroe).equipar(objeto);
+        List<Objeto> retirados = heroe(idHeroe).equipar(objeto);
         inventario.remove(idObjeto);
-        if (anterior != null) {
-            inventario.put(anterior.id(), anterior);
-        }
+        retirados.forEach(pieza -> inventario.put(pieza.id(), pieza));
     }
 
-    public synchronized void desequipar(UUID idHeroe, Categoria categoria) {
+    public synchronized void desequipar(UUID idHeroe, RanuraEquipo ranura) {
         exigirEstado(EstadoPartida.ENTRE_COMBATES);
-        if (categoria == null || !categoria.esEquipo()) {
+        if (ranura == null) {
             throw new IllegalArgumentException("Ranura de equipo inválida");
         }
-        Objeto objeto = heroe(idHeroe).desequipar(categoria);
+        Objeto objeto = heroe(idHeroe).desequipar(ranura);
         inventario.put(objeto.id(), objeto);
     }
 
     public synchronized void comprar(String codigo, UUID unidad) {
         exigirEstado(EstadoPartida.ENTRE_COMBATES);
-        Objeto objeto = tienda.comprar(codigo, unidad, oro);
-        oro -= unidad == null ? objeto.precioCatalogo() : objeto.precioRecompra();
+        boolean oroIlimitado = tieneOroIlimitado();
+        Objeto objeto = tienda.comprar(codigo, unidad, oro, oroIlimitado);
+        if (!oroIlimitado) {
+            oro -= unidad == null ? objeto.precioCatalogo() : objeto.precioRecompra();
+        }
         inventario.put(objeto.id(), objeto);
     }
 
@@ -178,7 +188,9 @@ public final class Partida {
         exigirEstado(EstadoPartida.ENTRE_COMBATES);
         Objeto objeto = objetoEnInventario(idObjeto);
         inventario.remove(idObjeto);
-        oro += objeto.precioVenta();
+        if (!tieneOroIlimitado()) {
+            oro += objeto.precioVenta();
+        }
         tienda.recibir(objeto);
     }
 
@@ -222,14 +234,14 @@ public final class Partida {
         if (getEstado() != EstadoPartida.ENTRE_COMBATES || (recompensa != null && recompensa.ronda() == ronda)) {
             return;
         }
-        int supervivientes = (int) equipo.stream().filter(Heroe::estaVivo).count();
+        var supervivientes = equipo.stream().filter(Heroe::estaVivo).toList();
         int turnos = combate.getCantidadTurnos();
         int consumibles = combate.getConsumiblesUsados();
         int experiencia = Equilibrio.experienciaRonda(ronda);
-        int monedas = Equilibrio.oroRonda(ronda, turnos, supervivientes, consumibles);
-        recompensa = new Recompensa(ronda, monedas, experiencia, turnos, supervivientes, consumibles);
+        int monedas = tieneOroIlimitado() ? 0 : Equilibrio.oroRonda(ronda, turnos, supervivientes.size(), consumibles);
+        recompensa = new Recompensa(ronda, monedas, experiencia, turnos, supervivientes.size(), consumibles);
         oro += monedas;
-        equipo.forEach(heroe -> heroe.ganarExperiencia(experiencia));
+        supervivientes.forEach(heroe -> heroe.ganarExperiencia(experiencia));
         for (Combatiente enemigo : combate.getEnemigos()) {
             if (!combate.fueRobado(enemigo.getId())) {
                 GeneradorBotin.tirar(((Enemigo) enemigo).getTipo(), azar).ifPresent(objeto -> botin.put(objeto.id(), objeto));

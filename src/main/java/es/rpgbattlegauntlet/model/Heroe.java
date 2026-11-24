@@ -2,17 +2,19 @@ package es.rpgbattlegauntlet.model;
 
 import es.rpgbattlegauntlet.config.Equilibrio;
 import es.rpgbattlegauntlet.enums.Atributo;
-import es.rpgbattlegauntlet.enums.Categoria;
+import es.rpgbattlegauntlet.enums.RanuraEquipo;
 import es.rpgbattlegauntlet.enums.ClaseHeroe;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 public final class Heroe extends Combatiente {
 
     private final ClaseHeroe clase;
-    private final Map<Categoria, Objeto> equipo = new EnumMap<>(Categoria.class);
+    private final Map<RanuraEquipo, Objeto> equipo = new EnumMap<>(RanuraEquipo.class);
     private int nivel = 1;
     private int experiencia;
     private int puntos;
@@ -26,7 +28,7 @@ public final class Heroe extends Combatiente {
         return clase;
     }
 
-    public Map<Categoria, Objeto> getEquipo() {
+    public Map<RanuraEquipo, Objeto> getEquipo() {
         return Map.copyOf(equipo);
     }
 
@@ -47,6 +49,12 @@ public final class Heroe extends Combatiente {
     }
 
     @Override
+    public int getBonoMaximoFuriaMaldita() {
+        Objeto arma = equipo.get(RanuraEquipo.ARMAS);
+        return arma == null ? 0 : arma.getBonoMaximoFuriaMaldita();
+    }
+
+    @Override
     public Bonificaciones getBonificaciones() {
         return equipo.values().stream().map(Objeto::bonificaciones)
                 .reduce(Bonificaciones.NINGUNA, Bonificaciones::sumar);
@@ -54,22 +62,40 @@ public final class Heroe extends Combatiente {
 
     @Override
     int reduccionAlDefenderse() {
-        Objeto armadura = equipo.get(Categoria.ARMADURAS);
-        return armadura != null && armadura.codigo().equals("escudo") ? 65 : super.reduccionAlDefenderse();
+        return equipo.containsKey(RanuraEquipo.ESCUDO) ? Equilibrio.REDUCCION_ESCUDO : super.reduccionAlDefenderse();
     }
 
-    Objeto equipar(Objeto objeto) {
-        if (!objeto.categoria().esEquipo() || !objeto.cumpleRequisitos(this)) {
+    List<Objeto> equipar(Objeto objeto) {
+        RanuraEquipo ranura = objeto.ranura();
+        if (ranura == null || !objeto.cumpleRequisitos(this)) {
             throw new IllegalArgumentException("El héroe no cumple los requisitos del equipo");
         }
-        return equipo.put(objeto.categoria(), objeto);
+        if (ranura == RanuraEquipo.ESCUDO) {
+            Objeto arma = equipo.get(RanuraEquipo.ARMAS);
+            if (arma == null || arma.dosManos()) {
+                throw new IllegalArgumentException("El escudo requiere un arma de una mano");
+            }
+        }
+
+        var retirados = new ArrayList<Objeto>(2);
+        Objeto anterior = equipo.put(ranura, objeto);
+        if (anterior != null) {
+            retirados.add(anterior);
+        }
+        if (objeto.dosManos()) {
+            Objeto escudo = equipo.remove(RanuraEquipo.ESCUDO);
+            if (escudo != null) {
+                retirados.add(escudo);
+            }
+        }
+        return retirados;
     }
 
-    Objeto desequipar(Categoria categoria) {
-        if (categoria == Categoria.ARMAS) {
+    Objeto desequipar(RanuraEquipo ranura) {
+        if (ranura == RanuraEquipo.ARMAS) {
             throw new IllegalArgumentException("El arma equipada solo se puede sustituir por otra compatible");
         }
-        Objeto objeto = equipo.remove(categoria);
+        Objeto objeto = equipo.remove(ranura);
         if (objeto == null) {
             throw new IllegalArgumentException("La ranura está vacía");
         }
@@ -77,15 +103,16 @@ public final class Heroe extends Combatiente {
     }
 
     Habilidad habilidadArma() {
-        Objeto arma = equipo.get(Categoria.ARMAS);
+        Objeto arma = equipo.get(RanuraEquipo.ARMAS);
         return arma == null ? null : arma.habilidad();
     }
 
     void ganarExperiencia(int cantidad) {
         experiencia += cantidad;
         while (experiencia >= Equilibrio.experienciaSiguiente(nivel)) {
-            experiencia -= Equilibrio.experienciaSiguiente(nivel++);
-            puntos += Equilibrio.PUNTOS_POR_NIVEL;
+            experiencia -= Equilibrio.experienciaSiguiente(nivel);
+            nivel++;
+            puntos += Equilibrio.puntosAlSubir(nivel);
             if (estaVivo()) {
                 recibirCuracion(Equilibrio.PV_AL_SUBIR);
                 recuperarMagia(Equilibrio.PM_AL_SUBIR);

@@ -7,6 +7,7 @@ import es.rpgbattlegauntlet.config.CatalogoEnemigos;
 import es.rpgbattlegauntlet.enums.EstadoTemporal;
 import es.rpgbattlegauntlet.config.CatalogoHabilidades;
 import es.rpgbattlegauntlet.enums.ResultadoCombate;
+import es.rpgbattlegauntlet.enums.TipoEfecto;
 import es.rpgbattlegauntlet.enums.TipoObjetivo;
 import es.rpgbattlegauntlet.enums.TipoEnemigo;
 
@@ -71,6 +72,10 @@ public final class Combate {
 
     public synchronized int getTurno() {
         return turno;
+    }
+
+    public int getPrimerTurno() {
+        return primerTurno;
     }
 
     public synchronized int getCantidadTurnos() {
@@ -181,21 +186,12 @@ public final class Combate {
             case CURACION -> curacion = objetivo.recibirCuracion(efecto.cantidad());
             case CURA_TOTAL -> curacion = objetivo.recibirCuracion(
                     objetivo.getEstadisticasBase().pvMaximos() * efecto.cantidad() / 100);
-            case PROTECCION -> { }
+            case PROTECCION -> objetivo.aplicarEstado(EstadoTemporal.PROTECCION_50, 2);
             case REVITALIZACION -> curacion = objetivo.revivir(efecto.cantidad());
             case ANIQUILAR_DRAGON -> {
                 danio = objetivo.getPvActuales();
                 objetivo.recibirDanio(danio);
             }
-        }
-        if (efecto.proteccion() > 0) {
-            EstadoTemporal proteccion = switch (efecto.proteccion()) {
-                case 35 -> EstadoTemporal.PROTECCION_35;
-                case 50 -> EstadoTemporal.PROTECCION_50;
-                case 65 -> EstadoTemporal.PROTECCION_65;
-                default -> throw new IllegalStateException("Protección sin estado asociado");
-            };
-            objetivo.aplicarEstado(proteccion, 2);
         }
         return new EventoCombate(turno, actor.getId(), tipo(actor), objeto.nombre(), objetivo.getId(),
                 tipo(objetivo), danio, curacion, magiaRecuperada, false, false, null);
@@ -241,10 +237,14 @@ public final class Combate {
                 && (habilidad.estado() == CARGA_FURIA_ANIMAL || habilidad.estado() == CARGA_INCENDIO_CENIZA)) {
             enemigo.iniciarAtaqueUnico();
         }
+        if (habilidad == CatalogoEnemigos.SENTENCIA && actor instanceof Enemigo verdugo) {
+            verdugo.marcarObjetivo(null);
+        }
         // Los estados anteriores expiran al actuar. Un estado nuevo empieza después de ese consumo.
         var daniosPendientes = actor.terminarTurno();
         for (Combatiente objetivo : objetivos) {
-            for (int golpe = 0; golpe < habilidad.golpes() && actor.estaVivo() && objetivo.estaVivo(); golpe++) {
+            for (int golpe = 0; golpe < habilidad.golpes() && actor.estaVivo()
+                    && (objetivo.estaVivo() || habilidad.efecto() == TipoEfecto.REVIVIR); golpe++) {
                 Combatiente receptor = interceptarSiProcede(actor, objetivo, habilidad);
                 registrarConReaccion(actor, receptor, resolver(actor, receptor, habilidad));
             }
@@ -349,6 +349,11 @@ public final class Combate {
                 objetivo.recibirDanio(danio);
             }
             case CURACION -> curacion = objetivo.recibirCuracion(CalculoCombate.curacion(actor, habilidad));
+            case REVIVIR -> {
+                curacion = objetivo.revivir(habilidad.potencia());
+                ((Enemigo) actor).registrarReanimacion();
+            }
+            case MARCAR -> ((Enemigo) actor).marcarObjetivo(objetivo.getId());
             case ESTADO -> { }
             case ROBO -> {
                 if (azar.nextInt(100) < ((Heroe) actor).probabilidadRobo()) {
@@ -363,8 +368,12 @@ public final class Combate {
             aplicarEstado(objetivo, habilidad.estado(), habilidad.duracion(), habilidad.probabilidadEstado(), interceptando);
         }
         if (interceptando && danio > 0) objetivo.retirarEstado(INTERCEPTANDO);
+        int curacionActor = 0;
+        if (danio > 0 && habilidad.porcentajeRoboVida() > 0) {
+            curacionActor = actor.recibirCuracion(danio * habilidad.porcentajeRoboVida() / 100);
+        }
         return new EventoCombate(turno, actor.getId(), tipo(actor), habilidad.id(), objetivo.getId(),
-                tipo(objetivo), danio, curacion, 0, esquivado, critico, objetoRobado);
+                tipo(objetivo), danio, curacion, 0, esquivado, critico, objetoRobado, curacionActor);
     }
 
     private void aplicarEstado(Combatiente objetivo, EstadoTemporal estado, int duracion, int probabilidad, boolean interceptando) {
@@ -386,6 +395,7 @@ public final class Combate {
                 if (!actor.estaVivo()) break;
             }
         }
+        actualizarMarcasEspectrales();
         if (enemigos.stream().noneMatch(Combatiente::estaVivo)) {
             resultado = GANADO;
         } else if (heroes.stream().noneMatch(Combatiente::estaVivo)) {
@@ -401,6 +411,27 @@ public final class Combate {
         pendientes.removeIf(combatiente -> !combatiente.estaVivo());
         if (pendientes.isEmpty()) {
             ordenarCiclo();
+        }
+    }
+
+    private void actualizarMarcasEspectrales() {
+        var marcados = new HashSet<UUID>();
+        for (Combatiente rival : enemigos) {
+            if (!(rival instanceof Enemigo verdugo) || verdugo.getObjetivoMarcado() == null) continue;
+            UUID objetivo = verdugo.getObjetivoMarcado();
+            if (verdugo.estaVivo() && heroes.stream().anyMatch(heroe -> heroe.estaVivo() && heroe.getId().equals(objetivo))) {
+                marcados.add(objetivo);
+            } else {
+                verdugo.marcarObjetivo(null);
+            }
+        }
+
+        for (Heroe heroe : heroes) {
+            if (marcados.contains(heroe.getId())) {
+                heroe.aplicarEstado(MARCA_ESPECTRAL, 1);
+            } else {
+                heroe.retirarEstado(MARCA_ESPECTRAL);
+            }
         }
     }
 

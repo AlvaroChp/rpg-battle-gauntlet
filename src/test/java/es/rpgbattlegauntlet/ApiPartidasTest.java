@@ -44,6 +44,7 @@ class ApiPartidasTest {
         var inicio = cliente.postForObject(ruta + "/iniciar", Map.of("version", 1), JsonNode.class);
         assertEquals("COMBATE", inicio.path("estado").asText());
         assertEquals("FACIL", inicio.path("dificultad").asText());
+        assertEquals(10, inicio.path("totalRondas").asInt());
         assertEquals(65, inicio.path("enemigos").get(0).path("pv").asInt());
         assertEquals("GOBLIN", inicio.path("enemigos").get(0).path("tipo").asText());
         assertEquals(HttpStatus.CONFLICT, cliente.postForEntity(ruta + "/comprar",
@@ -66,6 +67,9 @@ class ApiPartidasTest {
         var inicio = cliente.postForObject(ruta + "/iniciar", Map.of("version", 1, "dificultad", "EXPERTO"), JsonNode.class);
         assertEquals("COMBATE", inicio.path("estado").asText());
         assertEquals(Dificultad.EXPERTO.vidaEnemiga(65), inicio.path("enemigos").get(0).path("pv").asInt());
-        assertEquals("EXPERTO", cliente.getForObject(ruta, JsonNode.class).path("dificultad").asText());
+        assertEquals(15, inicio.path("totalRondas").asInt());
+        var consulta = cliente.getForObject(ruta, JsonNode.class);
+        assertEquals("EXPERTO", consulta.path("dificultad").asText());
+        assertEquals(15, consulta.path("totalRondas").asInt());
     }
 }

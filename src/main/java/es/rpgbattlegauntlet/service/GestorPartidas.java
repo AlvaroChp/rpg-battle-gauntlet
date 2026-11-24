@@ -2,6 +2,7 @@ package es.rpgbattlegauntlet.service;
 
 import es.rpgbattlegauntlet.dto.PeticionPartida;
 import es.rpgbattlegauntlet.dto.VistaPartida;
+import es.rpgbattlegauntlet.enums.RanuraEquipo;
 import es.rpgbattlegauntlet.enums.Dificultad;
 import es.rpgbattlegauntlet.exception.PartidaNoEncontrada;
 import es.rpgbattlegauntlet.model.AccionCombate;
@@ -64,7 +65,7 @@ public class GestorPartidas {
                         peticion.habilidad(), peticion.objetivo()));
                 case "recoger" -> partida.recoger(peticion.objeto());
                 case "equipar" -> partida.equipar(peticion.actor(), peticion.objeto());
-                case "desequipar" -> partida.desequipar(peticion.actor(), peticion.categoria());
+                case "desequipar" -> partida.desequipar(peticion.actor(), ranuraDesequipar(peticion));
                 case "comprar" -> partida.comprar(peticion.codigo(), peticion.objeto());
                 case "vender" -> partida.vender(peticion.objeto());
                 case "consumir" -> partida.usarConsumible(peticion.turno(), peticion.actor(), peticion.objeto(), peticion.objetivo());
@@ -74,6 +75,17 @@ public class GestorPartidas {
             sesion.version++;
             return VistaPartida.de(partida, sesion.version);
         }
+    }
+
+    private RanuraEquipo ranuraDesequipar(PeticionPartida peticion) {
+        if (peticion.ranura() != null || peticion.categoria() == null) {
+            return peticion.ranura();
+        }
+        return switch (peticion.categoria()) {
+            case ARMAS -> RanuraEquipo.ARMAS;
+            case ARMADURAS -> RanuraEquipo.ARMADURAS;
+            default -> throw new IllegalArgumentException("Ranura de equipo inválida");
+        };
     }
 
     private Sesion buscar(UUID id) {

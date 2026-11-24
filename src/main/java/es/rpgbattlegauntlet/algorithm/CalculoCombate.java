@@ -5,6 +5,7 @@ import es.rpgbattlegauntlet.model.Enemigo;
 import es.rpgbattlegauntlet.model.Habilidad;
 import es.rpgbattlegauntlet.model.Heroe;
 
+import static es.rpgbattlegauntlet.enums.TipoEfecto.DANIO_FISICO;
 import static es.rpgbattlegauntlet.enums.TipoEfecto.DANIO_MAGICO;
 
 public final class CalculoCombate {
@@ -29,6 +30,10 @@ public final class CalculoCombate {
             bruto = Math.min(64, bruto);
         }
         double multiplicador = atacante instanceof Enemigo enemigo ? enemigo.getMultiplicadorDanio() : 1.0;
+        if (habilidad.efecto() == DANIO_FISICO) {
+            double fraccionVidaPerdida = 1 - (double) atacante.getPvActuales() / origen.pvMaximos();
+            multiplicador *= 1 + fraccionVidaPerdida * atacante.getBonoMaximoFuriaMaldita() / 100;
+        }
         int reduccion = Math.max(objetivo.getReduccionDanio(), reduccionMinima);
         return aplicarMitigacion(bruto, mitigacion, critico, multiplicador, reduccion);
     }

@@ -125,6 +125,12 @@ class CampanaTest {
         }
         reponer(partida, "roja", ronda >= 8 ? 5 : 2, sanador);
         reponer(partida, "verde", ronda >= 8 ? 2 : 1, sanador);
+        if (ronda >= 6 && partida.getOro() >= 180) {
+            comprar(partida, "guantes_reforzados", guerrero);
+            comprar(partida, "capucha", sanador);
+            comprar(partida, "guantes", sanador);
+            comprar(partida, "botas", arquero);
+        }
     }
 
     private static int prioridadEnemigo(Combatiente enemigo) {
@@ -178,7 +184,7 @@ class CampanaTest {
                 || !plantilla.cumpleRequisitos(comprador)) {
             return false;
         }
-        var equipado = comprador.getEquipo().get(plantilla.categoria());
+        var equipado = plantilla.ranura() == null ? null : comprador.getEquipo().get(plantilla.ranura());
         if (equipado != null && equipado.codigo().equals(codigo)) {
             return false;
         }

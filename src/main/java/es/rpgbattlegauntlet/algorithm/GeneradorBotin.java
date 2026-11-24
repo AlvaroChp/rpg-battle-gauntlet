@@ -2,7 +2,6 @@ package es.rpgbattlegauntlet.algorithm;
 
 import es.rpgbattlegauntlet.config.CatalogoObjetos;
 import es.rpgbattlegauntlet.enums.Calidad;
-import es.rpgbattlegauntlet.enums.PotenciaPergamino;
 import es.rpgbattlegauntlet.enums.TipoEnemigo;
 import es.rpgbattlegauntlet.model.Habilidad;
 import es.rpgbattlegauntlet.model.Objeto;
@@ -15,7 +14,11 @@ import java.util.random.RandomGenerator;
 import static es.rpgbattlegauntlet.enums.TipoEnemigo.*;
 
 public final class GeneradorBotin {
-    private record Entrada(String codigo, int peso) {}
+    private record Entrada(String codigo, int peso, boolean enemigoUsaArma) {
+        Entrada(String codigo, int peso) {
+            this(codigo, peso, true);
+        }
+    }
     private record Tabla(int probabilidad, List<Entrada> entradas) {}
 
     private static final Map<TipoEnemigo, Tabla> TABLAS = Map.of(
@@ -24,9 +27,15 @@ public final class GeneradorBotin {
             GOBLIN_ARQUERO, new Tabla(40, List.of(new Entrada("arco_goblin", 100))),
             ESQUELETO, new Tabla(40, List.of(new Entrada("espada_esqueleto", 40), new Entrada("escudo", 35), new Entrada("antigua", 25))),
             CHAMAN, new Tabla(50, List.of(new Entrada("vara_magica", 30), new Entrada("vara_chaman", 15),
-                    new Entrada("tunica_mago", 20), new Entrada("tunica_chaman", 15), new Entrada("pergamino", 20))),
+                    new Entrada("tunica_mago", 10), new Entrada("daga_ritual", 10, false), new Entrada("tunica_chaman", 15), new Entrada("pergamino", 20))),
             OGRO, new Tabla(65, List.of(new Entrada("garrote", 50), new Entrada("pesada", 30), new Entrada("botas", 20))),
-            CABALLERO_OSCURO, new Tabla(75, List.of(new Entrada("maldita", 40), new Entrada("oscura", 35), new Entrada("casco_oscuro", 25)))
+            CABALLERO_OSCURO, new Tabla(75, List.of(new Entrada("maldita", 40), new Entrada("oscura", 35), new Entrada("casco_oscuro", 25))),
+            NIGROMANTE, new Tabla(60, List.of(new Entrada("vara_osario", 35, false),
+                    new Entrada("capucha_funeraria", 25), new Entrada("daga_ritual", 10, false), new Entrada("revitalizacion", 30))),
+            GOLEM_RUNICO, new Tabla(70, List.of(new Entrada("guantes_runicos", 40),
+                    new Entrada("coraza_runica", 35), new Entrada("proteccion", 25))),
+            VERDUGO_ESPECTRAL, new Tabla(65, List.of(new Entrada("hacha_espectral", 40, false),
+                    new Entrada("yelmo_espectral", 35), new Entrada("cura_mayor", 25)))
     );
 
     private GeneradorBotin() {
@@ -35,7 +44,7 @@ public final class GeneradorBotin {
     public static List<Habilidad> habilidadesDeArmas(TipoEnemigo tipo) {
         Tabla tabla = TABLAS.get(tipo);
         if (tabla == null) return List.of();
-        return tabla.entradas().stream().map(Entrada::codigo)
+        return tabla.entradas().stream().filter(Entrada::enemigoUsaArma).map(Entrada::codigo)
                 .flatMap(codigo -> CatalogoObjetos.habilidadArma(codigo).stream()).toList();
     }
 
@@ -67,13 +76,15 @@ public final class GeneradorBotin {
     }
 
     private static Objeto crear(String codigo, RandomGenerator azar) {
-        if ("pergamino".equals(codigo)) {
-            var hechizos = CatalogoObjetos.codigosPergaminos();
-            String hechizo = hechizos.get(azar.nextInt(hechizos.size()));
-            int potencia = tramo(azar.nextInt(100));
-            return CatalogoObjetos.pergamino(hechizo, PotenciaPergamino.values()[potencia]);
-        }
-        return CatalogoObjetos.equipo(codigo, Calidad.values()[tramo(azar.nextInt(100))], false);
+        return switch (codigo) {
+            case "pergamino" -> {
+                var hechizos = CatalogoObjetos.codigosPergaminos();
+                yield CatalogoObjetos.pergamino(hechizos.get(azar.nextInt(hechizos.size())));
+            }
+            case "proteccion", "cura_mayor" -> CatalogoObjetos.pergamino(codigo);
+            case "revitalizacion" -> CatalogoObjetos.pocionRevitalizacion();
+            default -> CatalogoObjetos.equipo(codigo, Calidad.values()[tramo(azar.nextInt(100))], false);
+        };
     }
 
     private static int tramo(int tirada) {

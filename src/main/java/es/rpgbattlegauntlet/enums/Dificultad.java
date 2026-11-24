@@ -1,7 +1,7 @@
 package es.rpgbattlegauntlet.enums;
 
 public enum Dificultad {
-    FACIL(100, 100), DIFICIL(125, 200), EXPERTO(130, 207), PRUEBAS(0, 100);
+    FACIL(100, 100), DIFICIL(125, 150), EXPERTO(130, 200), PRUEBAS(0, 100);
 
     private final int porcentajeVida;
     private final int porcentajeDanio;

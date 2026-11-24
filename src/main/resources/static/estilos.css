@@ -71,8 +71,12 @@ p { line-height: 1.5; }
     padding-top: 6rem;
     padding-bottom: clamp(1.5rem, 4vw, 3.75rem);
     border: 1px solid var(--borde);
-    background: linear-gradient(transparent 45%, #17121140), url('imagenes/escenario.png?v=estandartes-dragon') center bottom / cover;
+    background: linear-gradient(transparent 45%, #17121140), var(--fondo-escenario) center bottom / cover;
 }
+.escenario[data-escenario="1"] { --fondo-escenario: url('imagenes/escenarios/escenario1.png'); }
+.escenario[data-escenario="2"] { --fondo-escenario: url('imagenes/escenarios/escenario2.png'); }
+.escenario[data-escenario="3"] { --fondo-escenario: url('imagenes/escenarios/escenario3.png'); }
+
 .ultima-accion {
     position: absolute;
     z-index: 2;
@@ -130,6 +134,42 @@ p { line-height: 1.5; }
     justify-content: center;
     width: 100%;
 }
+.indicador-turno {
+    position: absolute;
+    bottom: calc(100% + .2rem);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2.52rem;
+    height: 1.65rem;
+    filter: drop-shadow(0 2px 0 #120c09);
+    pointer-events: none;
+}
+.indicador-turno::before {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--oro);
+    clip-path: polygon(
+        0 0, 100% 0, 100% 20%, 90% 20%, 90% 40%, 80% 40%,
+        80% 60%, 70% 60%, 70% 80%, 60% 80%, 60% 100%,
+        40% 100%, 40% 80%, 30% 80%, 30% 60%, 20% 60%,
+        20% 40%, 10% 40%, 10% 20%, 0 20%
+    );
+}
+.indicador-turno::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: #b67b38;
+    clip-path: polygon(
+        90% 0, 100% 0, 100% 20%, 90% 20%, 90% 40%,
+        80% 40%, 80% 60%, 70% 60%, 70% 80%, 60% 80%, 60% 100%,
+        50% 100%, 50% 80%, 60% 80%, 60% 60%, 70% 60%,
+        70% 40%, 80% 40%, 80% 20%, 90% 20%
+    );
+}
+.indicador-turno + .estados-combate { bottom: calc(100% + 2rem); }
 .estados-combate {
     position: absolute;
     inset-inline: 0;
@@ -158,7 +198,8 @@ p { line-height: 1.5; }
     gap: .2rem;
     pointer-events: none;
 }
-.retrato-combate:has(.resultado-combate) .estados-combate { bottom: calc(100% + 1.75rem); }
+.estados-combate > .resultado-combate { bottom: calc(100% + .2rem); }
+.indicador-turno ~ .resultado-combate { bottom: calc(100% + 2rem); }
 .resultado-combate span {
     padding: .12rem .35rem;
     border: 1px solid currentColor;
@@ -170,6 +211,11 @@ p { line-height: 1.5; }
 }
 .resultado-combate .danio { color: #ff9b87; }
 .resultado-combate .curacion { color: #9de2a3; }
+.resultado-combate .esquiva { color: #aadaff; }
+.esquiva-realizada { animation: esquiva-realizada .8s ease-out; }
+@keyframes esquiva-realizada {
+    35% { filter: drop-shadow(0 0 .4rem #aadaff); }
+}
 .accion-en-curso { animation: accion-en-curso .55s ease-out; }
 @keyframes accion-en-curso {
     40% { filter: drop-shadow(0 0 .55rem var(--oro)) brightness(1.24); }
@@ -196,23 +242,29 @@ p { line-height: 1.5; }
     max-width: min(calc(100% + 1.6rem), var(--ancho-sprite));
 }
 .luchador[data-tipo="OGRO"] { --ancho-sprite: 19rem; --alto-sprite: 16rem; }
+.luchador[data-tipo="NIGROMANTE"] { --ancho-sprite: 12rem; --alto-sprite: 11rem; }
+.luchador[data-tipo="GOLEM_RUNICO"] { --ancho-sprite: 23rem; --alto-sprite: 20rem; }
+.luchador[data-tipo="VERDUGO_ESPECTRAL"] { --ancho-sprite: 22rem; --alto-sprite: 19.5rem; }
 .luchador[data-tipo="DRAGON"] { --ancho-sprite: 27rem; --alto-sprite: 19rem; }
-.escenario:has(.luchador:only-child:is([data-tipo="OGRO"], [data-tipo="DRAGON"])) {
+.escenario:has(.luchador:only-child:is([data-tipo="OGRO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo="DRAGON"])) {
     --altura-figura: clamp(12rem, 25vw, 19rem);
 }
-.luchador:only-child:is([data-tipo="OGRO"], [data-tipo="DRAGON"]) {
+.escenario:has(.luchador:only-child:is([data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"])) {
+    --altura-figura: clamp(15rem, 28vw, 20rem);
+}
+.luchador:only-child:is([data-tipo="OGRO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo="DRAGON"]) {
     display: grid;
     grid-column: 1 / -1;
     grid-template-columns: subgrid;
 }
-.luchador:only-child:is([data-tipo="OGRO"], [data-tipo="DRAGON"]) .figura-combate {
+.luchador:only-child:is([data-tipo="OGRO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo="DRAGON"]) .figura-combate {
     grid-column: 1 / -1;
 }
-.luchador:only-child:is([data-tipo="OGRO"], [data-tipo="DRAGON"]) .sprite-combate {
+.luchador:only-child:is([data-tipo="OGRO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo="DRAGON"]) .sprite-combate {
     max-height: min(var(--altura-figura), var(--alto-sprite));
 }
 @container (min-width: 22.3rem) {
-    .luchador:only-child:is([data-tipo="OGRO"], [data-tipo="DRAGON"]) .tarjeta { grid-column: 2; }
+    .luchador:only-child:is([data-tipo="OGRO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo="DRAGON"]) .tarjeta { grid-column: 2; }
 }
 .fila, .pestanas { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; margin: .85rem 0; }
 .fila form { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
@@ -243,6 +295,52 @@ progress.magia { accent-color: #77a9e2; }
 .controles-combate .turno-actual { font-size: 1.15rem; }
 .acciones label { display: grid; gap: .35rem; max-width: 23rem; }
 .articulo { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; }
+.cabecera-objeto, .detalle-accion {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+}
+.cabecera-objeto h3 { margin: 0; }
+.icono-objeto {
+    flex: none;
+    width: 2.75rem;
+    height: 2.75rem;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+.detalle-accion .icono-objeto { width: 2.2rem; height: 2.2rem; }
+.rejilla-equipamiento {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-areas:
+        ". . cabeza . ."
+        ". arma torso guantes escudo"
+        ". . botas . .";
+    gap: .75rem;
+}
+.ranura-equipo[data-ranura="ARMAS"] { grid-area: arma; }
+.ranura-equipo[data-ranura="ARMADURAS"] { grid-area: torso; }
+.ranura-equipo[data-ranura="CABEZA"] { grid-area: cabeza; }
+.ranura-equipo[data-ranura="GUANTES"] { grid-area: guantes; }
+.ranura-equipo[data-ranura="ESCUDO"] { grid-area: escudo; }
+.ranura-equipo[data-ranura="BOTAS"] { grid-area: botas; }
+.ranura-equipo .tarjeta { height: 100%; overflow-wrap: anywhere; }
+.ranura-equipo .cabecera-objeto { flex-wrap: wrap; }
+.ranura-equipo button { max-width: 100%; white-space: normal; }
+
+@media (max-width: 43rem) {
+    .rejilla-equipamiento {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-areas:
+            ". cabeza . ."
+            "arma torso guantes escudo"
+            ". botas . .";
+        gap: .35rem;
+    }
+    .ranura-equipo .tarjeta, .ranura-equipo button { padding-inline: .3rem; }
+    .ranura-equipo button { font-size: .8rem; }
+}
+
 .articulo .fila { margin: auto 0 0; padding-top: .4rem; }
 .aviso { position: fixed; z-index: 2; bottom: 1rem; inset-inline: 1rem; max-width: 42rem; margin: auto; padding: .85rem; background: #432c22; border: 1px solid var(--oro); box-shadow: 0 4px 16px var(--sombra); }
 @media (max-width: 43rem) {

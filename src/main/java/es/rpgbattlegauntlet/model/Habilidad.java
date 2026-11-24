@@ -18,7 +18,8 @@ public record Habilidad(
         EstadoTemporal estado,
         int duracion,
         int golpes,
-        int probabilidadEstado
+        int probabilidadEstado,
+        int porcentajeRoboVida
 ) {
     public Habilidad(String id, String nombre, String descripcion, int costePm, TipoObjetivo objetivo,
                      TipoEfecto efecto, int potencia, int precisionAdicional, int criticoAdicional,
@@ -32,5 +33,12 @@ public record Habilidad(
                      int penetracion, EstadoTemporal estado, int duracion, int golpes) {
         this(id, nombre, descripcion, costePm, objetivo, efecto, potencia, precisionAdicional,
                 criticoAdicional, penetracion, estado, duracion, golpes, 100);
+    }
+
+    public Habilidad(String id, String nombre, String descripcion, int costePm, TipoObjetivo objetivo,
+                     TipoEfecto efecto, int potencia, int precisionAdicional, int criticoAdicional,
+                     int penetracion, EstadoTemporal estado, int duracion, int golpes, int probabilidadEstado) {
+        this(id, nombre, descripcion, costePm, objetivo, efecto, potencia, precisionAdicional,
+                criticoAdicional, penetracion, estado, duracion, golpes, probabilidadEstado, 0);
     }
 }

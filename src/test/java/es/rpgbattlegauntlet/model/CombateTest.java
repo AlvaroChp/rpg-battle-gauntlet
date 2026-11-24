@@ -1,8 +1,13 @@
 package es.rpgbattlegauntlet.model;
 
+import es.rpgbattlegauntlet.algorithm.CalculoCombate;
+import es.rpgbattlegauntlet.config.CatalogoEnemigos;
+import es.rpgbattlegauntlet.config.CatalogoHabilidades;
 import es.rpgbattlegauntlet.config.CatalogoHeroes;
 import es.rpgbattlegauntlet.config.CatalogoObjetos;
 import es.rpgbattlegauntlet.enums.Calidad;
+import es.rpgbattlegauntlet.enums.ClaseHeroe;
+import es.rpgbattlegauntlet.enums.TipoEnemigo;
 import es.rpgbattlegauntlet.enums.EstadoTemporal;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -18,10 +23,75 @@ import static org.junit.jupiter.api.Assertions.*;
 class CombateTest {
 
     @ParameterizedTest
-    @CsvSource({"false,false,15", "true,false,15", "false,true,7", "true,true,7"})
+    @CsvSource({"100,50,99,99,36,18", "100,50,99,0,54,27", "15,50,99,99,15,7",
+            "100,98,99,99,36,2", "100,50,0,99,0,0"})
+    void sangriaRitualCuraSegunDanioRealSinSuperarLosPvMaximos(int pvRival, int pvPortador,
+            int tiradaEsquiva, int tiradaCritico, int danio, int curacion) {
+        var picaro = new Heroe(PICARO, new EstadisticasBase(100, 25, 12, 6, 4, 7, 17, 20, 15));
+        picaro.equipar(CatalogoObjetos.equipo("daga_ritual", Calidad.NORMAL, false));
+        picaro.recibirDanio(100 - pvPortador);
+        var objetivo = rival(pvRival, 1, 6, 0, 1, 10);
+        var combate = new Combate(List.of(picaro), List.of(objetivo), azar(tiradaEsquiva, tiradaCritico));
+
+        actuar(combate, picaro, "sangria_ritual", objetivo);
+
+        var evento = combate.getHistorial().getFirst();
+        assertEquals(danio, evento.danio());
+        assertEquals(curacion, evento.curacionActor());
+        assertEquals(pvPortador + curacion, picaro.getPvActuales());
+        assertEquals(pvRival - danio, objetivo.getPvActuales());
+        assertEquals(20, picaro.getPmActuales());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"GUERRERO", "PICARO"})
+    void furiaMalditaAumentaConLaVidaPerdidaYDesapareceAlCambiarDeArma(ClaseHeroe clase) {
+        var portador = new Heroe(clase, new EstadisticasBase(100, 30, 22, 0, 10, 0, 8, 0, 0));
+        var objetivo = rival(200, 1, 0, 0, 1, 0);
+        var ataque = CatalogoHabilidades.ATAQUE_BASICO;
+        portador.equipar(CatalogoObjetos.equipo("maldita", Calidad.NORMAL, false));
+
+        assertEquals(72, CalculoCombate.danio(portador, objetivo, ataque, false));
+        int danoHabilidadConVidaCompleta = CalculoCombate.danio(portador, objetivo, portador.habilidadArma(), false);
+        portador.recibirDanio(50);
+        assertEquals(83, CalculoCombate.danio(portador, objetivo, ataque, false));
+        assertTrue(CalculoCombate.danio(portador, objetivo, portador.habilidadArma(), false) > danoHabilidadConVidaCompleta);
+        portador.recibirDanio(49);
+        assertEquals(93, CalculoCombate.danio(portador, objetivo, ataque, false));
+        portador.recibirCuracion(99);
+        assertEquals(72, CalculoCombate.danio(portador, objetivo, ataque, false));
+        portador.recibirDanio(99);
+        portador.equipar(CatalogoObjetos.equipo("espada_basica", Calidad.NORMAL, false));
+        assertEquals(52, CalculoCombate.danio(portador, objetivo, ataque, false));
+    }
+
+    @Test
+    void furiaDelCaballeroAfectaSuEspadaYContraataquePeroNoAlDanioMagico() {
+        var caballero = new Enemigo(TipoEnemigo.CABALLERO_OSCURO,
+                new EstadisticasBase(100, 30, 20, 0, 14, 0, 8, 0, 0), 2);
+        var objetivo = rival(200, 1, 0, 0, 1, 0);
+        var espada = CatalogoEnemigos.ESPADA_MALDITA;
+        var reaccion = CatalogoEnemigos.CONTRAATAQUE;
+        var hechizo = CatalogoEnemigos.BOLA_FUEGO;
+        int contraataqueInicial = CalculoCombate.danio(caballero, objetivo, reaccion, false);
+        int magiaInicial = CalculoCombate.danio(caballero, objetivo, hechizo, false);
+        assertEquals(96, CalculoCombate.danio(caballero, objetivo, espada, false));
+
+        caballero.recibirDanio(50);
+
+        assertEquals(110, CalculoCombate.danio(caballero, objetivo, espada, false));
+        assertTrue(CalculoCombate.danio(caballero, objetivo, reaccion, false) > contraataqueInicial);
+        assertEquals(magiaInicial, CalculoCombate.danio(caballero, objetivo, hechizo, false));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false,false,15", "true,false,15", "false,true,8", "true,true,8"})
     void interceptarProtegeAlGuerreroAunqueElGolpeVayaDirigidoAlMago(boolean apuntaAlMago, boolean llevaEscudo, int danio) {
         var guerrero = CatalogoHeroes.crearHeroe(GUERRERO);
-        if (llevaEscudo) guerrero.equipar(CatalogoObjetos.equipo("escudo", Calidad.NORMAL, false));
+        if (llevaEscudo) {
+            guerrero.equipar(CatalogoObjetos.equipo("espada_basica", Calidad.NORMAL, true));
+            guerrero.equipar(CatalogoObjetos.equipo("escudo", Calidad.NORMAL, false));
+        }
         var mago = CatalogoHeroes.crearHeroe(MAGO);
         var enemigo = rival(100, 20, 0, 0, 1, 0);
         var combate = new Combate(List.of(guerrero, mago), List.of(enemigo), azar(99, 99));
@@ -41,13 +111,14 @@ class CombateTest {
     @Test
     void defenderseConEscudoReduceUn65PorCientoSoloMientrasDuraLaDefensa() {
         var guerrero = CatalogoHeroes.crearHeroe(GUERRERO);
+        guerrero.equipar(CatalogoObjetos.equipo("espada_basica", Calidad.NORMAL, true));
         guerrero.equipar(CatalogoObjetos.equipo("escudo", Calidad.NORMAL, false));
         var enemigo = rival(100, 20, 0, 0, 1, 0);
         var combate = new Combate(List.of(guerrero), List.of(enemigo), azar(99, 99, 99, 99));
         actuar(combate, guerrero, "defender", null);
         assertEquals(65, guerrero.getReduccionDanio());
         actuar(combate, enemigo, "ataque_basico", guerrero);
-        assertEquals(7, combate.getHistorial().getLast().danio());
+        assertEquals(8, combate.getHistorial().getLast().danio());
         actuar(combate, guerrero, "ataque_basico", enemigo);
         assertEquals(0, guerrero.getReduccionDanio());
     }

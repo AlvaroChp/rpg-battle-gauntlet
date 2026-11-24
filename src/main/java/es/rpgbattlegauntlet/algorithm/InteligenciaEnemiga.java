@@ -56,9 +56,14 @@ public final class InteligenciaEnemiga {
                 }
                 yield new Decision(ESPADA_MALDITA, null);
             }
+            case NIGROMANTE -> decisionNigromante(enemigo, aliados);
+            case GOLEM_RUNICO -> decisionGolem(enemigo, accion);
+            case VERDUGO_ESPECTRAL -> decisionVerdugo(enemigo, heroes, accion);
             case DRAGON -> decisionDragon(enemigo, accion, vida);
         };
-        if (decision.habilidad().objetivo() != TipoObjetivo.ENEMIGO) return decision;
+        if (decision.habilidad().objetivo() != TipoObjetivo.ENEMIGO || decision.objetivo() != null) {
+            return decision;
+        }
 
         Habilidad ataque = decision.habilidad();
         boolean turnoDeArma = switch (enemigo.getTipo()) {
@@ -103,6 +108,32 @@ public final class InteligenciaEnemiga {
             }
         }
         return new Decision(puedeUsar(chaman, BOLA_FUEGO) ? BOLA_FUEGO : ATAQUE_BASICO, null);
+    }
+
+    private static Decision decisionNigromante(Enemigo enemigo, List<Combatiente> aliados) {
+        if (!enemigo.haUsadoReanimacion() && puedeUsar(enemigo, REANIMAR)) {
+            var caido = aliados.stream().filter(aliado -> !aliado.estaVivo()).findFirst();
+            if (caido.isPresent()) return new Decision(REANIMAR, caido.get());
+        }
+        return new Decision(puedeUsar(enemigo, DESCARGA_FUNEBRE) ? DESCARGA_FUNEBRE : ATAQUE_BASICO, null);
+    }
+
+    private static Decision decisionGolem(Enemigo enemigo, int accion) {
+        if (enemigo.tieneEstado(EstadoTemporal.CARGA_ONDA_RUNICA)) return new Decision(ONDA_RUNICA, null);
+        return accion % 3 == 0 ? new Decision(PREPARAR_ONDA_RUNICA, enemigo) : new Decision(PUNO_DE_PIEDRA, null);
+    }
+
+    private static Decision decisionVerdugo(Enemigo enemigo, List<Heroe> heroes, int accion) {
+        if (enemigo.getObjetivoMarcado() != null) {
+            var marcado = heroes.stream().filter(Heroe::estaVivo)
+                    .filter(heroe -> heroe.getId().equals(enemigo.getObjetivoMarcado())).findFirst();
+            if (marcado.isPresent()) return new Decision(SENTENCIA, marcado.get());
+        }
+        return switch (accion % 4) {
+            case 1 -> new Decision(MARCAR_SENTENCIA, null);
+            case 3 -> new Decision(BARRIDO_ESPECTRAL, null);
+            default -> new Decision(TAJO_ESPECTRAL, null);
+        };
     }
 
     private static Decision decisionDragon(Enemigo dragon, int accion, int vida) {
