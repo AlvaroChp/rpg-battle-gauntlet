@@ -52,6 +52,12 @@ public final class Heroe extends Combatiente {
                 .reduce(Bonificaciones.NINGUNA, Bonificaciones::sumar);
     }
 
+    @Override
+    int reduccionAlDefenderse() {
+        Objeto armadura = equipo.get(Categoria.ARMADURAS);
+        return armadura != null && armadura.codigo().equals("escudo") ? 65 : super.reduccionAlDefenderse();
+    }
+
     Objeto equipar(Objeto objeto) {
         if (!objeto.categoria().esEquipo() || !objeto.cumpleRequisitos(this)) {
             throw new IllegalArgumentException("El héroe no cumple los requisitos del equipo");

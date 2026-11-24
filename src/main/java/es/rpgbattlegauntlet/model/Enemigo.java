@@ -11,6 +11,7 @@ public final class Enemigo extends Combatiente {
     private final double multiplicadorDanio;
     private Objeto pocionRevitalizacion;
     private int accionesRealizadas;
+    private boolean ataqueUnicoIniciado;
 
     public Enemigo(TipoEnemigo tipo, EstadisticasBase estadisticasBase) {
         this(tipo, estadisticasBase, 1.0);
@@ -33,6 +34,14 @@ public final class Enemigo extends Combatiente {
 
     public int getAccionesRealizadas() {
         return accionesRealizadas;
+    }
+
+    public boolean haIniciadoAtaqueUnico() {
+        return ataqueUnicoIniciado;
+    }
+
+    void iniciarAtaqueUnico() {
+        ataqueUnicoIniciado = true;
     }
 
     public boolean tienePocionRevitalizacion() {

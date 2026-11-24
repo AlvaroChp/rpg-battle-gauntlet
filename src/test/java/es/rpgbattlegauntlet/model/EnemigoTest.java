@@ -20,10 +20,11 @@ class EnemigoTest {
 
     @ParameterizedTest
     @CsvSource({
-            "GOBLIN,65,0,10,5,0,4,11,5,10",
-            "ESQUELETO,90,0,12,10,0,5,7,5,5",
+            "GOBLIN,65,12,10,5,0,4,11,5,10",
+            "GOBLIN_ARQUERO,55,16,9,3,0,4,12,8,10",
+            "ESQUELETO,90,16,12,10,0,5,7,5,5",
             "CHAMAN,70,80,5,5,14,12,9,5,5",
-            "OGRO,220,0,20,14,0,8,4,10,0",
+            "OGRO,220,24,20,14,0,8,4,10,0",
             "CABALLERO_OSCURO,240,40,20,18,10,15,10,10,5",
             "DRAGON,650,120,27,20,22,18,12,15,5"
     })
@@ -36,6 +37,39 @@ class EnemigoTest {
         assertEquals(pv, enemigo.getPvActuales());
         assertEquals(pm, enemigo.getPmActuales());
         assertNotEquals(enemigo.getId(), CatalogoEnemigos.crear(tipo).getId());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"GOBLIN,ataque_doble,cuchillada,4", "ESQUELETO,guardia_osea,espadazo,4", "OGRO,barrido,mazazo,6"})
+    void enemigoUsaSuHabilidadEspecialSoloSiTieneConcentracion(TipoEnemigo tipo, String especial, String basico, int coste) {
+        var enemigo = CatalogoEnemigos.crear(tipo);
+        var heroes = List.of(CatalogoHeroes.crearHeroe(GUERRERO), CatalogoHeroes.crearHeroe(ARQUERO));
+        enemigo.registrarAccion();
+        var decision = InteligenciaEnemiga.decidir(enemigo, List.of(enemigo), heroes, azar());
+        assertEquals(especial, decision.habilidad().id());
+        assertEquals(coste, decision.habilidad().costePm());
+        enemigo.consumirMagia(enemigo.getPmActuales() - coste + 1);
+        assertEquals(basico, InteligenciaEnemiga.decidir(enemigo, List.of(enemigo), heroes, azar()).habilidad().id());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "GOBLIN,0,estocada_rapida,3", "GOBLIN,1,puntada_traicionera,5", "GOBLIN,2,corte_al_tendon,4",
+            "GOBLIN_ARQUERO,0,flecha_envenenada,4",
+            "ESQUELETO,0,corte_ultratumba,4", "CHAMAN,0,destello_arcano,4", "CHAMAN,1,eco_de_la_tormenta,9",
+            "OGRO,0,impacto,5", "CABALLERO_OSCURO,0,filo_maldicion,6"
+    })
+    void enemigosGastanLosMismosPcQueLosHeroesAlUsarUnArmaDelBotin(TipoEnemigo tipo, int variante, String habilidad, int coste) {
+        var enemigo = CatalogoEnemigos.crear(tipo);
+        var guerrero = new Heroe(GUERRERO, new EstadisticasBase(300, 20, 15, 15, 3, 8, 1, 5, 0));
+        enemigo.registrarAccion();
+        if (tipo != GOBLIN_ARQUERO) enemigo.registrarAccion();
+        if (tipo == CABALLERO_OSCURO) enemigo.registrarAccion();
+
+        var combate = new Combate(List.of(guerrero), List.of(enemigo), azarObjetivo(99, variante));
+
+        assertEquals(habilidad, combate.getHistorial().getFirst().habilidad());
+        assertEquals(enemigo.getEstadisticasBase().pmMaximos() - coste, enemigo.getPmActuales());
     }
 
     @Test
@@ -133,11 +167,49 @@ class EnemigoTest {
         dragon.recibirDanio(195);
         assertEquals(CatalogoEnemigos.ALIENTO, InteligenciaEnemiga.decidir(dragon, aliados, heroes, azar()).habilidad());
         dragon.recibirDanio(228);
+        assertEquals(CatalogoEnemigos.PREPARAR_INCENDIO_CENIZA, InteligenciaEnemiga.decidir(dragon, aliados, heroes, azar()).habilidad());
+        dragon.iniciarAtaqueUnico();
         assertEquals(CatalogoEnemigos.RUGIDO, InteligenciaEnemiga.decidir(dragon, aliados, heroes, azar()).habilidad());
         dragon.registrarAccion();
         assertEquals(CatalogoEnemigos.ALIENTO, InteligenciaEnemiga.decidir(dragon, aliados, heroes, azar()).habilidad());
         dragon.consumirMagia(120);
         assertEquals(CatalogoEnemigos.GARRA, InteligenciaEnemiga.decidir(dragon, aliados, heroes, azar()).habilidad());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"49,true", "50,false"})
+    void incendioDeCenizaSeAnunciaYQuemaConLaProbabilidadSegunProteccion(int tirada, boolean protegidoSeQuema) {
+        var dragon = CatalogoEnemigos.crear(DRAGON);
+        dragon.recibirDanio(423);
+        var protegido = new Heroe(GUERRERO, new EstadisticasBase(300, 20, 15, 15, 3, 8, 20, 5, 0));
+        var descubierto = new Heroe(ARQUERO, new EstadisticasBase(300, 30, 13, 7, 5, 8, 19, 5, 0));
+        var combate = new Combate(List.of(protegido, descubierto), List.of(dragon), azarObjetivo(tirada, 0));
+        defender(combate, protegido);
+        defender(combate, descubierto);
+        assertTrue(dragon.tieneEstado(EstadoTemporal.CARGA_INCENDIO_CENIZA));
+        defender(combate, protegido);
+        combate.ejecutar(new AccionCombate(combate.getTurno(), descubierto.getId(), "ataque_basico", dragon.getId()));
+        assertTrue(descubierto.tieneEstado(EstadoTemporal.QUEMADO));
+        assertEquals(protegidoSeQuema, protegido.tieneEstado(EstadoTemporal.QUEMADO));
+        assertFalse(dragon.tieneEstado(EstadoTemporal.CARGA_INCENDIO_CENIZA));
+        assertEquals(2, combate.getHistorial().stream().filter(evento -> evento.habilidad().equals("incendio_ceniza")).count());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"100,true", "0,false"})
+    void furiaAnimalSeAnunciaYUnCriticoFisicoPuedeInterrumpirla(int destreza, boolean interrumpida) {
+        var ogro = CatalogoEnemigos.crear(OGRO);
+        ogro.recibirDanio(110);
+        var guerrero = new Heroe(GUERRERO, new EstadisticasBase(300, 20, 15, 15, 3, 8, 20, 5, 0, destreza));
+        var combate = new Combate(List.of(guerrero), List.of(ogro), azar());
+        defender(combate, guerrero);
+        assertTrue(ogro.tieneEstado(EstadoTemporal.CARGA_FURIA_ANIMAL));
+        combate.ejecutar(new AccionCombate(combate.getTurno(), guerrero.getId(), "ataque_basico", ogro.getId()));
+        assertEquals(interrumpida, combate.getHistorial().stream().anyMatch(e -> e.habilidad().equals("furia_interrumpida")));
+        assertEquals(!interrumpida, combate.getHistorial().stream().anyMatch(e -> e.habilidad().equals("furia_animal")));
+        assertFalse(ogro.tieneEstado(EstadoTemporal.CARGA_FURIA_ANIMAL));
+        defender(combate, guerrero);
+        assertEquals(1, combate.getHistorial().stream().filter(e -> e.habilidad().equals("preparar_furia_animal")).count());
     }
 
     @Test
@@ -156,6 +228,23 @@ class EnemigoTest {
         assertTrue(aliento.stream().allMatch(evento -> evento.danio() > 0));
         assertTrue(aliento.stream().noneMatch(evento -> evento.esquivado() || evento.critico()));
         assertEquals(100, dragon.getPmActuales());
+    }
+
+    @Test
+    void interceptarReduceElGolpeDeAreaDelGuerreroYElAliadoRecibeElSuyo() {
+        var dragon = CatalogoEnemigos.crear(DRAGON);
+        dragon.recibirDanio(195);
+        dragon.registrarAccion();
+        var guerrero = new Heroe(GUERRERO, new EstadisticasBase(150, 20, 15, 15, 3, 8, 20, 5, 0));
+        var mago = new Heroe(MAGO, new EstadisticasBase(75, 100, 4, 5, 18, 8, 19, 5, 0));
+        var combate = new Combate(List.of(guerrero, mago), List.of(dragon), azar());
+        combate.ejecutar(new AccionCombate(combate.getTurno(), guerrero.getId(), "interceptar", null));
+        combate.ejecutar(new AccionCombate(combate.getTurno(), mago.getId(), "ataque_basico", dragon.getId()));
+
+        var aliento = combate.getHistorial().stream().filter(evento -> evento.habilidad().equals("aliento_fuego")).toList();
+        assertEquals(List.of(guerrero.getId(), mago.getId()), aliento.stream().map(EventoCombate::objetivo).toList());
+        assertEquals(List.of(25, 42), aliento.stream().map(EventoCombate::danio).toList());
+        assertFalse(guerrero.tieneEstado(EstadoTemporal.INTERCEPTANDO));
     }
 
     @Test

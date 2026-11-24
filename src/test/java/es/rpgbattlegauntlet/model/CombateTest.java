@@ -1,8 +1,12 @@
 package es.rpgbattlegauntlet.model;
 
 import es.rpgbattlegauntlet.config.CatalogoHeroes;
+import es.rpgbattlegauntlet.config.CatalogoObjetos;
+import es.rpgbattlegauntlet.enums.Calidad;
 import es.rpgbattlegauntlet.enums.EstadoTemporal;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.ArrayDeque;
 import java.util.List;
@@ -12,6 +16,41 @@ import static es.rpgbattlegauntlet.enums.ClaseHeroe.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CombateTest {
+
+    @ParameterizedTest
+    @CsvSource({"false,false,15", "true,false,15", "false,true,7", "true,true,7"})
+    void interceptarProtegeAlGuerreroAunqueElGolpeVayaDirigidoAlMago(boolean apuntaAlMago, boolean llevaEscudo, int danio) {
+        var guerrero = CatalogoHeroes.crearHeroe(GUERRERO);
+        if (llevaEscudo) guerrero.equipar(CatalogoObjetos.equipo("escudo", Calidad.NORMAL, false));
+        var mago = CatalogoHeroes.crearHeroe(MAGO);
+        var enemigo = rival(100, 20, 0, 0, 1, 0);
+        var combate = new Combate(List.of(guerrero, mago), List.of(enemigo), azar(99, 99));
+        actuar(combate, mago, "defender", null);
+        assertTrue(combate.getHabilidadesDisponibles().stream().noneMatch(habilidad -> habilidad.id().equals("guardia")));
+        actuar(combate, guerrero, "interceptar", null);
+        actuar(combate, enemigo, "ataque_basico", apuntaAlMago ? mago : guerrero);
+        var golpe = combate.getHistorial().getLast();
+        assertEquals(guerrero.getId(), golpe.objetivo());
+        assertEquals(danio, golpe.danio());
+        assertEquals(75, mago.getPvActuales());
+        assertEquals(16, guerrero.getPmActuales());
+        assertFalse(guerrero.tieneEstado(EstadoTemporal.INTERCEPTANDO));
+        assertEquals(apuntaAlMago, combate.getHistorial().stream().anyMatch(e -> e.habilidad().equals("golpe_interceptado")));
+    }
+
+    @Test
+    void defenderseConEscudoReduceUn65PorCientoSoloMientrasDuraLaDefensa() {
+        var guerrero = CatalogoHeroes.crearHeroe(GUERRERO);
+        guerrero.equipar(CatalogoObjetos.equipo("escudo", Calidad.NORMAL, false));
+        var enemigo = rival(100, 20, 0, 0, 1, 0);
+        var combate = new Combate(List.of(guerrero), List.of(enemigo), azar(99, 99, 99, 99));
+        actuar(combate, guerrero, "defender", null);
+        assertEquals(65, guerrero.getReduccionDanio());
+        actuar(combate, enemigo, "ataque_basico", guerrero);
+        assertEquals(7, combate.getHistorial().getLast().danio());
+        actuar(combate, guerrero, "ataque_basico", enemigo);
+        assertEquals(0, guerrero.getReduccionDanio());
+    }
 
     @Test
     void ataqueFisicoDistingueEsquivaYCriticoYAplicaDefensa() {
@@ -50,15 +89,43 @@ class CombateTest {
     }
 
     @Test
-    void ataqueMagicoAciertaSinTirarEsquivaNiCritico() {
+    void ataqueMagicoSoloTiraElEstadoSiEsDeFuego() {
         var mago = CatalogoHeroes.crearHeroe(MAGO);
         var rival = rival(120, 1, 0, 0, 5, 100);
-        var combate = new Combate(List.of(mago), List.of(rival), azar());
+        var combate = new Combate(List.of(mago), List.of(rival), azar(99));
         actuar(combate, mago, "bola_fuego", rival);
         var golpe = combate.getHistorial().getLast();
         assertEquals(48, golpe.danio());
         assertFalse(golpe.esquivado());
         assertFalse(golpe.critico());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"NINGUNO,49,true", "NINGUNO,50,false", "DEFENSA,24,true", "DEFENSA,25,false",
+            "BENDICION,24,true", "BENDICION,25,false", "PROTECCION_50,49,true"})
+    void defenderseYBendicionReducenLaProbabilidadDeQuemaduraYVeneno(String proteccion, int tirada, boolean aplica) {
+        var mago = CatalogoHeroes.crearHeroe(MAGO);
+        var arquera = CatalogoHeroes.crearHeroe(ARQUERO);
+        arquera.equipar(es.rpgbattlegauntlet.config.CatalogoObjetos.equipo("arco_goblin",
+                es.rpgbattlegauntlet.enums.Calidad.NORMAL, false));
+        var objetivoFuego = rival(150, 1, 0, 0, 1, 0);
+        var objetivoFlecha = rival(150, 1, 0, 0, 1, 0);
+        if (!proteccion.equals("NINGUNO")) {
+            var estado = EstadoTemporal.valueOf(proteccion);
+            objetivoFuego.aplicarEstado(estado, 1);
+            objetivoFlecha.aplicarEstado(estado, 1);
+        }
+        var combate = new Combate(List.of(mago, arquera), List.of(objetivoFuego, objetivoFlecha), azar(99, 99, tirada, tirada));
+        actuar(combate, arquera, "flecha_envenenada", objetivoFlecha);
+        actuar(combate, mago, "bola_fuego", objetivoFuego);
+        assertEquals(aplica, objetivoFlecha.tieneEstado(EstadoTemporal.ENVENENADO));
+        assertEquals(aplica, objetivoFuego.tieneEstado(EstadoTemporal.QUEMADO));
+        if (aplica) {
+            int pv = objetivoFuego.getPvActuales();
+            actuar(combate, objetivoFuego, "defender", null);
+            assertEquals(pv - 5, objetivoFuego.getPvActuales());
+            assertEquals(1, objetivoFuego.getEstados().get(EstadoTemporal.QUEMADO));
+        }
     }
 
     @Test

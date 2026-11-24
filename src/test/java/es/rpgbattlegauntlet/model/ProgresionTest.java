@@ -60,7 +60,7 @@ class ProgresionTest {
         assertTrue(partida.getOfertas().stream().anyMatch(oferta -> oferta.objeto() == armaduraInicial));
         assertThrows(IllegalArgumentException.class, () -> partida.desequipar(arquero.getId(), ARMAS));
         assertSame(arco, arquero.getEquipo().get(ARMAS));
-        assertEquals("disparo_tenso", arquero.habilidadArma().id());
+        assertEquals("flecha_de_alcance", arquero.habilidadArma().id());
 
         partida.comprar("daga", null);
         var daga = objeto(partida, "daga");
@@ -84,6 +84,83 @@ class ProgresionTest {
             assertEquals(clase == MAGO || clase == SANADOR,
                     CatalogoObjetos.equipo("vara_avanzada", NORMAL, false).cumpleRequisitos(heroe));
         }
+    }
+
+    @Test
+    void cadaArmaTieneSuPropioAtaqueYLoConservaEnTodasLasCalidades() {
+        var codigos = java.util.stream.Stream.concat(
+                CatalogoObjetos.tienda().stream().filter(objeto -> objeto.categoria() == ARMAS).map(Objeto::codigo),
+                java.util.stream.Stream.of("espada_esqueleto", "maldita", "vara_chaman", "arco_goblin")).toList();
+        var habilidades = new java.util.HashSet<String>();
+        for (String codigo : codigos) {
+            var habilidad = CatalogoObjetos.equipo(codigo, NORMAL, false).habilidad();
+            assertTrue(habilidades.add(habilidad.id()), codigo);
+            assertEquals(habilidad, CatalogoObjetos.equipo(codigo, INFERIOR, false).habilidad());
+            assertEquals(habilidad, CatalogoObjetos.equipo(codigo, SUPERIOR, false).habilidad());
+        }
+    }
+
+    @Test
+    void filoDeLaMaldicionInfligeDanioYDebilitaLaDefensa() {
+        var guerrero = new Heroe(GUERRERO, new EstadisticasBase(150, 20, 20, 15, 3, 8, 6, 5, 5));
+        guerrero.equipar(CatalogoObjetos.equipo("maldita", SUPERIOR, false));
+        var enemigo = new Combatiente(new EstadisticasBase(100, 0, 1, 15, 0, 0, 1, 0, 0));
+        var combate = new Combate(List.of(guerrero), List.of(enemigo), azar());
+        combate.ejecutar(new AccionCombate(combate.getTurno(), guerrero.getId(), "filo_maldicion", enemigo.getId()));
+        assertEquals(75, combate.getHistorial().getFirst().danio());
+        assertEquals(10, enemigo.getDefensaEfectiva());
+        assertEquals(14, guerrero.getPmActuales());
+    }
+
+    @Test
+    void corteAlTendonReduceLaVelocidadAlAcertar() {
+        var picaro = new Heroe(PICARO, new EstadisticasBase(85, 25, 14, 6, 4, 7, 17, 20, 15, 25));
+        picaro.equipar(CatalogoObjetos.equipo("daga_curva", NORMAL, false));
+        var enemigo = new Combatiente(new EstadisticasBase(100, 0, 1, 0, 0, 0, 10, 0, 0));
+        var combate = new Combate(List.of(picaro), List.of(enemigo), azar());
+        combate.ejecutar(new AccionCombate(combate.getTurno(), picaro.getId(), "corte_al_tendon", enemigo.getId()));
+        assertEquals(47, combate.getHistorial().getFirst().danio());
+        assertEquals(6, enemigo.getVelocidadEfectiva());
+        assertEquals(1, enemigo.getEstados().get(EstadoTemporal.RALENTIZACION));
+        assertEquals(21, picaro.getPmActuales());
+    }
+
+    @Test
+    void ecoDeLaTormentaDaniaYRalentizaSoloALosSupervivientes() {
+        var mago = CatalogoHeroes.crearHeroe(MAGO);
+        mago.equipar(CatalogoObjetos.equipo("vara_chaman", NORMAL, false));
+        var rival = new Combatiente(new EstadisticasBase(100, 0, 1, 0, 0, 0, 8, 0, 100));
+        var fragil = new Combatiente(new EstadisticasBase(12, 0, 1, 0, 0, 0, 7, 0, 100));
+        var combate = new Combate(List.of(mago), List.of(rival, fragil), azar());
+
+        combate.ejecutar(new AccionCombate(combate.getTurno(), mago.getId(), "eco_de_la_tormenta", null));
+
+        assertEquals(List.of(37, 12), combate.getHistorial().stream().map(EventoCombate::danio).toList());
+        assertEquals(4, rival.getVelocidadEfectiva());
+        assertEquals(1, rival.getEstados().get(EstadoTemporal.RALENTIZACION));
+        assertTrue(fragil.getEstados().isEmpty());
+        assertEquals(91, mago.getPmActuales());
+    }
+
+    @Test
+    void flechaEnvenenadaDaniaAlFinalDeLosDosTurnosDelObjetivo() {
+        var arquera = CatalogoHeroes.crearHeroe(ARQUERO);
+        arquera.equipar(CatalogoObjetos.equipo("arco_goblin", NORMAL, false));
+        var rival = new Combatiente(new EstadisticasBase(100, 0, 1, 0, 0, 0, 8, 0, 0));
+        var combate = new Combate(List.of(arquera), List.of(rival), azar(99, 99, 49));
+        combate.ejecutar(new AccionCombate(combate.getTurno(), arquera.getId(), "flecha_envenenada", rival.getId()));
+        assertEquals(60, rival.getPvActuales());
+        assertEquals(2, rival.getEstados().get(EstadoTemporal.ENVENENADO));
+
+        combate.ejecutar(new AccionCombate(combate.getTurno(), rival.getId(), "defender", null));
+        assertEquals(56, rival.getPvActuales());
+        assertEquals(1, rival.getEstados().get(EstadoTemporal.ENVENENADO));
+        combate.ejecutar(new AccionCombate(combate.getTurno(), arquera.getId(), "defender", null));
+        assertEquals(56, rival.getPvActuales());
+        combate.ejecutar(new AccionCombate(combate.getTurno(), rival.getId(), "defender", null));
+        assertEquals(52, rival.getPvActuales());
+        assertFalse(rival.getEstados().containsKey(EstadoTemporal.ENVENENADO));
+        assertEquals(List.of(4, 4), combate.getHistorial().stream().filter(e -> e.habilidad().equals("veneno")).map(EventoCombate::danio).toList());
     }
 
     @Test
@@ -186,7 +263,7 @@ class ProgresionTest {
     void catalogoTieneCuatroApartadosYCuatroPociones() {
         var ofertas = new Tienda().ofertas();
         assertEquals(4, ofertas.stream().map(oferta -> oferta.objeto().categoria()).distinct().count());
-        assertEquals(11, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == ARMAS).count());
+        assertEquals(13, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == ARMAS).count());
         assertEquals(9, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == ARMADURAS).count());
         assertEquals(4, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == POCIONES).count());
         assertEquals(10, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == PERGAMINOS).count());
@@ -288,17 +365,25 @@ class ProgresionTest {
     @Test
     void tiradasSeparanProbabilidadTipoYCalidad() {
         assertTrue(GeneradorBotin.tirar(GOBLIN, azar(35)).isEmpty());
-        var daga = GeneradorBotin.tirar(GOBLIN, azar(34, 44, 34)).orElseThrow();
+        var daga = GeneradorBotin.tirar(GOBLIN, azar(34, 24, 34)).orElseThrow();
         assertEquals("Daga mellada", daga.nombre());
         assertEquals(INFERIOR, daga.calidad());
         assertEquals(12, daga.precioVenta());
         assertEquals(24, daga.precioRecompra());
+        assertEquals("Daga de duelo bruñida", GeneradorBotin.tirar(GOBLIN, azar(34, 25, 85)).orElseThrow().nombre());
+        assertEquals("Daga curva astillada", GeneradorBotin.tirar(GOBLIN, azar(34, 44, 34)).orElseThrow().nombre());
+        assertTrue(GeneradorBotin.tirar(GOBLIN_ARQUERO, azar(40)).isEmpty());
+        assertEquals("Arco goblin reforzado", GeneradorBotin.tirar(GOBLIN_ARQUERO, azar(39, 99, 85)).orElseThrow().nombre());
         var capucha = GeneradorBotin.tirar(GOBLIN, azar(0, 45, 35)).orElseThrow();
         assertEquals(NORMAL, capucha.calidad());
         var oscura = GeneradorBotin.tirar(CABALLERO_OSCURO, azar(74, 40, 85)).orElseThrow();
         assertEquals(SUPERIOR, oscura.calidad());
         assertEquals(-5, oscura.bonificaciones().velocidad());
         assertEquals(20, oscura.fuerzaMinima());
+        assertEquals("vara_magica", GeneradorBotin.tirar(CHAMAN, azar(49, 29, 35)).orElseThrow().codigo());
+        assertEquals("Vara de chamán ritual", GeneradorBotin.tirar(CHAMAN, azar(49, 30, 85)).orElseThrow().nombre());
+        assertEquals("Túnica de chamán ritual", GeneradorBotin.tirar(CHAMAN, azar(49, 65, 85)).orElseThrow().nombre());
+        assertEquals("tunica_chaman", GeneradorBotin.elegirBotinRobado(CHAMAN, azar(79, 35)).codigo());
         var meteorito = GeneradorBotin.tirar(CHAMAN, azar(49, 80, 9, 99)).orElseThrow();
         assertEquals(PODEROSO, meteorito.potencia());
         assertEquals(200, meteorito.efecto().cantidad());

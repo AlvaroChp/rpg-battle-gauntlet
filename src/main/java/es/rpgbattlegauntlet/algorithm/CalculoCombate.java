@@ -13,6 +13,10 @@ public final class CalculoCombate {
     }
 
     public static int danio(Combatiente atacante, Combatiente objetivo, Habilidad habilidad, boolean critico) {
+        return danio(atacante, objetivo, habilidad, critico, 0);
+    }
+
+    public static int danio(Combatiente atacante, Combatiente objetivo, Habilidad habilidad, boolean critico, int reduccionMinima) {
         var origen = atacante.getEstadisticasBase();
         var bonos = atacante.getBonificaciones();
         boolean magico = habilidad.efecto() == DANIO_MAGICO;
@@ -25,18 +29,18 @@ public final class CalculoCombate {
             bruto = Math.min(64, bruto);
         }
         double multiplicador = atacante instanceof Enemigo enemigo ? enemigo.getMultiplicadorDanio() : 1.0;
-        return aplicarMitigacion(objetivo, bruto, mitigacion, critico, multiplicador);
+        int reduccion = Math.max(objetivo.getReduccionDanio(), reduccionMinima);
+        return aplicarMitigacion(bruto, mitigacion, critico, multiplicador, reduccion);
     }
 
     public static int danioPergamino(Combatiente objetivo, int potencia) {
-        return aplicarMitigacion(objetivo, potencia, objetivo.getResistenciaEfectiva(), false, 1.0);
+        return aplicarMitigacion(potencia, objetivo.getResistenciaEfectiva(), false, 1.0, objetivo.getReduccionDanio());
     }
 
-    private static int aplicarMitigacion(Combatiente objetivo, double bruto, double mitigacion, boolean critico,
-                                        double multiplicador) {
+    private static int aplicarMitigacion(double bruto, double mitigacion, boolean critico, double multiplicador, int reduccion) {
         double reducido = Math.max(bruto * 0.25, bruto - mitigacion);
         double multiplicadorCritico = critico ? 1.5 : 1.0;
-        double finalTrasProteccion = reducido * multiplicadorCritico * (100 - objetivo.getReduccionDanio()) / 100.0;
+        double finalTrasProteccion = reducido * multiplicadorCritico * (100 - reduccion) / 100.0;
         return Math.max(1, (int) Math.round(finalTrasProteccion * multiplicador));
     }
 

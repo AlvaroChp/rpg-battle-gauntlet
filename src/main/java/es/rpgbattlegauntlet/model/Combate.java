@@ -23,6 +23,9 @@ import java.util.random.RandomGenerator;
 import java.util.stream.Stream;
 
 import static es.rpgbattlegauntlet.enums.ResultadoCombate.*;
+import static es.rpgbattlegauntlet.enums.EstadoTemporal.*;
+import static es.rpgbattlegauntlet.enums.TipoEfecto.DANIO_FISICO;
+import static es.rpgbattlegauntlet.enums.TipoEfecto.DANIO_MAGICO;
 import static es.rpgbattlegauntlet.enums.TipoConsumible.ANIQUILAR_DRAGON;
 import static es.rpgbattlegauntlet.enums.TipoEfecto.ROBO;
 
@@ -115,7 +118,7 @@ public final class Combate {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("El combatiente no conoce esa habilidad"));
         if (habilidad.costePm() > actor.getPmActuales()) {
-            throw new IllegalArgumentException("El combatiente no tiene PM suficientes");
+            throw new IllegalArgumentException("El combatiente no tiene PC suficientes");
         }
         List<Combatiente> objetivos = objetivos(actor, habilidad.objetivo(), accion.objetivo());
         boolean robo = habilidad.efecto() == ROBO;
@@ -149,7 +152,7 @@ public final class Combate {
     }
 
     private void ejecutarConsumible(Combatiente actor, Objeto objeto, List<Combatiente> objetivos) {
-        actor.terminarTurno();
+        var daniosPendientes = actor.terminarTurno();
         for (Combatiente objetivo : objetivos) {
             if (!actor.estaVivo()) {
                 break;
@@ -157,7 +160,7 @@ public final class Combate {
             registrarConReaccion(actor, objetivo, resolverConsumible(actor, objetivo, objeto));
         }
         if (actor instanceof Heroe) consumiblesUsados++;
-        avanzarTurno();
+        avanzarTurno(daniosPendientes);
     }
 
     private EventoCombate resolverConsumible(Combatiente actor, Combatiente objetivo, Objeto objeto) {
@@ -173,6 +176,7 @@ public final class Combate {
             case DANIO -> {
                 danio = Math.min(objetivo.getPvActuales(), CalculoCombate.danioPergamino(objetivo, efecto.cantidad()));
                 objetivo.recibirDanio(danio);
+                if (efecto.incendiario()) aplicarEstado(objetivo, QUEMADO, 2, 50, false);
             }
             case CURACION -> curacion = objetivo.recibirCuracion(efecto.cantidad());
             case CURA_TOTAL -> curacion = objetivo.recibirCuracion(
@@ -233,22 +237,50 @@ public final class Combate {
 
     private void ejecutarHabilidad(Combatiente actor, Habilidad habilidad, List<Combatiente> objetivos) {
         actor.consumirMagia(habilidad.costePm());
+        if (actor instanceof Enemigo enemigo
+                && (habilidad.estado() == CARGA_FURIA_ANIMAL || habilidad.estado() == CARGA_INCENDIO_CENIZA)) {
+            enemigo.iniciarAtaqueUnico();
+        }
         // Los estados anteriores expiran al actuar. Un estado nuevo empieza después de ese consumo.
-        actor.terminarTurno();
+        var daniosPendientes = actor.terminarTurno();
         for (Combatiente objetivo : objetivos) {
             for (int golpe = 0; golpe < habilidad.golpes() && actor.estaVivo() && objetivo.estaVivo(); golpe++) {
-                registrarConReaccion(actor, objetivo, resolver(actor, objetivo, habilidad));
+                Combatiente receptor = interceptarSiProcede(actor, objetivo, habilidad);
+                registrarConReaccion(actor, receptor, resolver(actor, receptor, habilidad));
             }
         }
-        avanzarTurno();
+        avanzarTurno(daniosPendientes);
     }
 
     private void registrarConReaccion(Combatiente actor, Combatiente objetivo, EventoCombate evento) {
         historial.add(evento);
+        if (evento.critico() && objetivo.estaVivo() && objetivo.retirarEstado(CARGA_FURIA_ANIMAL)) {
+            historial.add(new EventoCombate(turno, objetivo.getId(), tipo(objetivo), "furia_interrumpida", objetivo.getId(),
+                    tipo(objetivo), 0, 0, 0, false, false, null));
+        }
         if (evento.danio() > 0 && objetivo.estaVivo()
                 && objetivo.retirarEstado(EstadoTemporal.CONTRAATAQUE_LISTO)) {
-            historial.add(resolver(objetivo, actor, CatalogoEnemigos.CONTRAATAQUE));
+            var contraataque = CatalogoEnemigos.CONTRAATAQUE;
+            historial.add(resolver(objetivo, interceptarSiProcede(objetivo, actor, contraataque), contraataque));
         }
+    }
+
+    private Combatiente interceptarSiProcede(Combatiente actor, Combatiente objetivo, Habilidad habilidad) {
+        if (habilidad.objetivo() != TipoObjetivo.ENEMIGO || !esAtaque(habilidad)
+                || !heroes.contains(objetivo) || heroes.contains(actor) || objetivo.tieneEstado(INTERCEPTANDO)) {
+            return objetivo;
+        }
+        var interceptor = heroes.stream().filter(Heroe::estaVivo).filter(heroe -> heroe.tieneEstado(INTERCEPTANDO)).findFirst();
+        if (interceptor.isEmpty()) return objetivo;
+
+        Heroe guerrero = interceptor.get();
+        historial.add(new EventoCombate(turno, guerrero.getId(), tipo(guerrero), "golpe_interceptado", objetivo.getId(),
+                tipo(objetivo), 0, 0, 0, false, false, null));
+        return guerrero;
+    }
+
+    private static boolean esAtaque(Habilidad habilidad) {
+        return habilidad.efecto() == DANIO_FISICO || habilidad.efecto() == DANIO_MAGICO;
     }
 
     private List<Habilidad> habilidades(Combatiente actor) {
@@ -298,6 +330,8 @@ public final class Combate {
         boolean esquivado = false;
         boolean critico = false;
         Objeto objetoRobado = null;
+        boolean interceptando = esAtaque(habilidad) && objetivo.tieneEstado(INTERCEPTANDO) && !heroes.contains(actor);
+        int reduccionMinima = interceptando ? objetivo.reduccionAlDefenderse() : 0;
         switch (habilidad.efecto()) {
             case DANIO_FISICO -> {
                 int esquiva = Math.max(0, objetivo.getEsquivaEfectiva() - habilidad.precisionAdicional());
@@ -306,12 +340,12 @@ public final class Combate {
                     var base = actor.getEstadisticasBase();
                     int criticoBase = actor instanceof Heroe ? base.destreza() : base.critico();
                     critico = azar.nextInt(100) < criticoBase + actor.getBonificaciones().critico() + habilidad.criticoAdicional();
-                    danio = Math.min(objetivo.getPvActuales(), CalculoCombate.danio(actor, objetivo, habilidad, critico));
+                    danio = Math.min(objetivo.getPvActuales(), CalculoCombate.danio(actor, objetivo, habilidad, critico, reduccionMinima));
                     objetivo.recibirDanio(danio);
                 }
             }
             case DANIO_MAGICO -> {
-                danio = Math.min(objetivo.getPvActuales(), CalculoCombate.danio(actor, objetivo, habilidad, false));
+                danio = Math.min(objetivo.getPvActuales(), CalculoCombate.danio(actor, objetivo, habilidad, false, reduccionMinima));
                 objetivo.recibirDanio(danio);
             }
             case CURACION -> curacion = objetivo.recibirCuracion(CalculoCombate.curacion(actor, habilidad));
@@ -325,15 +359,33 @@ public final class Combate {
                 }
             }
         }
-        if (!esquivado && objetivo.estaVivo() && habilidad.estado() != null) {
-            objetivo.aplicarEstado(habilidad.estado(), habilidad.duracion());
+        if (!esquivado && habilidad.estado() != null) {
+            aplicarEstado(objetivo, habilidad.estado(), habilidad.duracion(), habilidad.probabilidadEstado(), interceptando);
         }
+        if (interceptando && danio > 0) objetivo.retirarEstado(INTERCEPTANDO);
         return new EventoCombate(turno, actor.getId(), tipo(actor), habilidad.id(), objetivo.getId(),
                 tipo(objetivo), danio, curacion, 0, esquivado, critico, objetoRobado);
     }
 
-    private void avanzarTurno() {
-        pendientes.remove();
+    private void aplicarEstado(Combatiente objetivo, EstadoTemporal estado, int duracion, int probabilidad, boolean interceptando) {
+        if (!objetivo.estaVivo()) return;
+        boolean protegido = interceptando || objetivo.tieneEstado(DEFENSA) || objetivo.tieneEstado(BENDICION);
+        int efectiva = estado.danioPeriodico() > 0 && protegido ? probabilidad / 2 : probabilidad;
+        if (efectiva >= 100 || azar.nextInt(100) < efectiva) objetivo.aplicarEstado(estado, duracion);
+    }
+
+    private void avanzarTurno(List<EstadoTemporal> daniosPendientes) {
+        Combatiente actor = pendientes.remove();
+        if (!daniosPendientes.isEmpty() && actor.estaVivo() && heroes.stream().anyMatch(Combatiente::estaVivo)
+                && enemigos.stream().anyMatch(Combatiente::estaVivo)) {
+            for (EstadoTemporal estado : daniosPendientes) {
+                int danio = Math.min(actor.getPvActuales(), estado.danioPeriodico());
+                actor.recibirDanio(danio);
+                historial.add(new EventoCombate(turno, actor.getId(), tipo(actor), estado.eventoDanio(), actor.getId(),
+                        tipo(actor), danio, 0, 0, false, false, null));
+                if (!actor.estaVivo()) break;
+            }
+        }
         if (enemigos.stream().noneMatch(Combatiente::estaVivo)) {
             resultado = GANADO;
         } else if (heroes.stream().noneMatch(Combatiente::estaVivo)) {

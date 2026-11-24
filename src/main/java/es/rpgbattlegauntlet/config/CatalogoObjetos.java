@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static es.rpgbattlegauntlet.enums.Categoria.*;
 import static es.rpgbattlegauntlet.enums.TipoObjetivo.*;
@@ -27,7 +28,7 @@ public final class CatalogoObjetos {
     }
 
     private record Pergamino(String codigo, String nombre, TipoConsumible tipo, TipoObjetivo objetivo,
-                             int debil, int normal, int poderoso, int inteligencia, int precio) {
+                             int debil, int normal, int poderoso, int inteligencia, int precio, boolean incendiario) {
         Objeto plantilla(PotenciaPergamino potencia) {
             int cantidad = switch (potencia) {
                 case DEBIL -> debil;
@@ -39,15 +40,36 @@ public final class CatalogoObjetos {
             int venta = potencia.venta(precio);
             return new Objeto(null, codigo, nombre, PERGAMINOS, null, potencia, false, Bonificaciones.NINGUNA,
                     0, potencia.requisito(inteligencia), precio, venta, 2 * venta, null, null,
-                    new EfectoConsumible(tipo, objetivo, cantidad, 0, proteccion));
+                    new EfectoConsumible(tipo, objetivo, cantidad, 0, proteccion, incendiario));
         }
     }
 
     private static final Habilidad DAGA = habilidad("estocada_rapida", "Estocada rápida", 3, false, 5, 20, 5, 0);
-    private static final Habilidad ESPADA = habilidad("corte", "Corte amplio", 4, false, 10, 10, 0, 0);
-    private static final Habilidad ARCO = habilidad("disparo_tenso", "Disparo tenso", 5, false, 10, 15, 0, 25);
+    private static final Habilidad PUNTADA_TRAICIONERA = habilidad("puntada_traicionera", "Puntada traicionera", 5, false, 8, 10, 20, 0);
+    private static final Habilidad CORTE_AL_TENDON = new Habilidad("corte_al_tendon", "Corte al tendón",
+            "Inflige daño físico con +7 de potencia y reduce la velocidad del objetivo en 4 durante un turno.",
+            4, ENEMIGO, TipoEfecto.DANIO_FISICO, 7, 0, 0, 0, EstadoTemporal.RALENTIZACION, 1);
+    private static final Habilidad CORTE_AMPLIO = habilidad("corte", "Corte amplio", 4, false, 10, 10, 0, 0);
+    private static final Habilidad ESTOCADA_PRECISA = habilidad("estocada_precisa", "Estocada precisa", 4, false, 12, 30, 0, 0);
+    private static final Habilidad TAJO_DEMOLEDOR = habilidad("tajo_demoledor", "Tajo demoledor", 6, false, 16, 0, 0, 30);
+    private static final Habilidad CORTE_ULTRATUMBA = new Habilidad("corte_ultratumba", "Corte de ultratumba",
+            "Inflige daño físico con +11 de potencia y ralentiza al objetivo durante un turno.",
+            4, ENEMIGO, TipoEfecto.DANIO_FISICO, 11, 0, 0, 0, EstadoTemporal.RALENTIZACION, 1);
+    private static final Habilidad FILO_MALDICION = new Habilidad("filo_maldicion", "Filo de la maldición",
+            "Inflige daño físico con +14 de potencia y reduce la DEF del objetivo en 5 durante dos turnos.",
+            6, ENEMIGO, TipoEfecto.DANIO_FISICO, 14, 0, 0, 0, EstadoTemporal.DEFENSA_DEBILITADA, 2);
+    private static final Habilidad DISPARO_TENSO = habilidad("disparo_tenso", "Disparo tenso", 5, false, 10, 15, 0, 25);
+    private static final Habilidad FLECHA_ENVENENADA = new Habilidad("flecha_envenenada", "Flecha envenenada",
+            "Inflige daño físico con +4 de potencia y +10 de precisión. Si acierta, envenena con un 50 % de probabilidad, o un 25 % con Defenderse o Bendición.",
+            4, ENEMIGO, TipoEfecto.DANIO_FISICO, 4, 10, 0, 0, EstadoTemporal.ENVENENADO, 2, 1, 50);
+    private static final Habilidad FLECHA_DE_ALCANCE = habilidad("flecha_de_alcance", "Flecha de largo alcance", 5, false, 12, 15, 0, 30);
     private static final Habilidad BALLESTA = habilidad("virote_perforante", "Virote perforante", 6, false, 12, 10, 0, 35);
-    private static final Habilidad VARA = habilidad("pulso", "Pulso de vara", 5, true, 13, 10, 0, 0);
+    private static final Habilidad PULSO = habilidad("pulso", "Pulso de vara", 5, true, 13, 0, 0, 0);
+    private static final Habilidad DESTELLO_ARCANO = habilidad("destello_arcano", "Destello arcano", 4, true, 12, 0, 0, 0);
+    private static final Habilidad ECO_DE_LA_TORMENTA = new Habilidad("eco_de_la_tormenta", "Eco de la tormenta",
+            "Inflige daño mágico a todos los enemigos con +10 de potencia y reduce su velocidad en 4 durante un turno.",
+            9, ENEMIGOS, TipoEfecto.DANIO_MAGICO, 10, 0, 0, 0, EstadoTemporal.RALENTIZACION, 1);
+    private static final Habilidad DESCARGA_ASTRAL = habilidad("descarga_astral", "Descarga astral", 8, true, 22, 0, 0, 0);
     private static final Habilidad GARROTE = habilidad("impacto", "Impacto contundente", 5, false, 14, 0, 0, 15);
 
     private static final Map<String, Equipo> EQUIPOS = equipos();
@@ -55,13 +77,13 @@ public final class CatalogoObjetos {
             perg("proyectil", "Proyectil mágico", TipoConsumible.DANIO, ENEMIGO, 50, 65, 90, 5, 65),
             perg("cura", "Cura", TipoConsumible.CURACION, ALIADO, 65, 90, 130, 6, 75),
             perg("cura_mayor", "Cura mayor", TipoConsumible.CURACION, ALIADO, 90, 120, 160, 8, 100),
-            perg("llamarada", "Llamarada", TipoConsumible.DANIO, ENEMIGO, 75, 100, 140, 10, 110),
+            new Pergamino("llamarada", "Llamarada", TipoConsumible.DANIO, ENEMIGO, 75, 100, 140, 10, 110, true),
             perg("ventisca", "Ventisca", TipoConsumible.DANIO, ENEMIGOS, 45, 65, 90, 12, 140),
             perg("cura_grupal", "Cura grupal", TipoConsumible.CURACION, ALIADOS, 50, 70, 100, 14, 150),
             perg("tormenta", "Tormenta eléctrica", TipoConsumible.DANIO, ENEMIGOS, 60, 80, 115, 15, 170),
             perg("proteccion", "Protección divina", TipoConsumible.PROTECCION, ALIADOS, 35, 50, 65, 16, 160),
             perg("cura_total", "Cura total", TipoConsumible.CURA_TOTAL, ALIADO, 75, 100, 100, 18, 180),
-            perg("meteorito", "Meteorito", TipoConsumible.DANIO, ENEMIGOS, 100, 140, 200, 22, 250)
+            new Pergamino("meteorito", "Meteorito", TipoConsumible.DANIO, ENEMIGOS, 100, 140, 200, 22, 250, true)
     );
 
     private static final Objeto REVITALIZACION = pocion("revitalizacion", "Poción dorada", 120,
@@ -108,6 +130,10 @@ public final class CatalogoObjetos {
         return EQUIPOS.get(codigo).plantilla(calidad).nuevaUnidad(inicial);
     }
 
+    public static Optional<Habilidad> habilidadArma(String codigo) {
+        return Optional.ofNullable(EQUIPOS.get(codigo)).map(Equipo::habilidad);
+    }
+
     public static List<Objeto> inicial(ClaseHeroe clase) {
         var codigos = switch (clase) {
             case GUERRERO -> List.of("espada_basica", "pesada_basica");
@@ -121,32 +147,37 @@ public final class CatalogoObjetos {
     private static Map<String, Equipo> equipos() {
         var equipos = new LinkedHashMap<String, Equipo>();
         List.of(
-            arma("daga", "Daga mellada", "Daga", "Daga afilada", 3, 0, 2, 0, 0, 40, FamiliaArma.DAGA, true),
-            arma("espada_basica", "Espada básica mellada", "Espada básica", "Espada básica afilada", 4, 0, 0, 0, 0, 50, FamiliaArma.ESPADA, true),
-            arma("arco_corto", "Arco corto astillado", "Arco corto", "Arco corto templado", 4, 0, 0, 10, 0, 60, FamiliaArma.ARCO, true),
-            arma("vara_aprendiz", "Vara de aprendiz agrietada", "Vara de aprendiz", "Vara de aprendiz reforzada", 0, 3, 0, 0, 12, 60, FamiliaArma.VARA, true),
-            arma("garrote", "Garrote astillado", "Garrote", "Garrote ferrado", 7, 0, 0, 15, 0, 100, FamiliaArma.GARROTE, true),
-            arma("arco_largo", "Arco largo torcido", "Arco largo", "Arco largo templado", 8, 0, 0, 15, 0, 130, FamiliaArma.ARCO, true),
-            arma("ballesta", "Ballesta desgastada", "Ballesta", "Ballesta reforzada", 10, 0, 0, 16, 0, 175, FamiliaArma.BALLESTA, true),
-            arma("espada_acero", "Espada de acero mellada", "Espada de acero", "Espada de acero bruñida", 9, 0, 0, 16, 0, 150, FamiliaArma.ESPADA, true),
-            arma("vara_magica", "Vara mágica agrietada", "Vara mágica", "Vara mágica reforzada", 0, 8, 0, 0, 14, 150, FamiliaArma.VARA, true),
-            arma("espada_pesada", "Espada pesada mellada", "Espada pesada", "Espada pesada forjada", 12, 0, 0, 18, 0, 200, FamiliaArma.ESPADA, true),
-            arma("vara_avanzada", "Vara avanzada agrietada", "Vara avanzada", "Vara avanzada engastada", 0, 13, 0, 0, 22, 240, FamiliaArma.VARA, true),
+            arma("daga", "Daga mellada", "Daga", "Daga afilada", 3, 0, 2, 0, 0, 40, FamiliaArma.DAGA, DAGA, true),
+            arma("daga_duelo", "Daga de duelo mellada", "Daga de duelo", "Daga de duelo bruñida", 5, 0, 0, 12, 0, 95, FamiliaArma.DAGA, PUNTADA_TRAICIONERA, true),
+            arma("daga_curva", "Daga curva astillada", "Daga curva", "Daga curva afilada", 6, 0, 0, 14, 0, 115, FamiliaArma.DAGA, CORTE_AL_TENDON, true),
+            arma("espada_basica", "Espada básica mellada", "Espada básica", "Espada básica afilada", 4, 0, 0, 0, 0, 50, FamiliaArma.ESPADA, CORTE_AMPLIO, true),
+            arma("arco_corto", "Arco corto astillado", "Arco corto", "Arco corto templado", 4, 0, 0, 10, 0, 60, FamiliaArma.ARCO, DISPARO_TENSO, true),
+            arma("arco_goblin", "Arco goblin astillado", "Arco goblin", "Arco goblin reforzado", 5, 0, 0, 10, 0, 75, FamiliaArma.ARCO, FLECHA_ENVENENADA, false),
+            arma("vara_aprendiz", "Vara de aprendiz agrietada", "Vara de aprendiz", "Vara de aprendiz reforzada", 0, 3, 0, 0, 12, 60, FamiliaArma.VARA, PULSO, true),
+            arma("garrote", "Garrote astillado", "Garrote", "Garrote ferrado", 7, 0, 0, 15, 0, 100, FamiliaArma.GARROTE, GARROTE, true),
+            arma("arco_largo", "Arco largo torcido", "Arco largo", "Arco largo templado", 8, 0, 0, 15, 0, 130, FamiliaArma.ARCO, FLECHA_DE_ALCANCE, true),
+            arma("ballesta", "Ballesta desgastada", "Ballesta", "Ballesta reforzada", 10, 0, 0, 16, 0, 175, FamiliaArma.BALLESTA, BALLESTA, true),
+            arma("espada_acero", "Espada de acero mellada", "Espada de acero", "Espada de acero bruñida", 9, 0, 0, 16, 0, 150, FamiliaArma.ESPADA, ESTOCADA_PRECISA, true),
+            arma("vara_magica", "Vara mágica agrietada", "Vara mágica", "Vara mágica reforzada", 0, 8, 0, 0, 14, 150, FamiliaArma.VARA, DESTELLO_ARCANO, true),
+            arma("vara_chaman", "Vara de chamán agrietada", "Vara de chamán", "Vara de chamán ritual", 0, 9, 0, 0, 16, 170, FamiliaArma.VARA, ECO_DE_LA_TORMENTA, false),
+            arma("espada_pesada", "Espada pesada mellada", "Espada pesada", "Espada pesada forjada", 12, 0, 0, 18, 0, 200, FamiliaArma.ESPADA, TAJO_DEMOLEDOR, true),
+            arma("vara_avanzada", "Vara avanzada agrietada", "Vara avanzada", "Vara avanzada engastada", 0, 13, 0, 0, 22, 240, FamiliaArma.VARA, DESCARGA_ASTRAL, true),
             armadura("ropa", "Ropa ligera remendada", "Ropa ligera", "Ropa ligera bordada", 2, 0, 0, 2, 0, 0, 0, 30, true),
             armadura("capucha", "Capucha desgastada", "Capucha", "Capucha nueva", 2, 0, 0, 4, 0, 0, 0, 45, true),
             armadura("tunica_aprendiz", "Túnica de aprendiz raída", "Túnica de aprendiz", "Túnica de aprendiz impecable", 2, 0, 0, 0, 3, 0, 0, 50, true),
             armadura("ligera", "Armadura ligera rasgada", "Armadura ligera", "Armadura ligera remachada", 4, 0, 0, 0, 0, 8, 0, 65, true),
             armadura("tunica_mago", "Túnica de mago raída", "Túnica de mago", "Túnica de mago impecable", 3, 0, 0, 0, 6, 0, 12, 110, true),
+            armadura("tunica_chaman", "Túnica de chamán raída", "Túnica de chamán", "Túnica de chamán ritual", 4, 2, 0, 0, 7, 0, 16, 145, false),
             armadura("media", "Armadura media abollada", "Armadura media", "Armadura media ensamblada", 7, 0, -1, 0, 0, 12, 0, 120, true),
             armadura("botas", "Botas reforzadas gastadas", "Botas reforzadas", "Botas reforzadas ligeras", 4, 0, 3, 0, 0, 10, 0, 130, true),
             armadura("pesada", "Armadura pesada abollada", "Armadura pesada", "Armadura pesada bruñida", 12, 0, -3, 0, 0, 15, 0, 180, true),
             armadura("casco", "Casco reforzado abollado", "Casco reforzado", "Casco reforzado templado", 10, 3, 0, 0, 0, 16, 0, 190, true),
             armadura("pesada_basica", "Armadura pesada básica abollada", "Armadura pesada básica", "Armadura pesada básica bruñida", 8, 0, -3, 0, 0, 15, 0, 0, false),
             armadura("ligera_basica", "Armadura ligera básica rasgada", "Armadura ligera básica", "Armadura ligera básica remachada", 4, 0, 0, 0, 0, 8, 0, 0, false),
-            arma("espada_esqueleto", "Espada oxidada", "Espada", "Espada afilada", 6, 0, 0, 12, 0, 80, FamiliaArma.ESPADA, false),
+            arma("espada_esqueleto", "Espada oxidada", "Espada", "Espada afilada", 6, 0, 0, 12, 0, 80, FamiliaArma.ESPADA, CORTE_ULTRATUMBA, false),
             armadura("escudo", "Escudo abollado", "Escudo", "Escudo reforzado", 6, 0, 0, 0, 0, 10, 0, 70, false),
             armadura("antigua", "Armadura antigua agrietada", "Armadura antigua", "Armadura antigua restaurada", 7, 2, -1, 0, 0, 12, 0, 100, false),
-            arma("maldita", "Espada maldita mellada", "Espada maldita", "Espada maldita ritual", 14, 0, 0, 20, 0, 250, FamiliaArma.ESPADA, false),
+            arma("maldita", "Espada maldita mellada", "Espada maldita", "Espada maldita ritual", 14, 0, 0, 20, 0, 250, FamiliaArma.ESPADA, FILO_MALDICION, false),
             armadura("oscura", "Armadura oscura agrietada", "Armadura oscura", "Armadura oscura templada", 15, 0, -4, 0, 0, 20, 0, 300, false),
             armadura("casco_oscuro", "Casco oscuro abollado", "Casco oscuro", "Casco oscuro grabado", 10, 5, 0, 0, 0, 16, 0, 190, false)
         ).forEach(equipo -> equipos.put(equipo.codigo(), equipo));
@@ -155,15 +186,7 @@ public final class CatalogoObjetos {
 
     private static Equipo arma(String codigo, String inferior, String nombre, String superior,
                                int fuerza, int inteligencia, int critico, int minFuerza, int minInteligencia,
-                               int precio, FamiliaArma familia, boolean enTienda) {
-        Habilidad habilidad = switch (familia) {
-            case ESPADA -> ESPADA;
-            case DAGA -> DAGA;
-            case GARROTE -> GARROTE;
-            case VARA -> VARA;
-            case ARCO -> ARCO;
-            case BALLESTA -> BALLESTA;
-        };
+                               int precio, FamiliaArma familia, Habilidad habilidad, boolean enTienda) {
         return new Equipo(codigo, inferior, nombre, superior, ARMAS,
                 new Bonificaciones(fuerza, 0, inteligencia, 0, 0, critico, 0, 0),
                 minFuerza, minInteligencia, precio, habilidad, familia, enTienda);
@@ -179,7 +202,11 @@ public final class CatalogoObjetos {
 
     private static Habilidad habilidad(String id, String nombre, int pm, boolean magica, int potencia,
                                        int precision, int critico, int penetracion) {
-        return new Habilidad(id, nombre, "Habilidad del arma equipada. Potencia adicional: " + potencia + ".",
+        String descripcion = "Daño " + (magica ? "mágico" : "físico") + " con +" + potencia + " de potencia."
+                + (precision > 0 ? " Reduce la esquiva en " + precision + " puntos porcentuales." : "")
+                + (critico > 0 ? " Añade " + critico + " puntos porcentuales de crítico." : "")
+                + (penetracion > 0 ? " Ignora el " + penetracion + " % de la defensa." : "");
+        return new Habilidad(id, nombre, descripcion,
                 pm, ENEMIGO, magica ? TipoEfecto.DANIO_MAGICO : TipoEfecto.DANIO_FISICO,
                 potencia, precision, critico, penetracion, null, 0);
     }
@@ -195,6 +222,6 @@ public final class CatalogoObjetos {
 
     private static Pergamino perg(String codigo, String nombre, TipoConsumible tipo, TipoObjetivo objetivo,
                                   int debil, int normal, int poderoso, int inteligencia, int precio) {
-        return new Pergamino(codigo, nombre, tipo, objetivo, debil, normal, poderoso, inteligencia, precio);
+        return new Pergamino(codigo, nombre, tipo, objetivo, debil, normal, poderoso, inteligencia, precio, false);
     }
 }

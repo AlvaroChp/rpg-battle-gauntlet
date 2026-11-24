@@ -1,5 +1,5 @@
 package es.rpgbattlegauntlet.enums;
 
 public enum TipoEnemigo {
-    GOBLIN, ESQUELETO, CHAMAN, OGRO, CABALLERO_OSCURO, DRAGON
+    GOBLIN, GOBLIN_ARQUERO, ESQUELETO, CHAMAN, OGRO, CABALLERO_OSCURO, DRAGON
 }

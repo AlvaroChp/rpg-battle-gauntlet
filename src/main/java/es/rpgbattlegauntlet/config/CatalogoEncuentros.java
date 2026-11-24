@@ -12,11 +12,11 @@ public final class CatalogoEncuentros {
 
     private static final List<List<TipoEnemigo>> RONDAS = List.of(
             List.of(GOBLIN),
-            List.of(GOBLIN, GOBLIN),
+            List.of(GOBLIN, GOBLIN_ARQUERO),
             List.of(GOBLIN, ESQUELETO),
-            List.of(ESQUELETO, CHAMAN),
+            List.of(ESQUELETO, CHAMAN, GOBLIN_ARQUERO),
             List.of(OGRO),
-            List.of(GOBLIN, GOBLIN, CHAMAN),
+            List.of(ESQUELETO, ESQUELETO, CHAMAN),
             List.of(CABALLERO_OSCURO),
             List.of(CABALLERO_OSCURO, CHAMAN),
             List.of(CABALLERO_OSCURO, CABALLERO_OSCURO),

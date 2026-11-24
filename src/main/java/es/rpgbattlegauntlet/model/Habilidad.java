@@ -17,12 +17,20 @@ public record Habilidad(
         int penetracion,
         EstadoTemporal estado,
         int duracion,
-        int golpes
+        int golpes,
+        int probabilidadEstado
 ) {
     public Habilidad(String id, String nombre, String descripcion, int costePm, TipoObjetivo objetivo,
                      TipoEfecto efecto, int potencia, int precisionAdicional, int criticoAdicional,
                      int penetracion, EstadoTemporal estado, int duracion) {
         this(id, nombre, descripcion, costePm, objetivo, efecto, potencia, precisionAdicional,
                 criticoAdicional, penetracion, estado, duracion, 1);
+    }
+
+    public Habilidad(String id, String nombre, String descripcion, int costePm, TipoObjetivo objetivo,
+                     TipoEfecto efecto, int potencia, int precisionAdicional, int criticoAdicional,
+                     int penetracion, EstadoTemporal estado, int duracion, int golpes) {
+        this(id, nombre, descripcion, costePm, objetivo, efecto, potencia, precisionAdicional,
+                criticoAdicional, penetracion, estado, duracion, golpes, 100);
     }
 }

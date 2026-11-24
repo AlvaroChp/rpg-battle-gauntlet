@@ -4,6 +4,7 @@ import es.rpgbattlegauntlet.config.CatalogoObjetos;
 import es.rpgbattlegauntlet.enums.Calidad;
 import es.rpgbattlegauntlet.enums.PotenciaPergamino;
 import es.rpgbattlegauntlet.enums.TipoEnemigo;
+import es.rpgbattlegauntlet.model.Habilidad;
 import es.rpgbattlegauntlet.model.Objeto;
 
 import java.util.List;
@@ -18,14 +19,24 @@ public final class GeneradorBotin {
     private record Tabla(int probabilidad, List<Entrada> entradas) {}
 
     private static final Map<TipoEnemigo, Tabla> TABLAS = Map.of(
-            GOBLIN, new Tabla(35, List.of(new Entrada("daga", 45), new Entrada("capucha", 30), new Entrada("ligera", 25))),
+            GOBLIN, new Tabla(35, List.of(new Entrada("daga", 25), new Entrada("daga_duelo", 12), new Entrada("daga_curva", 8),
+                    new Entrada("capucha", 30), new Entrada("ligera", 25))),
+            GOBLIN_ARQUERO, new Tabla(40, List.of(new Entrada("arco_goblin", 100))),
             ESQUELETO, new Tabla(40, List.of(new Entrada("espada_esqueleto", 40), new Entrada("escudo", 35), new Entrada("antigua", 25))),
-            CHAMAN, new Tabla(50, List.of(new Entrada("vara_magica", 45), new Entrada("tunica_mago", 35), new Entrada("pergamino", 20))),
+            CHAMAN, new Tabla(50, List.of(new Entrada("vara_magica", 30), new Entrada("vara_chaman", 15),
+                    new Entrada("tunica_mago", 20), new Entrada("tunica_chaman", 15), new Entrada("pergamino", 20))),
             OGRO, new Tabla(65, List.of(new Entrada("garrote", 50), new Entrada("pesada", 30), new Entrada("botas", 20))),
             CABALLERO_OSCURO, new Tabla(75, List.of(new Entrada("maldita", 40), new Entrada("oscura", 35), new Entrada("casco_oscuro", 25)))
     );
 
     private GeneradorBotin() {
+    }
+
+    public static List<Habilidad> habilidadesDeArmas(TipoEnemigo tipo) {
+        Tabla tabla = TABLAS.get(tipo);
+        if (tabla == null) return List.of();
+        return tabla.entradas().stream().map(Entrada::codigo)
+                .flatMap(codigo -> CatalogoObjetos.habilidadArma(codigo).stream()).toList();
     }
 
     public static Optional<Objeto> tirar(TipoEnemigo enemigo, RandomGenerator azar) {

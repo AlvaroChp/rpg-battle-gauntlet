@@ -17,18 +17,19 @@ public final class CatalogoHabilidades {
             0, ENEMIGO, DANIO_FISICO, 0, 0, 0, 0, null, 0);
 
     public static final Habilidad DEFENDER = new Habilidad(
-            "defender", "Defenderse", "Reduce el daño recibido un 40 % durante un turno.",
+            "defender", "Defenderse", "Reduce el daño recibido un 40 % durante un turno, o un 65 % con un escudo equipado.",
             0, PROPIO, ESTADO, 0, 0, 0, 0, DEFENSA, 1);
 
     private static final Map<ClaseHeroe, List<Habilidad>> POR_CLASE = Map.of(
             ClaseHeroe.GUERRERO, List.of(
                     new Habilidad("golpe_poderoso", "Golpe poderoso", "Daño físico contundente.",
                             5, ENEMIGO, DANIO_FISICO, 16, 0, 0, 0, null, 0),
-                    new Habilidad("guardia", "Guardia", "Reduce el daño recibido por el guerrero un 55 % durante dos turnos.",
-                            4, PROPIO, ESTADO, 0, 0, 0, 0, GUARDIA, 2)),
+                    new Habilidad("interceptar", "Interceptar",
+                            "Hasta tu próximo turno, recibe un golpe individual dirigido a un aliado o protege el primer golpe que te alcance. Reduce ese daño un 40 %, o un 65 % con escudo.",
+                            4, PROPIO, ESTADO, 0, 0, 0, 0, INTERCEPTANDO, 1)),
             ClaseHeroe.MAGO, List.of(
-                    new Habilidad("bola_fuego", "Bola de fuego", "Inflige daño mágico a un enemigo.",
-                            9, ENEMIGO, DANIO_MAGICO, 30, 0, 0, 0, null, 0),
+                    new Habilidad("bola_fuego", "Bola de fuego", "Inflige daño mágico. Quema con un 50 % de probabilidad, o un 25 % con Defenderse o Bendición.",
+                            9, ENEMIGO, DANIO_MAGICO, 30, 0, 0, 0, QUEMADO, 2, 1, 50),
                     new Habilidad("descarga_arcana", "Descarga arcana", "Inflige daño mágico a todos los enemigos.",
                             13, ENEMIGOS, DANIO_MAGICO, 14, 0, 0, 0, null, 0)),
             ClaseHeroe.ARQUERO, List.of(

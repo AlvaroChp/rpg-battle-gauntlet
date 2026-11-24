@@ -7,12 +7,13 @@ const ruta = '/api/partidas';
 const clave = 'gauntlet-partida';
 const nombres = {
     GUERRERO: 'Guerrero', MAGO: 'Mago', ARQUERO: 'Arquera', SANADOR: 'Sanadora', PICARO: 'Pícaro',
-    GOBLIN: 'Goblin', ESQUELETO: 'Esqueleto', CHAMAN: 'Chamán', OGRO: 'Ogro',
+    GOBLIN: 'Goblin', GOBLIN_ARQUERO: 'Goblin arquero', ESQUELETO: 'Esqueleto', CHAMAN: 'Chamán', OGRO: 'Ogro',
     CABALLERO_OSCURO: 'Caballero oscuro', DRAGON: 'Dragón',
     ARMAS: 'Armas', ARMADURAS: 'Armaduras', POCIONES: 'Pociones', PERGAMINOS: 'Pergaminos',
     DEBIL: 'Débil', NORMAL: 'Normal', PODEROSO: 'Poderoso', INFERIOR: 'Desgastada', SUPERIOR: 'Superior',
-    DEFENSA: 'Defensa', GUARDIA: 'Guardia', BENDICION: 'Bendición', EVASION: 'Esquiva',
-    RALENTIZACION: 'Ralentización', DEFENSA_DEBILITADA: 'Defensa debilitada',
+    DEFENSA: 'Defensa', INTERCEPTANDO: 'Listo para interceptar', BENDICION: 'Bendición', EVASION: 'Esquiva',
+    RALENTIZACION: 'Ralentización', ENVENENADO: 'Veneno', QUEMADO: 'Quemadura', DEFENSA_DEBILITADA: 'Defensa debilitada',
+    CARGA_FURIA_ANIMAL: 'Prepara Furia animal', CARGA_INCENDIO_CENIZA: 'Prepara Incendio de ceniza',
     GUARDIA_OSEA_ACTIVA: 'Guardia ósea', GUARDIA_OSCURA_ACTIVA: 'Guardia oscura',
     CONTRAATAQUE_LISTO: 'Contraataque preparado', PROTECCION_35: 'Protección del 35 %',
     PROTECCION_50: 'Protección del 50 %', PROTECCION_65: 'Protección del 65 %'
@@ -22,52 +23,52 @@ const iconos = { GUERRERO: '⚔', MAGO: '✦', ARQUERO: '➶', SANADOR: '✚', P
 const spritesCombate = {
     GUERRERO: 'guerrero.png', MAGO: 'mago.png', ARQUERO: 'arquero.png', SANADOR: 'sanador.png',
     PICARO: 'picaro.png',
-    GOBLIN: 'goblin.png', ESQUELETO: 'esqueleto.png', CHAMAN: 'chaman.png', OGRO: 'ogro.png',
+    GOBLIN: 'goblin.png', GOBLIN_ARQUERO: 'goblin_arquero.png', ESQUELETO: 'esqueleto.png', CHAMAN: 'chaman.png', OGRO: 'ogro.png',
     CABALLERO_OSCURO: 'caballero_oscuro.png', DRAGON: 'dragon.png'
 };
 const biografias = {
     GUERRERO: {
-        titulo: 'Therakos — Guerrero',
+        titulo: 'Therakos - Guerrero',
         parrafos: [
             'Antiguo capitán de los Caballeros de la Luna Quebrada, Therakos renegó del culto tras descubrir las verdaderas intenciones del Padre Fundador. Acusado de herejía, se vio obligado a acabar con la vida de su mejor amigo en defensa propia.',
             'Desde entonces vive como mercenario, ocultando bajo su armadura los tatuajes que delatan su pasado como miembro de la orden. Ofrece su espada a cualquiera que pueda pagar por sus servicios, pero se niega a servir a tirano alguno.'
         ]
     },
     MAGO: {
-        titulo: 'Vaelthar — Mago',
+        titulo: 'Vaelthar - Mago',
         parrafos: [
             'Misterioso erudito cuyo dominio de la magia supera al de los más prestigiosos estudiosos. Posee un conocimiento extraordinario de la desaparecida civilización Kryptoi, sus costumbres y sus artes arcanas.',
             'Lo que nadie sabe es que Vaelthar es un Kryptoi inmortal que ha sobrevivido al Cataclismo. Ocultando su verdadera naturaleza, lleva siglos recorriendo el mundo bajo distintas identidades, custodiando secretos de una civilización que todos creen extinta.'
         ]
     },
     ARQUERO: {
-        titulo: 'Lyra — Arquera',
+        titulo: 'Lyra - Arquera',
         parrafos: [
             'Criada en una pequeña comunidad de cazadores, Lyra aprendió desde temprana edad a orientarse en los bosques, rastrear animales y manejar el arco. Su extraordinaria puntería le valió un puesto entre los exploradores encargados de proteger las fronteras de su territorio.',
             'Tras años al servicio de su pueblo, decidió abandonar su hogar y recorrer el mundo, ganándose la vida como exploradora y mercenaria. Su conocimiento del terreno y su capacidad para anticiparse al peligro la convierten en una valiosa compañera de viaje.'
         ]
     },
     SANADOR: {
-        titulo: 'Dabria — Sanadora',
+        titulo: 'Dabria - Sanadora',
         parrafos: [
-            'Originaria de Kael-Seriv, Dabria es una eminente estudiosa del Eco, especializada en las artes de la restauración y la creación de barreras energéticas. Su profundo conocimiento de la antigua civilización Kryptoi la llevó a investigar los acontecimientos que desencadenaron el Cataclismo.',
+            'Originaria de Kael-Seriv, Dabria es una eminente estudiosa de la magia, especializada en las artes de la restauración y la creación de barreras energéticas. Su profundo conocimiento de la antigua civilización Kryptoi la llevó a investigar los acontecimientos que desencadenaron el Cataclismo.',
             'Tras descubrir una verdad inquietante en unos documentos prohibidos, decidió abandonar la capital. Desde entonces recorre el mundo en busca de respuestas, empleando su dominio del Eco para proteger y sanar a sus compañeros.'
         ]
     },
     PICARO: {
-        titulo: 'Lykos — Pícaro',
+        titulo: 'Lykos - Pícaro',
         parrafos: [
             'Huérfano desde temprana edad, Lykos creció entre los callejones de Vhaldris, una próspera ciudad comercial donde la opulencia de la nobleza contrasta con la miseria de los barrios bajos. Fue acogido por el gremio de ladrones, cuyos miembros le dieron el nombre por el que se le conoce. Ni él mismo conoce su verdadera identidad ni sus orígenes.',
             'Tras abandonar el gremio, comenzó a recorrer el mundo como mercenario. Aunque desconfía de las grandes promesas y los ideales heroicos, posee su propio código de honor y jamás traiciona a quienes considera sus compañeros.'
         ]
     }
 };
-const atributos = { fuerza: 'FUE', defensa: 'DEF', inteligencia: 'INT', resistencia: 'RES',
-    velocidad: 'VEL', destreza: 'DES', critico: 'Crítico', esquiva: 'Esquiva', potenciaMagica: 'Potencia mágica' };
+const atributosBase = { fuerza: 'FUE', defensa: 'DEF', inteligencia: 'INT', resistencia: 'RES',
+    velocidad: 'VEL', destreza: 'DES' };
+const atributos = { ...atributosBase, critico: 'Crítico', esquiva: 'Esquiva', potenciaMagica: 'Potencia mágica' };
 const categorias = ['ARMAS', 'ARMADURAS', 'POCIONES', 'PERGAMINOS'];
 const paneles = { recompensas: 'Recompensas', estado: 'Estado', inventario: 'Inventario', equipo: 'Equipamiento', tienda: 'Tienda', nivel: 'Nivel' };
-const dificultades = { FACIL: 'Fácil', DIFICIL: 'Difícil', EXPERTO: 'Experto', PRUEBAS: 'Pruebas' };
-const nombresId = new Map();
+const dificultades = { PRUEBAS: 'Pruebas', FACIL: 'Normal', DIFICIL: 'Difícil', EXPERTO: 'Experto' };
 const observarNombresCombate = new ResizeObserver(entradas => {
     for (const { target: titulo, contentRect } of entradas) {
         titulo.style.removeProperty('font-size');
@@ -112,7 +113,8 @@ async function api(url, datos) {
     });
     const contenido = await respuesta.json();
     if (!respuesta.ok) {
-        const error = new Error(contenido.mensaje ?? 'No se pudo completar la petición');
+        const mensaje = contenido.mensaje ?? 'No se pudo completar la petición';
+        const error = new Error(mensaje.replace(/\bPM\b/g, 'PC'));
         error.estado = respuesta.status;
         throw error;
     }
@@ -126,7 +128,6 @@ function actualizar(nueva) {
     }
     partida = nueva;
     localStorage.setItem(clave, partida.id);
-    partida.heroes.concat(partida.enemigos).forEach(combatiente => nombresId.set(combatiente.id, nombre(combatiente.tipo)));
 }
 
 async function operar(operacion, datos = {}) {
@@ -165,24 +166,79 @@ async function operar(operacion, datos = {}) {
     }
 }
 
-async function reproducirAcciones(eventos) {
-    const figuras = new Map([...juego.querySelectorAll('[data-combatiente]')].map(luchador =>
-        [luchador.dataset.combatiente, luchador.querySelector('.figura-combate')]));
+function agruparAcciones(eventos) {
     const acciones = [];
     for (const evento of eventos) {
         const anterior = acciones.at(-1);
-        if (anterior?.turno === evento.turno && anterior.actor === evento.actor) {
-            anterior.eventos.push(evento);
+        if (anterior && anterior[0].turno === evento.turno && anterior[0].actor === evento.actor
+            && anterior[0].habilidad === evento.habilidad) {
+            anterior.push(evento);
         } else {
-            acciones.push({ turno: evento.turno, actor: evento.actor, eventos: [evento] });
+            acciones.push([evento]);
         }
     }
-    for (const accion of acciones) {
-        await animarFiguras([figuras.get(accion.actor)], 'accion-en-curso');
-        const objetivos = new Set(accion.eventos.filter(evento => evento.danio > 0)
-            .map(evento => figuras.get(evento.objetivo)));
-        await animarFiguras(objetivos, 'golpe-recibido');
+    return acciones;
+}
+
+function textoAccion(accion, anterior) {
+    if (!accion) return '';
+    const intercepto = anterior?.[0].habilidad === 'golpe_interceptado'
+        && anterior[0].turno === accion[0].turno;
+    return (intercepto ? anterior.concat(accion) : accion).map(textoEvento).join(' ');
+}
+
+async function reproducirAcciones(eventos) {
+    const aviso = juego.querySelector('.ultima-accion');
+    if (!aviso) return;
+    const figuras = new Map([...juego.querySelectorAll('[data-combatiente]')].map(luchador =>
+        [luchador.dataset.combatiente, luchador.querySelector('.figura-combate')]));
+    let anterior;
+    for (const accion of agruparAcciones(eventos)) {
+        aviso.textContent = textoAccion(accion, anterior);
+        aviso.scrollTop = 0;
+        anterior = accion;
+        await animarFiguras([figuras.get(accion[0].actor)], 'accion-en-curso');
+
+        const resultados = new Map();
+        for (const evento of accion) {
+            const figura = figuras.get(evento.objetivo);
+            if (!figura || !(evento.danio || evento.curacion)) continue;
+            const resultado = resultados.get(figura) ?? { danio: 0, curacion: 0 };
+            resultado.danio += evento.danio;
+            resultado.curacion += evento.curacion;
+            resultados.set(figura, resultado);
+        }
+        const indicadores = [];
+        const golpeados = [];
+        const curados = [];
+        for (const [figura, resultado] of resultados) {
+            const indicador = document.createElement('div');
+            indicador.className = 'resultado-combate';
+            indicador.setAttribute('aria-hidden', 'true');
+            if (resultado.danio) {
+                indicador.append(etiquetaResultado(`−${resultado.danio} PV`, 'danio'));
+                golpeados.push(figura);
+            }
+            if (resultado.curacion) {
+                indicador.append(etiquetaResultado(`+${resultado.curacion} PV`, 'curacion'));
+                if (!resultado.danio) curados.push(figura);
+            }
+            figura.querySelector('.retrato-combate').append(indicador);
+            indicadores.push(indicador);
+        }
+        await Promise.all([
+            animarFiguras(golpeados, 'golpe-recibido'),
+            animarFiguras(curados, 'curacion-recibida')
+        ]);
+        indicadores.forEach(indicador => indicador.remove());
     }
+}
+
+function etiquetaResultado(texto, clase) {
+    const etiqueta = document.createElement('span');
+    etiqueta.className = clase;
+    etiqueta.textContent = texto;
+    return etiqueta;
 }
 
 async function animarFiguras(figuras, clase) {
@@ -236,20 +292,41 @@ function mostrar() {
 }
 
 function mostrarSeleccion() {
-    const modos = partida.dificultadesDisponibles ?? (partida.dificultad ? ['FACIL', 'DIFICIL', 'EXPERTO'] : ['FACIL']);
+    const detallesAbiertos = new Set([...juego.querySelectorAll('.detalle-seleccion[open]')].map(detalle => detalle.dataset.detalle));
+    const disponibles = partida.dificultadesDisponibles ?? (partida.dificultad ? ['FACIL', 'DIFICIL', 'EXPERTO'] : ['FACIL']);
+    const modos = Object.keys(dificultades).filter(codigo => disponibles.includes(codigo));
     juego.innerHTML = `<h1>Elige a tus héroes</h1><p class="ayuda">${seleccion.length} de 3 clases seleccionadas</p>
         <div class="rejilla seleccion-heroes">${perfiles.map(({clase, base}) => {
             const { titulo, parrafos } = biografias[clase];
             return `<article class="tarjeta ficha-seleccion">
                 <div class="retrato-seleccion"><img src="imagenes/${spritesCombate[clase]}" alt=""></div>
                 <h2>${escapar(titulo)}</h2>
-                <small>${base.pvMaximos} PV · ${base.pmMaximos} PM</small>
-                <small>${Object.entries(atributos).filter(([clave]) => clave in base && (clave !== 'critico' || !('destreza' in base)))
+                <small>${base.pvMaximos} PV · ${base.pmMaximos} PC · Esquiva ${base.esquiva} · Crítico ${base.destreza ?? base.critico}</small>
+                <small>${Object.entries(atributosBase).filter(([clave]) => clave in base)
                     .map(([clave, etiqueta]) => `${etiqueta} ${base[clave]}`).join(' · ')}</small>
-                <div class="biografia">${parrafos.map(parrafo => `<p>${escapar(parrafo)}</p>`).join('')}</div>
+                <details class="detalle-seleccion" data-detalle="${clase}"${detallesAbiertos.has(clase) ? ' open' : ''}>
+                    <summary><span>Ver historia</span><span>Ocultar historia</span></summary>
+                    ${parrafos.map(parrafo => `<p>${escapar(parrafo)}</p>`).join('')}
+                </details>
                 ${boton('Elegir', 'clase', clase, `aria-label="Elegir a ${escapar(titulo)}" aria-pressed="${seleccion.includes(clase)}"`)}
             </article>`;
-        }).join('')}</div>
+        }).join('')}
+            <article class="tarjeta ficha-seleccion">
+                <h2>Cómo jugar</h2>
+                <details class="detalle-seleccion" data-detalle="guia"${detallesAbiertos.has('guia') ? ' open' : ''}>
+                    <summary><span>Ver conceptos básicos</span><span>Ocultar conceptos básicos</span></summary>
+                    <p><strong>Equipo y turnos.</strong> Elige tres héroes y supera diez rondas. La velocidad (VEL) decide el orden. En cada turno puedes atacar, usar una habilidad o un objeto, o defenderte.</p>
+                    <p><strong>Vida y concentración.</strong> Los Puntos de Vida (PV) son la salud de nuestro personaje. Con 0 PV, el héroe cae. Los puntos de concentración (PC) se gastan al usar habilidades. La poción roja recupera 80 PV, la verde recupera 50 PC y la azul recupera 50 PV y 30 PC. El ataque básico y Defenderse son gratuitos.</p>
+                    <p><strong>Interceptar.</strong> Therakos puede gastar 4 PC para proteger el próximo golpe que reciba o ponerse en el lugar de un aliado ante un ataque individual. La postura termina al empezar su siguiente turno. Un escudo equipado eleva la reducción de Defenderse y del golpe interceptado del 40 % al 65 %.</p>
+                    <p><strong>Daño físico.</strong> La fuerza (FUE) aumenta el daño y la defensa (DEF) lo reduce.</p>
+                    <p><strong>Magia.</strong> La inteligencia (INT) mejora el daño mágico y la curación. La resistencia (RES) reduce el daño mágico. Los ataques mágicos siempre aciertan y carecen de crítico.</p>
+                    <p><strong>Quemadura y veneno.</strong> El fuego y Flecha envenenada pueden aplicar un estado con un 50 % de probabilidad, o un 25 % con Defenderse o Bendición. Incendio de ceniza quema con un 100 % de probabilidad, o un 50 % con alguna de esas protecciones. El daño dura dos turnos del objetivo.</p>
+                    <p><strong>Esquiva.</strong> Es la probabilidad de evitar un golpe físico por completo. Una prenda como la capucha puede aumentarla. La precisión del arma o del ataque puede reducir la esquiva del objetivo para ese golpe.</p>
+                    <p><strong>Crítico.</strong> Cuando un golpe físico acierta, puede infligir un 50 % más de daño. Cada punto de destreza (DES) aporta un punto porcentual de crítico base. El equipo y el ataque pueden añadir bonos, como los de la daga y su Estocada rápida.</p>
+                    <p><strong>Campamento.</strong> Entre rondas puedes recoger botín, comprar equipo y gastar puntos de nivel. Cada arma concede un ataque propio. La Poción dorada revive a un aliado caído con el 25 % de sus PV máximos.</p>
+                </details>
+            </article>
+        </div>
         <div class="fila"><label>Dificultad <select id="dificultad">${modos.map(codigo =>
             `<option value="${codigo}" ${codigo === dificultadElegida ? 'selected' : ''}>${dificultades[codigo]}</option>`).join('')}</select></label>
             ${boton('Iniciar combate', 'iniciar', '', `class="principal" ${seleccion.length === 3 ? '' : 'disabled'}`)}</div>`;
@@ -274,7 +351,7 @@ function luchador(datos, enCampamento = false) {
         <div class="tarjeta ${!enCampamento && partida.orden[0] === datos.id ? 'activo' : ''}">
             <h3><span>${nombre(datos.tipo)}</span></h3>
             ${enCampamento ? `<small>Nivel ${datos.nivel}</small>` : ''}
-            ${barra('PV', datos.pv, datos.base.pvMaximos)}${barra('PM', datos.pm, datos.base.pmMaximos, 'magia')}
+            ${barra('PV', datos.pv, datos.base.pvMaximos)}${barra('PC', datos.pm, datos.base.pmMaximos, 'magia')}
             ${enCampamento ? `<small>${datos.pv > 0 ? 'En pie' : 'Fuera de combate'}</small>` : '<small class="aviso-caida">Fuera de combate</small>'}
             ${enCampamento ? `<dl class="equipo-estado">
                 ${datos.base.destreza === undefined ? '' : `<dt>Destreza</dt><dd>${datos.base.destreza}</dd>`}
@@ -294,23 +371,63 @@ function nombreObjeto(objeto) {
     return objeto.nombre;
 }
 
-function historial() {
-    const etiquetas = { ataque_basico: 'Ataque básico', defender: 'Defenderse', bola_fuego: 'Bola de fuego',
+const etiquetasCombate = { ataque_basico: 'Ataque básico', defender: 'Defenderse', bola_fuego: 'Bola de fuego',
+        interceptar: 'Interceptar', golpe_interceptado: 'Se interpone para proteger a',
         fuego_chaman: 'Bola de fuego', aliento_fuego: 'Aliento de fuego', barrido: 'Ataque de área', robar: 'Robar',
+        corte: 'Corte amplio', estocada_precisa: 'Estocada precisa', tajo_demoledor: 'Tajo demoledor',
+        corte_ultratumba: 'Corte de ultratumba', filo_maldicion: 'Filo de la maldición',
+        estocada_rapida: 'Estocada rápida', puntada_traicionera: 'Puntada traicionera', corte_al_tendon: 'Corte al tendón',
+        impacto: 'Impacto contundente',
+        flecha_de_alcance: 'Flecha de largo alcance', destello_arcano: 'Destello arcano', descarga_astral: 'Descarga astral',
+        eco_de_la_tormenta: 'Eco de la tormenta',
+        flechazo_goblin: 'Flechazo goblin', flecha_envenenada: 'Flecha envenenada', veneno: 'Veneno', quemadura: 'Quemadura',
+        preparar_furia_animal: 'Prepara Furia animal', furia_animal: 'Furia animal', furia_interrumpida: 'Furia animal interrumpida',
+        preparar_incendio_ceniza: 'Prepara Incendio de ceniza', incendio_ceniza: 'Incendio de ceniza',
         'Réquiem del Dragón': nombrePergaminoDragon, 'Poción de revitalización': nombrePocionDorada };
+function textoEvento(evento) {
+    const actor = nombre(evento.tipoActor);
+    const objetivo = nombre(evento.tipoObjetivo);
+    if (evento.habilidad === 'golpe_interceptado') return `${actor} se interpone para proteger a ${objetivo}.`;
+    const accion = etiquetasCombate[evento.habilidad] ?? evento.habilidad.replaceAll('_', ' ');
+    const destino = evento.actor === evento.objetivo ? '' : ` → ${objetivo}`;
+    const detalles = [];
+    if (evento.habilidad === 'robar') {
+        detalles.push(evento.objetoRobado ? `roba ${nombreObjeto(evento.objetoRobado)}` : 'intento fallido');
+    }
+    if (evento.esquivado) detalles.push(`${objetivo} esquiva`);
+    if (evento.danio) detalles.push(`${evento.danio} de daño${evento.critico ? ' crítico' : ''}`);
+    if (evento.curacion) detalles.push(`+${evento.curacion} PV`);
+    if (evento.magiaRecuperada) detalles.push(`+${evento.magiaRecuperada} PC`);
+    return [`${actor} · ${accion}${destino}`, ...detalles].join(' · ') + '.';
+}
+
+function historial() {
     const eventos = partida.historial.slice().reverse();
     return `<details class="panel" ${partida.estado === 'COMBATE' ? 'open' : ''}><summary>Historial de combate (${eventos.length})</summary>
-        <ol class="registro">${eventos.map(evento => {
-            const accion = etiquetas[evento.habilidad] ?? evento.habilidad.replaceAll('_', ' ');
-            const resultado = evento.habilidad === 'robar'
-                ? (evento.objetoRobado ? ` · ha robado ${escapar(nombreObjeto(evento.objetoRobado))}` : ' · intento fallido')
-                : evento.esquivado ? ' · esquivado'
-                : evento.danio ? ` · ${evento.danio} de daño${evento.critico ? ' crítico' : ''}`
-                : evento.curacion ? ` · +${evento.curacion} PV` : '';
-            const magia = evento.magiaRecuperada ? ` · +${evento.magiaRecuperada} PM` : '';
-            return `<li>${evento.turno} · ${escapar(nombre(evento.tipoActor))} · ${escapar(accion)}
-                · ${escapar(nombre(evento.tipoObjetivo))}${resultado}${magia}</li>`;
-        }).join('')}</ol></details>`;
+        <ol class="registro">${eventos.map(evento =>
+            `<li>${evento.turno} · ${escapar(textoEvento(evento))}</li>`).join('')}</ol></details>`;
+}
+
+function nombresDeLosSiguientesTurnos() {
+    const vivos = partida.heroes.concat(partida.enemigos).filter(combatiente => combatiente.pv > 0);
+    const combatientes = new Map(vivos.map(combatiente => [combatiente.id, {
+        nombre: nombre(combatiente.tipo),
+        velocidadBase: combatiente.base.velocidad + (combatiente.modificadoresEquipo?.velocidad ?? 0),
+        turnosRalentizado: combatiente.estados.RALENTIZACION ?? 0
+    }]));
+    const velocidad = id => {
+        const datos = combatientes.get(id);
+        return Math.max(1, datos.velocidadBase - (datos.turnosRalentizado > 0 ? 4 : 0));
+    };
+    let pendientes = partida.orden.filter(id => combatientes.has(id));
+    const nombres = [];
+    for (let turno = 0; turno <= 4; turno++) {
+        if (!pendientes.length) pendientes = [...combatientes.keys()].sort((a, b) => velocidad(b) - velocidad(a));
+        const datos = combatientes.get(pendientes.shift());
+        if (turno > 0) nombres.push(datos.nombre);
+        if (datos.turnosRalentizado > 0) datos.turnosRalentizado--;
+    }
+    return nombres;
 }
 
 function mostrarCombate() {
@@ -322,7 +439,7 @@ function mostrarCombate() {
     const dragonesVivos = partida.enemigos.filter(enemigo => enemigo.tipo === 'DRAGON' && enemigo.pv > 0);
     const objetivosRobo = new Set(partida.objetivosRobo ?? []);
     const opciones = [
-        ...partida.habilidades.map(habilidad => ({ ...habilidad, texto: `${habilidad.nombre} · ${habilidad.costePm} PM`,
+        ...partida.habilidades.map(habilidad => ({ ...habilidad, texto: `${habilidad.nombre} · ${habilidad.costePm} PC`,
             avisoBloqueo: habilidad.id === 'robar' && !objetivosRobo.size ? 'Sin objetivos con botín' : '' })),
         ...consumibles.map(objeto => {
             const { tipo, objetivo } = objeto.efecto;
@@ -345,17 +462,24 @@ function mostrarCombate() {
         <label>${apuntarACaido ? 'Aliado caído' : 'Objetivo'}<select name="objetivo" required>${objetivos
             .map(objetivo => `<option value="${objetivo.id}">${nombre(objetivo.tipo)} · ${apuntarACaido ? 'Fuera de combate' : `${objetivo.pv} PV`}</option>`)
             .join('')}</select></label>` : '';
-    juego.innerHTML = `<p class="orden">Turno de <strong>${nombre(actor.tipo)}</strong> · ${partida.orden.map(id => nombresId.get(id)).join(' / ')}</p>
-        <div class="bandos escenario">
+    const ultimoTurno = partida.historial.at(-1)?.turno;
+    const acciones = agruparAcciones(partida.historial.filter(evento => evento.turno === ultimoTurno));
+    juego.innerHTML = `<div class="bandos escenario">
+            <div class="ultima-accion" role="status" aria-label="Última acción">${escapar(textoAccion(acciones.at(-1), acciones.at(-2)))}</div>
             <section class="rejilla" aria-label="Héroes">${partida.heroes.map(heroe => luchador(heroe)).join('')}</section>
             <section class="rejilla" aria-label="Enemigos">${partida.enemigos.map(enemigo => luchador(enemigo)).join('')}</section>
         </div>
-        <form id="accion" class="panel acciones" data-objeto="${accion.objeto?.id ?? ''}">
-            <h2>Acciones disponibles</h2>
-            <div class="fila"><label>Acción<select name="habilidad">
+        <form id="accion" class="panel acciones" aria-label="Acciones disponibles" data-objeto="${accion.objeto?.id ?? ''}">
+            <div class="controles-combate">
+                <div class="fila"><label>Acción<select name="habilidad">
             ${opciones.map(opcion => `<option value="${opcion.id}" ${opcion.id === accion.id ? 'selected' : ''}
                 ${opcion.avisoBloqueo ? 'disabled' : ''}>${escapar(opcion.texto)}${opcion.avisoBloqueo ? ` · ${escapar(opcion.avisoBloqueo)}` : ''}</option>`).join('')}
-            </select></label>${elegirObjetivo}<button class="principal" type="submit">Actuar</button></div>
+                </select></label>${elegirObjetivo}<button class="principal" type="submit">Actuar</button></div>
+                <p class="orden">
+                    <span class="turno-actual">Turno de <strong>${nombre(actor.tipo)}</strong></span>
+                    <span>Siguientes: ${nombresDeLosSiguientesTurnos().join(' / ')}</span>
+                </p>
+            </div>
             <small>${escapar(accion.descripcion)}${accion.id === 'robar' ? ` Probabilidad: ${actor.probabilidadRobo} %.` : ''}</small>
         </form>${historial()}`;
     juego.querySelectorAll('.escenario .luchador h3').forEach(titulo => observarNombresCombate.observe(titulo));
@@ -367,12 +491,12 @@ function describir(objeto) {
     if (!objeto.efecto) return bonos;
     const {tipo, objetivo, cantidad, magia, proteccion} = objeto.efecto;
     const grupo = objetivo === 'ENEMIGOS' ? ' a todos los enemigos' : objetivo === 'ALIADOS' ? ' a todos los aliados vivos' : '';
-    if (tipo === 'DANIO') return `${cantidad} de daño mágico${grupo}`;
+    if (tipo === 'DANIO') return `${cantidad} de daño mágico${grupo}${objeto.efecto.incendiario ? ' · Puede causar quemaduras' : ''}`;
     if (tipo === 'ANIQUILAR_DRAGON') return 'Derrota al dragón de un solo golpe.';
     if (tipo === 'REVITALIZACION') return `Revive a un héroe caído con el ${cantidad} % de sus PV máximos.`;
     if (tipo === 'PROTECCION') return `${proteccion} % de reducción durante 2 turnos${grupo}`;
     if (tipo === 'CURA_TOTAL') return `Recupera ${cantidad} % de PV máximos${proteccion ? ` · protección del ${proteccion} % durante 2 turnos` : ''}`;
-    return [cantidad ? `+${cantidad} PV${grupo}` : '', magia ? `+${magia} PM` : ''].filter(Boolean).join(' · ');
+    return [cantidad ? `+${cantidad} PV${grupo}` : '', magia ? `+${magia} PC` : ''].filter(Boolean).join(' · ');
 }
 
 function articulo(objeto, controles, detalle = '') {
@@ -381,9 +505,10 @@ function articulo(objeto, controles, detalle = '') {
         objeto.inteligenciaMinima && `INT ${objeto.inteligenciaMinima}`,
         objeto.clasesCompatibles?.map(nombre).join(', ')].filter(Boolean).join(' · ');
     return `<article class="tarjeta articulo"><h3>${escapar(nombreObjeto(objeto))}</h3>
-        ${variante ? `<small>${escapar(nombre(variante))}${objeto.inicial ? ' · Inicial' : ''}</small>` : ''}
+        ${variante ? `<small>${objeto.categoria === 'ARMAS' ? 'Calidad: ' : ''}${escapar(nombre(variante))}${objeto.inicial ? ' · Inicial' : ''}</small>` : ''}
         <small>${escapar(describir(objeto))}</small><small>Requisitos · ${requisitos || 'Ninguno'}</small>
-        ${objeto.habilidad ? `<small>${escapar(objeto.habilidad.nombre)} · ${objeto.habilidad.costePm} PM</small>` : ''}
+        ${objeto.codigo === 'escudo' ? '<small>Defenderse e Interceptar reducen el daño un 65 % con el escudo equipado.</small>' : ''}
+        ${objeto.habilidad ? `<small>${escapar(objeto.habilidad.nombre)} · ${objeto.habilidad.costePm} PC</small>` : ''}
         ${detalle}<div class="fila">${controles}</div></article>`;
 }
 
@@ -453,7 +578,7 @@ function mostrarCampamento() {
             <div class="fila">${Object.entries({PV: heroe.base.pvMaximos, PM: heroe.base.pmMaximos, FUE: heroe.base.fuerza,
                 DEF: heroe.base.defensa, INT: heroe.base.inteligencia, RES: heroe.base.resistencia, VEL: heroe.base.velocidad,
                 DES: heroe.base.destreza}).filter(([, valor]) => valor !== undefined)
-                .map(([atributo, valor]) => boton(`${atributo} ${valor} · +1 punto`, 'atributo', atributo,
+                .map(([atributo, valor]) => boton(`${atributo === 'PM' ? 'PC' : atributo} ${valor} · +1 punto`, 'atributo', atributo,
                     heroe.puntos ? '' : 'disabled')).join('')}</div>`;
     }
     juego.innerHTML = `<div class="pestanas">${Object.entries(paneles).map(([clave, etiqueta]) =>
@@ -466,10 +591,10 @@ document.addEventListener('click', async evento => {
     if (!boton || ocupado) return;
     const {accion, valor} = boton.dataset;
     switch (accion) {
-        case 'crear': seleccion = []; await operar('crear'); break;
+        case 'crear': seleccion = []; dificultadElegida = 'FACIL'; await operar('crear'); break;
         case 'reiniciar':
             if (partida.ronda && !window.confirm('¿Empezar una nueva partida? Se perderá el progreso actual.')) break;
-            if (await operar('reiniciar')) { seleccion = []; mostrar(); }
+            if (await operar('reiniciar')) { seleccion = []; dificultadElegida = 'FACIL'; mostrar(); }
             break;
         case 'clase':
             if (seleccion.includes(valor)) seleccion = seleccion.filter(clase => clase !== valor);

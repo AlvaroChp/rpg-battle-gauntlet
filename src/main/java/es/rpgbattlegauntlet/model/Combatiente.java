@@ -3,6 +3,7 @@ package es.rpgbattlegauntlet.model;
 import es.rpgbattlegauntlet.enums.EstadoTemporal;
 
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -53,6 +54,10 @@ public class Combatiente {
         return Map.copyOf(estados);
     }
 
+    public boolean tieneEstado(EstadoTemporal estado) {
+        return estados.containsKey(estado);
+    }
+
     public int getVelocidadEfectiva() {
         int cambio = estados.keySet().stream().mapToInt(EstadoTemporal::cambioVelocidad).sum();
         return Math.max(1, estadisticasBase.velocidad() + getBonificaciones().velocidad() + cambio);
@@ -73,7 +78,12 @@ public class Combatiente {
     }
 
     public int getReduccionDanio() {
-        return estados.keySet().stream().mapToInt(EstadoTemporal::reduccionDanio).max().orElse(0);
+        return estados.keySet().stream().mapToInt(estado -> estado == EstadoTemporal.DEFENSA
+                ? reduccionAlDefenderse() : estado.reduccionDanio()).max().orElse(0);
+    }
+
+    int reduccionAlDefenderse() {
+        return EstadoTemporal.DEFENSA.reduccionDanio();
     }
 
     void recibirDanio(int cantidad) {
@@ -112,9 +122,11 @@ public class Combatiente {
         estados.merge(estado, turnos, Math::max);
     }
 
-    void terminarTurno() {
+    List<EstadoTemporal> terminarTurno() {
+        var danios = estados.keySet().stream().filter(estado -> estado.danioPeriodico() > 0).toList();
         estados.replaceAll((estado, restantes) -> restantes - 1);
         estados.values().removeIf(restantes -> restantes == 0);
+        return danios;
     }
 
     void limpiarEstados() {

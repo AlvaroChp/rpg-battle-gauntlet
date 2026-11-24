@@ -5,6 +5,8 @@ import es.rpgbattlegauntlet.model.Enemigo;
 import es.rpgbattlegauntlet.model.Habilidad;
 import es.rpgbattlegauntlet.model.Heroe;
 import es.rpgbattlegauntlet.enums.TipoObjetivo;
+import es.rpgbattlegauntlet.enums.TipoEnemigo;
+import es.rpgbattlegauntlet.enums.EstadoTemporal;
 
 import java.util.Comparator;
 import java.util.List;
@@ -29,12 +31,21 @@ public final class InteligenciaEnemiga {
     public static Decision decidir(Enemigo enemigo, List<Combatiente> aliados, List<Heroe> heroes, RandomGenerator azar) {
         int accion = enemigo.getAccionesRealizadas();
         int vida = porcentajeVida(enemigo);
+        if (enemigo.getTipo() == TipoEnemigo.OGRO) {
+            if (enemigo.tieneEstado(EstadoTemporal.CARGA_FURIA_ANIMAL)) return new Decision(FURIA_ANIMAL, null);
+            if (vida <= 50 && !enemigo.haIniciadoAtaqueUnico()) return new Decision(PREPARAR_FURIA_ANIMAL, enemigo);
+        }
+        if (enemigo.getTipo() == TipoEnemigo.DRAGON) {
+            if (enemigo.tieneEstado(EstadoTemporal.CARGA_INCENDIO_CENIZA)) return new Decision(INCENDIO_CENIZA, null);
+            if (vida <= 35 && !enemigo.haIniciadoAtaqueUnico()) return new Decision(PREPARAR_INCENDIO_CENIZA, enemigo);
+        }
         Decision decision = switch (enemigo.getTipo()) {
-            case GOBLIN -> new Decision(accion % 3 == 1 ? ATAQUE_DOBLE : CUCHILLADA, null);
-            case ESQUELETO -> accion % 3 == 1 || (vida <= 35 && accion % 3 == 0)
+            case GOBLIN -> new Decision(accion % 3 == 1 && puedeUsar(enemigo, ATAQUE_DOBLE) ? ATAQUE_DOBLE : CUCHILLADA, null);
+            case GOBLIN_ARQUERO -> new Decision(FLECHAZO_GOBLIN, null);
+            case ESQUELETO -> (accion % 3 == 1 || (vida <= 35 && accion % 3 == 0)) && puedeUsar(enemigo, GUARDIA_OSEA)
                     ? new Decision(GUARDIA_OSEA, enemigo) : new Decision(ESPADAZO, null);
             case CHAMAN -> decisionChaman(enemigo, aliados);
-            case OGRO -> accion % 2 == 1 && heroes.stream().filter(Combatiente::estaVivo).count() > 1
+            case OGRO -> accion % 2 == 1 && puedeUsar(enemigo, BARRIDO) && heroes.stream().filter(Combatiente::estaVivo).count() > 1
                     ? new Decision(BARRIDO, null) : new Decision(MAZAZO, null);
             case CABALLERO_OSCURO -> {
                 if (accion % 4 == 1 && puedeUsar(enemigo, GUARDIA_OSCURA)) {
@@ -47,8 +58,22 @@ public final class InteligenciaEnemiga {
             }
             case DRAGON -> decisionDragon(enemigo, accion, vida);
         };
-        return decision.habilidad().objetivo() == TipoObjetivo.ENEMIGO
-                ? new Decision(decision.habilidad(), elegirObjetivo(heroes, azar)) : decision;
+        if (decision.habilidad().objetivo() != TipoObjetivo.ENEMIGO) return decision;
+
+        Habilidad ataque = decision.habilidad();
+        boolean turnoDeArma = switch (enemigo.getTipo()) {
+            case CABALLERO_OSCURO -> accion % 4 == 3;
+            case GOBLIN_ARQUERO -> accion % 2 == 1;
+            default -> accion % 3 == 2;
+        };
+        if (turnoDeArma && ataque != ATAQUE_DOBLE) {
+            var disponibles = GeneradorBotin.habilidadesDeArmas(enemigo.getTipo()).stream()
+                    .filter(habilidad -> puedeUsar(enemigo, habilidad)).toList();
+            if (!disponibles.isEmpty()) {
+                ataque = disponibles.size() == 1 ? disponibles.getFirst() : disponibles.get(azar.nextInt(disponibles.size()));
+            }
+        }
+        return new Decision(ataque, ataque.objetivo() == TipoObjetivo.ENEMIGO ? elegirObjetivo(heroes, azar) : null);
     }
 
     private static Heroe elegirObjetivo(List<Heroe> heroes, RandomGenerator azar) {

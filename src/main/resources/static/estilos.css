@@ -48,7 +48,11 @@ p { line-height: 1.5; }
 .retrato-seleccion { display: grid; place-items: end center; height: 11rem; margin-bottom: .8rem; }
 .retrato-seleccion img { max-width: 100%; max-height: 11rem; }
 .ficha-seleccion h2 { margin-bottom: .35rem; }
-.biografia { margin: .8rem 0 1rem; font-size: .92rem; }
+.detalle-seleccion { margin: .8rem 0 1rem; font-size: .92rem; }
+.detalle-seleccion summary { width: fit-content; color: var(--oro); cursor: pointer; }
+.detalle-seleccion summary:focus-visible { outline: 2px solid #ffd598; outline-offset: 3px; }
+.detalle-seleccion:not([open]) summary span:last-child, .detalle-seleccion[open] summary span:first-child { display: none; }
+.detalle-seleccion summary + p { margin-top: .65rem; }
 .ficha-seleccion button { align-self: start; margin-top: auto; }
 .icono { display: inline-grid; place-items: center; width: 2.5rem; height: 2.5rem; margin-bottom: .55rem; border: 1px solid var(--borde); color: var(--oro); background: #3c2921; box-shadow: inset 0 0 0 3px var(--panel); font-size: 1.35rem; }
 .bandos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1rem, 2.5vw, 2rem); margin-bottom: 1rem; }
@@ -60,13 +64,33 @@ p { line-height: 1.5; }
     gap: var(--separacion);
 }
 .escenario {
+    position: relative;
     align-content: end;
-    min-height: clamp(22rem, 42vw, 31rem);
+    min-height: clamp(22rem, 49vw, 36rem);
     padding: clamp(.75rem, 2vw, 1.5rem);
-    padding-top: 3.5rem;
+    padding-top: 6rem;
+    padding-bottom: clamp(1.5rem, 4vw, 3.75rem);
     border: 1px solid var(--borde);
-    background: linear-gradient(transparent 15%, #171211d9), url('imagenes/escenario.png') center / cover;
+    background: linear-gradient(transparent 45%, #17121140), url('imagenes/escenario.png?v=estandartes-dragon') center bottom / cover;
 }
+.ultima-accion {
+    position: absolute;
+    z-index: 2;
+    inset: 1.15rem 0 auto;
+    width: clamp(18rem, 34%, 25rem);
+    max-width: calc(100% - 1.5rem);
+    margin-inline: auto;
+    max-height: 4.5rem;
+    overflow: auto;
+    padding: .4rem .65rem;
+    border: 1px solid var(--borde);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--texto);
+    text-align: center;
+    font-size: .9rem;
+}
+.ultima-accion:empty { visibility: hidden; }
 .luchador { min-width: 0; }
 .luchador.caido { opacity: .65; }
 .luchador:not(.caido) .aviso-caida { visibility: hidden; }
@@ -124,14 +148,40 @@ p { line-height: 1.5; }
     font-size: .72rem;
     text-align: center;
 }
-.accion-en-curso { animation: accion-en-curso .24s ease-out; }
+.resultado-combate {
+    position: absolute;
+    z-index: 1;
+    inset-inline: 0;
+    bottom: 100%;
+    display: flex;
+    justify-content: center;
+    gap: .2rem;
+    pointer-events: none;
+}
+.retrato-combate:has(.resultado-combate) .estados-combate { bottom: calc(100% + 1.75rem); }
+.resultado-combate span {
+    padding: .12rem .35rem;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    background: var(--panel);
+    font-size: .82rem;
+    font-weight: bold;
+    white-space: nowrap;
+}
+.resultado-combate .danio { color: #ff9b87; }
+.resultado-combate .curacion { color: #9de2a3; }
+.accion-en-curso { animation: accion-en-curso .55s ease-out; }
 @keyframes accion-en-curso {
     40% { filter: drop-shadow(0 0 .55rem var(--oro)) brightness(1.24); }
 }
-.golpe-recibido { animation: golpe-recibido .32s ease-out; }
+.golpe-recibido { animation: golpe-recibido .8s ease-out; }
 @keyframes golpe-recibido {
     25% { filter: brightness(1.6) drop-shadow(0 0 .4rem #ff684f); transform: translateX(.25rem); }
     50% { transform: translateX(-.15rem); }
+}
+.curacion-recibida { animation: curacion-recibida .8s ease-out; }
+@keyframes curacion-recibida {
+    35% { filter: drop-shadow(0 0 .5rem #79e48d) brightness(1.2); }
 }
 @media (prefers-reduced-motion: reduce) {
     .golpe-recibido { animation-name: brillo-golpe; }
@@ -139,7 +189,7 @@ p { line-height: 1.5; }
         25% { filter: drop-shadow(0 0 .45rem #ff684f); }
     }
 }
-.luchador[data-tipo="GOBLIN"] { --ancho-sprite: 7.5rem; --alto-sprite: 6.75rem; }
+.luchador:is([data-tipo="GOBLIN"], [data-tipo="GOBLIN_ARQUERO"]) { --ancho-sprite: 7.5rem; --alto-sprite: 6.75rem; }
 .luchador[data-tipo="CABALLERO_OSCURO"] { --ancho-sprite: 15rem; --alto-sprite: 13rem; }
 .luchador[data-tipo="CABALLERO_OSCURO"] .figura-combate { padding-inline: 0; }
 .luchador[data-tipo="CABALLERO_OSCURO"] .sprite-combate {
@@ -172,10 +222,25 @@ small { display: block; line-height: 1.5; }
 .barra { display: grid; grid-template-columns: 4.7rem 1fr; gap: .35rem; align-items: center; font-size: .8rem; margin: .25rem 0; }
 progress { width: 100%; height: .65rem; accent-color: #db765e; }
 progress.magia { accent-color: #77a9e2; }
-.orden { color: var(--oro); overflow-wrap: anywhere; }
+.orden { overflow-wrap: anywhere; }
 .registro { max-height: 14rem; overflow: auto; margin: .65rem 0 0; padding-left: 1.35rem; }
 .registro li { margin: .3rem 0; }
 .acciones { margin-bottom: 1rem; }
+.controles-combate {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: .55rem 1rem;
+    margin-bottom: .65rem;
+}
+.controles-combate .fila { margin: 0; max-width: 100%; }
+.controles-combate .orden {
+    display: grid;
+    margin: 0 0 0 auto;
+    padding-inline-end: .75rem;
+}
+.controles-combate .turno-actual { font-size: 1.15rem; }
 .acciones label { display: grid; gap: .35rem; max-width: 23rem; }
 .articulo { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; }
 .articulo .fila { margin: auto 0 0; padding-top: .4rem; }
