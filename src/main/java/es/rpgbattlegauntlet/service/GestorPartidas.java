@@ -2,12 +2,14 @@ package es.rpgbattlegauntlet.service;
 
 import es.rpgbattlegauntlet.dto.PeticionPartida;
 import es.rpgbattlegauntlet.dto.VistaPartida;
+import es.rpgbattlegauntlet.enums.Dificultad;
 import es.rpgbattlegauntlet.exception.PartidaNoEncontrada;
 import es.rpgbattlegauntlet.model.AccionCombate;
 import es.rpgbattlegauntlet.model.Partida;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -56,7 +58,7 @@ public class GestorPartidas {
                     return crear();
                 }
                 case "seleccion" -> partida.seleccionarHeroes(peticion.clases());
-                case "iniciar" -> partida.iniciarCombate();
+                case "iniciar" -> partida.iniciarCombate(Objects.requireNonNullElse(peticion.dificultad(), Dificultad.FACIL));
                 case "avanzar" -> partida.avanzarRonda(peticion.ronda());
                 case "accion" -> partida.actuar(new AccionCombate(peticion.turno(), peticion.actor(),
                         peticion.habilidad(), peticion.objetivo()));

@@ -2,6 +2,7 @@ package es.rpgbattlegauntlet.model;
 
 import es.rpgbattlegauntlet.config.CatalogoEncuentros;
 import es.rpgbattlegauntlet.config.Equilibrio;
+import es.rpgbattlegauntlet.enums.Dificultad;
 import es.rpgbattlegauntlet.enums.EstadoPartida;
 import es.rpgbattlegauntlet.enums.TipoEnemigo;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,17 @@ class EncuentrosTest {
         assertEquals(10, CatalogoEncuentros.totalRondas());
         assertThrows(IllegalArgumentException.class, () -> CatalogoEncuentros.crearEnemigos(0));
         assertThrows(IllegalArgumentException.class, () -> CatalogoEncuentros.crearEnemigos(11));
+    }
+
+    @Test
+    void modoPruebasCreaTodosLosEnemigosConUnPuntoDeVida() {
+        for (int ronda = 1; ronda <= CatalogoEncuentros.totalRondas(); ronda++) {
+            for (var enemigo : CatalogoEncuentros.crearEnemigos(ronda, Dificultad.PRUEBAS)) {
+                assertEquals(1, enemigo.getPvActuales());
+                assertEquals(1, enemigo.getEstadisticasBase().pvMaximos());
+                assertEquals(1.0, enemigo.getMultiplicadorDanio());
+            }
+        }
     }
 
     @Test

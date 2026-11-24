@@ -1,5 +1,6 @@
 package es.rpgbattlegauntlet.config;
 
+import es.rpgbattlegauntlet.enums.Dificultad;
 import es.rpgbattlegauntlet.enums.EstadoTemporal;
 import es.rpgbattlegauntlet.enums.TipoEfecto;
 import es.rpgbattlegauntlet.enums.TipoEnemigo;
@@ -47,7 +48,14 @@ public final class CatalogoEnemigos {
     }
 
     public static Enemigo crear(TipoEnemigo tipo) {
-        return new Enemigo(tipo, ESTADISTICAS.get(tipo));
+        return crear(tipo, Dificultad.FACIL);
+    }
+
+    public static Enemigo crear(TipoEnemigo tipo, Dificultad dificultad) {
+        var base = ESTADISTICAS.get(tipo);
+        var ajustada = new EstadisticasBase(dificultad.vidaEnemiga(base.pvMaximos()), base.pmMaximos(), base.fuerza(),
+                base.defensa(), base.inteligencia(), base.resistencia(), base.velocidad(), base.critico(), base.esquiva());
+        return new Enemigo(tipo, ajustada, dificultad.multiplicadorDanioEnemigo());
     }
 
     private static Habilidad ataque(String id, String nombre, TipoEfecto efecto, TipoObjetivo objetivo,

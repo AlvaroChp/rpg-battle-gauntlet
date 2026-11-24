@@ -13,7 +13,7 @@ import static es.rpgbattlegauntlet.enums.TipoObjetivo.*;
 
 public final class CatalogoObjetos {
     private record Equipo(String codigo, String inferior, String normal, String superior, Categoria categoria,
-                          Bonificaciones bonos, int fuerza, int inteligencia, int precio, Habilidad habilidad,
+                          Bonificaciones bonos, int fuerza, int inteligencia, int precio, Habilidad habilidad, FamiliaArma familia,
                           boolean enTienda) {
         Objeto plantilla(Calidad calidad) {
             String nombre = switch (calidad) {
@@ -22,7 +22,7 @@ public final class CatalogoObjetos {
                 case SUPERIOR -> superior;
             };
             return new Objeto(null, codigo, nombre, categoria, calidad, null, false, bonos.ajustar(calidad), fuerza,
-                    inteligencia, precio, calidad.venta(precio), calidad.recompra(precio), habilidad, null);
+                    inteligencia, precio, calidad.venta(precio), calidad.recompra(precio), habilidad, familia, null);
         }
     }
 
@@ -38,7 +38,7 @@ public final class CatalogoObjetos {
                     : tipo == TipoConsumible.CURA_TOTAL && potencia == PotenciaPergamino.PODEROSO ? 35 : 0;
             int venta = potencia.venta(precio);
             return new Objeto(null, codigo, nombre, PERGAMINOS, null, potencia, false, Bonificaciones.NINGUNA,
-                    0, potencia.requisito(inteligencia), precio, venta, 2 * venta, null,
+                    0, potencia.requisito(inteligencia), precio, venta, 2 * venta, null, null,
                     new EfectoConsumible(tipo, objetivo, cantidad, 0, proteccion));
         }
     }
@@ -46,6 +46,7 @@ public final class CatalogoObjetos {
     private static final Habilidad DAGA = habilidad("estocada_rapida", "Estocada rápida", 3, false, 5, 20, 5, 0);
     private static final Habilidad ESPADA = habilidad("corte", "Corte amplio", 4, false, 10, 10, 0, 0);
     private static final Habilidad ARCO = habilidad("disparo_tenso", "Disparo tenso", 5, false, 10, 15, 0, 25);
+    private static final Habilidad BALLESTA = habilidad("virote_perforante", "Virote perforante", 6, false, 12, 10, 0, 35);
     private static final Habilidad VARA = habilidad("pulso", "Pulso de vara", 5, true, 13, 10, 0, 0);
     private static final Habilidad GARROTE = habilidad("impacto", "Impacto contundente", 5, false, 14, 0, 0, 15);
 
@@ -63,10 +64,13 @@ public final class CatalogoObjetos {
             perg("meteorito", "Meteorito", TipoConsumible.DANIO, ENEMIGOS, 100, 140, 200, 22, 250)
     );
 
+    private static final Objeto REVITALIZACION = pocion("revitalizacion", "Poción dorada", 120,
+            new EfectoConsumible(TipoConsumible.REVITALIZACION, ALIADO_CAIDO, 25, 0, 0));
     private static final List<Objeto> POCIONES_DISPONIBLES = List.of(
             pocion("roja", "Poción roja", 80, 0, 40),
             pocion("verde", "Poción verde", 0, 50, 40),
-            pocion("azul", "Poción azul", 50, 30, 55)
+            pocion("azul", "Poción azul", 50, 30, 55),
+            REVITALIZACION
     );
     private static final List<Objeto> CATALOGO = java.util.stream.Stream.of(
             EQUIPOS.values().stream().filter(Equipo::enTienda).map(equipo -> equipo.plantilla(Calidad.NORMAL)),
@@ -81,6 +85,10 @@ public final class CatalogoObjetos {
         return CATALOGO;
     }
 
+    public static Objeto pocionRevitalizacion() {
+        return REVITALIZACION.nuevaUnidad(false);
+    }
+
     public static List<String> codigosPergaminos() {
         return PERGAMINOS_DISPONIBLES.stream().map(Pergamino::codigo).toList();
     }
@@ -88,6 +96,12 @@ public final class CatalogoObjetos {
     public static Objeto pergamino(String codigo, PotenciaPergamino potencia) {
         return PERGAMINOS_DISPONIBLES.stream().filter(pergamino -> pergamino.codigo().equals(codigo))
                 .findFirst().orElseThrow().plantilla(potencia).nuevaUnidad(false);
+    }
+
+    public static Objeto requiemDelDragon() {
+        return new Objeto(null, "requiem_dragon", "Pergamino de Dragón", PERGAMINOS, null, null, false,
+                Bonificaciones.NINGUNA, 0, 22, 0, 0, 0, null, null,
+                new EfectoConsumible(TipoConsumible.ANIQUILAR_DRAGON, ENEMIGO, 0, 0, 0)).nuevaUnidad(false);
     }
 
     public static Objeto equipo(String codigo, Calidad calidad, boolean inicial) {
@@ -107,16 +121,17 @@ public final class CatalogoObjetos {
     private static Map<String, Equipo> equipos() {
         var equipos = new LinkedHashMap<String, Equipo>();
         List.of(
-            arma("daga", "Daga mellada", "Daga", "Daga afilada", 3, 0, 2, 0, 0, 40, DAGA, true),
-            arma("espada_basica", "Espada básica mellada", "Espada básica", "Espada básica afilada", 4, 0, 0, 0, 0, 50, ESPADA, true),
-            arma("arco_corto", "Arco corto astillado", "Arco corto", "Arco corto templado", 4, 0, 0, 10, 0, 60, ARCO, true),
-            arma("vara_aprendiz", "Vara de aprendiz agrietada", "Vara de aprendiz", "Vara de aprendiz reforzada", 0, 3, 0, 0, 12, 60, VARA, true),
-            arma("garrote", "Garrote astillado", "Garrote", "Garrote ferrado", 7, 0, 0, 15, 0, 100, GARROTE, true),
-            arma("arco_largo", "Arco largo torcido", "Arco largo", "Arco largo templado", 8, 0, 0, 15, 0, 130, ARCO, true),
-            arma("espada_acero", "Espada de acero mellada", "Espada de acero", "Espada de acero bruñida", 9, 0, 0, 16, 0, 150, ESPADA, true),
-            arma("vara_magica", "Vara mágica agrietada", "Vara mágica", "Vara mágica reforzada", 0, 8, 0, 0, 14, 150, VARA, true),
-            arma("espada_pesada", "Espada pesada mellada", "Espada pesada", "Espada pesada forjada", 12, 0, 0, 18, 0, 200, ESPADA, true),
-            arma("vara_avanzada", "Vara avanzada agrietada", "Vara avanzada", "Vara avanzada engastada", 0, 13, 0, 0, 22, 240, VARA, true),
+            arma("daga", "Daga mellada", "Daga", "Daga afilada", 3, 0, 2, 0, 0, 40, FamiliaArma.DAGA, true),
+            arma("espada_basica", "Espada básica mellada", "Espada básica", "Espada básica afilada", 4, 0, 0, 0, 0, 50, FamiliaArma.ESPADA, true),
+            arma("arco_corto", "Arco corto astillado", "Arco corto", "Arco corto templado", 4, 0, 0, 10, 0, 60, FamiliaArma.ARCO, true),
+            arma("vara_aprendiz", "Vara de aprendiz agrietada", "Vara de aprendiz", "Vara de aprendiz reforzada", 0, 3, 0, 0, 12, 60, FamiliaArma.VARA, true),
+            arma("garrote", "Garrote astillado", "Garrote", "Garrote ferrado", 7, 0, 0, 15, 0, 100, FamiliaArma.GARROTE, true),
+            arma("arco_largo", "Arco largo torcido", "Arco largo", "Arco largo templado", 8, 0, 0, 15, 0, 130, FamiliaArma.ARCO, true),
+            arma("ballesta", "Ballesta desgastada", "Ballesta", "Ballesta reforzada", 10, 0, 0, 16, 0, 175, FamiliaArma.BALLESTA, true),
+            arma("espada_acero", "Espada de acero mellada", "Espada de acero", "Espada de acero bruñida", 9, 0, 0, 16, 0, 150, FamiliaArma.ESPADA, true),
+            arma("vara_magica", "Vara mágica agrietada", "Vara mágica", "Vara mágica reforzada", 0, 8, 0, 0, 14, 150, FamiliaArma.VARA, true),
+            arma("espada_pesada", "Espada pesada mellada", "Espada pesada", "Espada pesada forjada", 12, 0, 0, 18, 0, 200, FamiliaArma.ESPADA, true),
+            arma("vara_avanzada", "Vara avanzada agrietada", "Vara avanzada", "Vara avanzada engastada", 0, 13, 0, 0, 22, 240, FamiliaArma.VARA, true),
             armadura("ropa", "Ropa ligera remendada", "Ropa ligera", "Ropa ligera bordada", 2, 0, 0, 2, 0, 0, 0, 30, true),
             armadura("capucha", "Capucha desgastada", "Capucha", "Capucha nueva", 2, 0, 0, 4, 0, 0, 0, 45, true),
             armadura("tunica_aprendiz", "Túnica de aprendiz raída", "Túnica de aprendiz", "Túnica de aprendiz impecable", 2, 0, 0, 0, 3, 0, 0, 50, true),
@@ -128,10 +143,10 @@ public final class CatalogoObjetos {
             armadura("casco", "Casco reforzado abollado", "Casco reforzado", "Casco reforzado templado", 10, 3, 0, 0, 0, 16, 0, 190, true),
             armadura("pesada_basica", "Armadura pesada básica abollada", "Armadura pesada básica", "Armadura pesada básica bruñida", 8, 0, -3, 0, 0, 15, 0, 0, false),
             armadura("ligera_basica", "Armadura ligera básica rasgada", "Armadura ligera básica", "Armadura ligera básica remachada", 4, 0, 0, 0, 0, 8, 0, 0, false),
-            arma("espada_esqueleto", "Espada oxidada", "Espada", "Espada afilada", 6, 0, 0, 12, 0, 80, ESPADA, false),
+            arma("espada_esqueleto", "Espada oxidada", "Espada", "Espada afilada", 6, 0, 0, 12, 0, 80, FamiliaArma.ESPADA, false),
             armadura("escudo", "Escudo abollado", "Escudo", "Escudo reforzado", 6, 0, 0, 0, 0, 10, 0, 70, false),
             armadura("antigua", "Armadura antigua agrietada", "Armadura antigua", "Armadura antigua restaurada", 7, 2, -1, 0, 0, 12, 0, 100, false),
-            arma("maldita", "Espada maldita mellada", "Espada maldita", "Espada maldita ritual", 14, 0, 0, 20, 0, 250, ESPADA, false),
+            arma("maldita", "Espada maldita mellada", "Espada maldita", "Espada maldita ritual", 14, 0, 0, 20, 0, 250, FamiliaArma.ESPADA, false),
             armadura("oscura", "Armadura oscura agrietada", "Armadura oscura", "Armadura oscura templada", 15, 0, -4, 0, 0, 20, 0, 300, false),
             armadura("casco_oscuro", "Casco oscuro abollado", "Casco oscuro", "Casco oscuro grabado", 10, 5, 0, 0, 0, 16, 0, 190, false)
         ).forEach(equipo -> equipos.put(equipo.codigo(), equipo));
@@ -140,10 +155,18 @@ public final class CatalogoObjetos {
 
     private static Equipo arma(String codigo, String inferior, String nombre, String superior,
                                int fuerza, int inteligencia, int critico, int minFuerza, int minInteligencia,
-                               int precio, Habilidad habilidad, boolean enTienda) {
+                               int precio, FamiliaArma familia, boolean enTienda) {
+        Habilidad habilidad = switch (familia) {
+            case ESPADA -> ESPADA;
+            case DAGA -> DAGA;
+            case GARROTE -> GARROTE;
+            case VARA -> VARA;
+            case ARCO -> ARCO;
+            case BALLESTA -> BALLESTA;
+        };
         return new Equipo(codigo, inferior, nombre, superior, ARMAS,
                 new Bonificaciones(fuerza, 0, inteligencia, 0, 0, critico, 0, 0),
-                minFuerza, minInteligencia, precio, habilidad, enTienda);
+                minFuerza, minInteligencia, precio, habilidad, familia, enTienda);
     }
 
     private static Equipo armadura(String codigo, String inferior, String nombre, String superior,
@@ -151,7 +174,7 @@ public final class CatalogoObjetos {
                                    int fuerza, int inteligencia, int precio, boolean enTienda) {
         return new Equipo(codigo, inferior, nombre, superior, ARMADURAS,
                 new Bonificaciones(0, defensa, 0, resistencia, velocidad, 0, esquiva, potencia),
-                fuerza, inteligencia, precio, null, enTienda);
+                fuerza, inteligencia, precio, null, null, enTienda);
     }
 
     private static Habilidad habilidad(String id, String nombre, int pm, boolean magica, int potencia,
@@ -162,8 +185,12 @@ public final class CatalogoObjetos {
     }
 
     private static Objeto pocion(String codigo, String nombre, int pv, int pm, int precio) {
+        return pocion(codigo, nombre, precio, new EfectoConsumible(TipoConsumible.POCION, ALIADO, pv, pm, 0));
+    }
+
+    private static Objeto pocion(String codigo, String nombre, int precio, EfectoConsumible efecto) {
         return new Objeto(null, codigo, nombre, POCIONES, null, null, false, Bonificaciones.NINGUNA, 0, 0, precio,
-                (precio + 1) / 2, precio, null, new EfectoConsumible(TipoConsumible.POCION, ALIADO, pv, pm, 0));
+                (precio + 1) / 2, precio, null, null, efecto);
     }
 
     private static Pergamino perg(String codigo, String nombre, TipoConsumible tipo, TipoObjetivo objetivo,

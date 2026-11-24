@@ -13,6 +13,7 @@ public record EventoCombate(
         int curacion,
         int magiaRecuperada,
         boolean esquivado,
-        boolean critico
+        boolean critico,
+        Objeto objetoRobado
 ) {
 }

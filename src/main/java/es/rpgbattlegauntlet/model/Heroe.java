@@ -42,6 +42,10 @@ public final class Heroe extends Combatiente {
         return puntos;
     }
 
+    public int probabilidadRobo() {
+        return Math.min(90, 20 + 2 * getEstadisticasBase().destreza());
+    }
+
     @Override
     public Bonificaciones getBonificaciones() {
         return equipo.values().stream().map(Objeto::bonificaciones)
@@ -56,6 +60,9 @@ public final class Heroe extends Combatiente {
     }
 
     Objeto desequipar(Categoria categoria) {
+        if (categoria == Categoria.ARMAS) {
+            throw new IllegalArgumentException("El arma equipada solo se puede sustituir por otra compatible");
+        }
         Objeto objeto = equipo.remove(categoria);
         if (objeto == null) {
             throw new IllegalArgumentException("La ranura está vacía");
@@ -93,7 +100,7 @@ public final class Heroe extends Combatiente {
                 base.inteligencia() + (atributo == Atributo.INT ? cantidad : 0),
                 base.resistencia() + (atributo == Atributo.RES ? cantidad : 0),
                 base.velocidad() + (atributo == Atributo.VEL ? cantidad : 0),
-                base.critico(), base.esquiva()));
+                base.critico(), base.esquiva(), base.destreza() + (atributo == Atributo.DES ? cantidad : 0)));
         if (estaVivo()) {
             if (atributo == Atributo.PV) {
                 recibirCuracion(cantidad * Equilibrio.PV_POR_PUNTO);

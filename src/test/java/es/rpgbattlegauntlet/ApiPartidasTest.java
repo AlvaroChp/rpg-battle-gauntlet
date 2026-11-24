@@ -1,6 +1,7 @@
 package es.rpgbattlegauntlet;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import es.rpgbattlegauntlet.enums.Dificultad;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -42,6 +43,8 @@ class ApiPartidasTest {
 
         var inicio = cliente.postForObject(ruta + "/iniciar", Map.of("version", 1), JsonNode.class);
         assertEquals("COMBATE", inicio.path("estado").asText());
+        assertEquals("FACIL", inicio.path("dificultad").asText());
+        assertEquals(65, inicio.path("enemigos").get(0).path("pv").asInt());
         assertEquals("GOBLIN", inicio.path("enemigos").get(0).path("tipo").asText());
         assertEquals(HttpStatus.CONFLICT, cliente.postForEntity(ruta + "/comprar",
                 Map.of("version", 2, "codigo", "roja"), JsonNode.class).getStatusCode());
@@ -51,5 +54,18 @@ class ApiPartidasTest {
         assertNotEquals(alta.getBody().path("id"), nueva.path("id"));
         assertEquals("SELECCION_PERSONAJES", nueva.path("estado").asText());
         assertEquals(HttpStatus.NOT_FOUND, cliente.getForEntity(ruta, JsonNode.class).getStatusCode());
+    }
+
+    @Test
+    void iniciarEnExpertoAplicaLaDificultadYLaConservaAlConsultar() {
+        var alta = cliente.postForEntity("/api/partidas", null, JsonNode.class);
+        String ruta = alta.getHeaders().getLocation().getPath();
+        cliente.postForObject(ruta + "/seleccion",
+                Map.of("version", 0, "clases", List.of("ARQUERO", "MAGO", "PICARO")), JsonNode.class);
+
+        var inicio = cliente.postForObject(ruta + "/iniciar", Map.of("version", 1, "dificultad", "EXPERTO"), JsonNode.class);
+        assertEquals("COMBATE", inicio.path("estado").asText());
+        assertEquals(Dificultad.EXPERTO.vidaEnemiga(65), inicio.path("enemigos").get(0).path("pv").asInt());
+        assertEquals("EXPERTO", cliente.getForObject(ruta, JsonNode.class).path("dificultad").asText());
     }
 }

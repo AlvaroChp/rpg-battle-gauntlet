@@ -129,15 +129,15 @@ class EnemigoTest {
         List<Combatiente> aliados = List.of(dragon);
 
         dragon.registrarAccion();
-        assertEquals(CatalogoEnemigos.GARRA, InteligenciaEnemiga.decidir(dragon, aliados, heroes).habilidad());
+        assertEquals(CatalogoEnemigos.GARRA, InteligenciaEnemiga.decidir(dragon, aliados, heroes, azar()).habilidad());
         dragon.recibirDanio(195);
-        assertEquals(CatalogoEnemigos.ALIENTO, InteligenciaEnemiga.decidir(dragon, aliados, heroes).habilidad());
+        assertEquals(CatalogoEnemigos.ALIENTO, InteligenciaEnemiga.decidir(dragon, aliados, heroes, azar()).habilidad());
         dragon.recibirDanio(228);
-        assertEquals(CatalogoEnemigos.RUGIDO, InteligenciaEnemiga.decidir(dragon, aliados, heroes).habilidad());
+        assertEquals(CatalogoEnemigos.RUGIDO, InteligenciaEnemiga.decidir(dragon, aliados, heroes, azar()).habilidad());
         dragon.registrarAccion();
-        assertEquals(CatalogoEnemigos.ALIENTO, InteligenciaEnemiga.decidir(dragon, aliados, heroes).habilidad());
+        assertEquals(CatalogoEnemigos.ALIENTO, InteligenciaEnemiga.decidir(dragon, aliados, heroes, azar()).habilidad());
         dragon.consumirMagia(120);
-        assertEquals(CatalogoEnemigos.GARRA, InteligenciaEnemiga.decidir(dragon, aliados, heroes).habilidad());
+        assertEquals(CatalogoEnemigos.GARRA, InteligenciaEnemiga.decidir(dragon, aliados, heroes, azar()).habilidad());
     }
 
     @Test
@@ -154,7 +154,86 @@ class EnemigoTest {
         var aliento = combate.getHistorial().stream().filter(evento -> evento.habilidad().equals("aliento_fuego")).toList();
         assertEquals(List.of(guerrero.getId(), sanador.getId()), aliento.stream().map(EventoCombate::objetivo).toList());
         assertTrue(aliento.stream().allMatch(evento -> evento.danio() > 0));
+        assertTrue(aliento.stream().noneMatch(evento -> evento.esquivado() || evento.critico()));
         assertEquals(100, dragon.getPmActuales());
+    }
+
+    @Test
+    void ataquesIndividualesSorteanEntreVivosYSoloPriorizanLaProporcionDeVidaEnUnaDeCadaCuatroTiradas() {
+        var goblin = CatalogoEnemigos.crear(GOBLIN);
+        var guerrero = CatalogoHeroes.crearHeroe(GUERRERO);
+        var mago = CatalogoHeroes.crearHeroe(MAGO);
+        var arquero = CatalogoHeroes.crearHeroe(ARQUERO);
+        guerrero.recibirDanio(60);
+        var heroes = List.of(guerrero, mago, arquero);
+
+        int ataquesAlGuerrero = 0;
+        for (int tirada = 0; tirada < 100; tirada++) {
+            for (int indice = 0; indice < heroes.size(); indice++) {
+                var objetivo = InteligenciaEnemiga.decidir(goblin, List.of(goblin), heroes, azarObjetivo(tirada, indice)).objetivo();
+                assertSame(tirada < 25 ? guerrero : heroes.get(indice), objetivo);
+                if (objetivo == guerrero) ataquesAlGuerrero++;
+            }
+        }
+        assertEquals(150, ataquesAlGuerrero);
+
+        guerrero.recibirCuracion(60);
+        assertSame(arquero, InteligenciaEnemiga.decidir(goblin, List.of(goblin), heroes, azarObjetivo(0, 2)).objetivo());
+        guerrero.recibirDanio(150);
+        assertSame(mago, InteligenciaEnemiga.decidir(goblin, List.of(goblin), heroes, azarObjetivo(0, 0)).objetivo());
+    }
+
+    private static RandomGenerator azarObjetivo(int tirada, int indice) {
+        return new java.util.Random(0) {
+            @Override
+            public int nextInt(int limite) {
+                return limite == 100 ? tirada : indice;
+            }
+        };
+    }
+
+    @Test
+    void caballeroReviveAUnAliadoConSuUnicaPocion() {
+        var picaro = picaroParaProbarRevitalizacion();
+        var herido = CatalogoEnemigos.crear(CABALLERO_OSCURO);
+        var aliado = CatalogoEnemigos.crear(CABALLERO_OSCURO);
+        herido.recibirDanio(239);
+        var combate = new Combate(List.of(picaro), List.of(herido, aliado), azar());
+
+        combate.ejecutar(new AccionCombate(combate.getTurno(), picaro.getId(), "ataque_basico", herido.getId()));
+        assertEquals(60, herido.getPvActuales());
+        assertFalse(aliado.tienePocionRevitalizacion());
+        assertTrue(herido.tienePocionRevitalizacion());
+        var resurreccion = combate.getHistorial().getLast();
+        assertEquals(aliado.getId(), resurreccion.actor());
+        assertEquals(herido.getId(), resurreccion.objetivo());
+        assertEquals(60, resurreccion.curacion());
+        assertEquals(0, combate.getConsumiblesUsados());
+
+        combate.ejecutar(new AccionCombate(combate.getTurno(), picaro.getId(), "ataque_basico", herido.getId()));
+        assertEquals(0, herido.getPvActuales());
+    }
+
+    @Test
+    void robarLaPocionImpideRevitalizarAlCompaneroCaido() {
+        var picaro = picaroParaProbarRevitalizacion();
+        var herido = CatalogoEnemigos.crear(CABALLERO_OSCURO);
+        var aliado = CatalogoEnemigos.crear(CABALLERO_OSCURO);
+        herido.recibirDanio(239);
+        var combate = new Combate(List.of(picaro), List.of(herido, aliado), azarObjetivo(69, 0));
+
+        var pocion = combate.ejecutar(new AccionCombate(combate.getTurno(), picaro.getId(), "robar", aliado.getId()));
+        assertEquals("revitalizacion", pocion.codigo());
+        assertFalse(aliado.tienePocionRevitalizacion());
+        assertTrue(herido.tienePocionRevitalizacion());
+
+        combate.ejecutar(new AccionCombate(combate.getTurno(), picaro.getId(), "ataque_basico", herido.getId()));
+        assertEquals(0, herido.getPvActuales());
+        assertTrue(combate.getHistorial().stream().noneMatch(evento -> evento.curacion() > 0));
+    }
+
+    private static Heroe picaroParaProbarRevitalizacion() {
+        return new Heroe(PICARO, new EstadisticasBase(350, 25, 50, 6, 4, 7, 17, 20, 15, 25));
     }
 
     private static void defender(Combate combate, Heroe heroe) {

@@ -1,12 +1,14 @@
 package es.rpgbattlegauntlet.model;
 
 import es.rpgbattlegauntlet.algorithm.CalculoCombate;
+import es.rpgbattlegauntlet.algorithm.GeneradorBotin;
 import es.rpgbattlegauntlet.algorithm.InteligenciaEnemiga;
 import es.rpgbattlegauntlet.config.CatalogoEnemigos;
 import es.rpgbattlegauntlet.enums.EstadoTemporal;
 import es.rpgbattlegauntlet.config.CatalogoHabilidades;
 import es.rpgbattlegauntlet.enums.ResultadoCombate;
 import es.rpgbattlegauntlet.enums.TipoObjetivo;
+import es.rpgbattlegauntlet.enums.TipoEnemigo;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -15,11 +17,14 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.random.RandomGenerator;
 import java.util.stream.Stream;
 
 import static es.rpgbattlegauntlet.enums.ResultadoCombate.*;
+import static es.rpgbattlegauntlet.enums.TipoConsumible.ANIQUILAR_DRAGON;
+import static es.rpgbattlegauntlet.enums.TipoEfecto.ROBO;
 
 public final class Combate {
 
@@ -29,6 +34,7 @@ public final class Combate {
     private final RandomGenerator azar;
     private final Deque<Combatiente> pendientes = new ArrayDeque<>();
     private final List<EventoCombate> historial = new ArrayList<>();
+    private final Set<UUID> objetivosRobados = new HashSet<>();
     private ResultadoCombate resultado = EN_CURSO;
     private final int primerTurno;
     private int turno;
@@ -92,7 +98,16 @@ public final class Combate {
         return habilidades(actor).stream().filter(habilidad -> habilidad.costePm() <= actor.getPmActuales()).toList();
     }
 
-    public synchronized void ejecutar(AccionCombate accion) {
+    public synchronized boolean fueRobado(UUID objetivo) {
+        return objetivosRobados.contains(objetivo);
+    }
+
+    public synchronized boolean puedeSerRobado(Combatiente objetivo) {
+        return objetivo instanceof Enemigo enemigo && enemigo.estaVivo()
+                && GeneradorBotin.permiteRobo(enemigo.getTipo()) && !fueRobado(enemigo.getId());
+    }
+
+    public synchronized Objeto ejecutar(AccionCombate accion) {
         Combatiente actor = validarTurno(accion.turno(), accion.actor());
 
         Habilidad habilidad = habilidades(actor).stream()
@@ -103,9 +118,16 @@ public final class Combate {
             throw new IllegalArgumentException("El combatiente no tiene PM suficientes");
         }
         List<Combatiente> objetivos = objetivos(actor, habilidad.objetivo(), accion.objetivo());
+        boolean robo = habilidad.efecto() == ROBO;
+        if (robo && !puedeSerRobado(objetivos.getFirst())) {
+            throw new IllegalArgumentException("Este enemigo no tiene ningún objeto que puedas robar");
+        }
 
+        int primerEvento = historial.size();
         ejecutarHabilidad(actor, habilidad, objetivos);
+        Objeto objetoRobado = robo ? historial.get(primerEvento).objetoRobado() : null;
         ejecutarTurnosEnemigos();
+        return objetoRobado;
     }
 
     synchronized void usarConsumible(int numeroTurno, UUID actorId, Objeto objeto, UUID objetivoId) {
@@ -118,6 +140,15 @@ public final class Combate {
 
         var efecto = objeto.efecto();
         var objetivos = objetivos(actor, efecto.objetivo(), objetivoId);
+        if (efecto.tipo() == ANIQUILAR_DRAGON && (!(objetivos.getFirst() instanceof Enemigo enemigo)
+                || enemigo.getTipo() != TipoEnemigo.DRAGON)) {
+            throw new IllegalArgumentException("El Pergamino de Dragón solo puede usarse contra el dragón");
+        }
+        ejecutarConsumible(actor, objeto, objetivos);
+        ejecutarTurnosEnemigos();
+    }
+
+    private void ejecutarConsumible(Combatiente actor, Objeto objeto, List<Combatiente> objetivos) {
         actor.terminarTurno();
         for (Combatiente objetivo : objetivos) {
             if (!actor.estaVivo()) {
@@ -125,12 +156,11 @@ public final class Combate {
             }
             registrarConReaccion(actor, objetivo, resolverConsumible(actor, objetivo, objeto));
         }
-        consumiblesUsados++;
+        if (actor instanceof Heroe) consumiblesUsados++;
         avanzarTurno();
-        ejecutarTurnosEnemigos();
     }
 
-    private EventoCombate resolverConsumible(Heroe actor, Combatiente objetivo, Objeto objeto) {
+    private EventoCombate resolverConsumible(Combatiente actor, Combatiente objetivo, Objeto objeto) {
         var efecto = objeto.efecto();
         int danio = 0;
         int curacion = 0;
@@ -148,6 +178,11 @@ public final class Combate {
             case CURA_TOTAL -> curacion = objetivo.recibirCuracion(
                     objetivo.getEstadisticasBase().pvMaximos() * efecto.cantidad() / 100);
             case PROTECCION -> { }
+            case REVITALIZACION -> curacion = objetivo.revivir(efecto.cantidad());
+            case ANIQUILAR_DRAGON -> {
+                danio = objetivo.getPvActuales();
+                objetivo.recibirDanio(danio);
+            }
         }
         if (efecto.proteccion() > 0) {
             EstadoTemporal proteccion = switch (efecto.proteccion()) {
@@ -159,7 +194,7 @@ public final class Combate {
             objetivo.aplicarEstado(proteccion, 2);
         }
         return new EventoCombate(turno, actor.getId(), tipo(actor), objeto.nombre(), objetivo.getId(),
-                tipo(objetivo), danio, curacion, magiaRecuperada, false, false);
+                tipo(objetivo), danio, curacion, magiaRecuperada, false, false, null);
     }
 
     private String tipo(Combatiente combatiente) {
@@ -184,9 +219,14 @@ public final class Combate {
 
     private void ejecutarTurnosEnemigos() {
         while (pendientes.peek() instanceof Enemigo enemigo) {
-            var decision = InteligenciaEnemiga.decidir(enemigo, enemigos, heroes);
-            UUID objetivo = decision.objetivo() == null ? null : decision.objetivo().getId();
-            ejecutarHabilidad(enemigo, decision.habilidad(), objetivos(enemigo, decision.habilidad().objetivo(), objetivo));
+            Combatiente caido = InteligenciaEnemiga.aliadoParaRevitalizar(enemigo, enemigos);
+            if (caido != null) {
+                ejecutarConsumible(enemigo, enemigo.retirarPocionRevitalizacion(), List.of(caido));
+            } else {
+                var decision = InteligenciaEnemiga.decidir(enemigo, enemigos, heroes, azar);
+                UUID objetivo = decision.objetivo() == null ? null : decision.objetivo().getId();
+                ejecutarHabilidad(enemigo, decision.habilidad(), objetivos(enemigo, decision.habilidad().objetivo(), objetivo));
+            }
             enemigo.registrarAccion();
         }
     }
@@ -232,8 +272,9 @@ public final class Combate {
                 }
                 yield List.of(actor);
             }
-            case ALIADO -> List.of(buscarVivo(esHeroe ? heroes : enemigos, objetivo));
-            case ENEMIGO -> List.of(buscarVivo(esHeroe ? enemigos : heroes, objetivo));
+            case ALIADO -> List.of(buscarObjetivo(esHeroe ? heroes : enemigos, objetivo, true));
+            case ALIADO_CAIDO -> List.of(buscarObjetivo(esHeroe ? heroes : enemigos, objetivo, false));
+            case ENEMIGO -> List.of(buscarObjetivo(esHeroe ? enemigos : heroes, objetivo, true));
             case ENEMIGOS, ALIADOS -> {
                 if (objetivo != null) {
                     throw new IllegalArgumentException("Las habilidades de área no requieren un objetivo individual");
@@ -245,9 +286,10 @@ public final class Combate {
         };
     }
 
-    private Combatiente buscarVivo(List<? extends Combatiente> bando, UUID id) {
-        return bando.stream().filter(objetivo -> objetivo.getId().equals(id) && objetivo.estaVivo())
-                .findFirst().orElseThrow(() -> new IllegalArgumentException("Objetivo inválido o derrotado"));
+    private Combatiente buscarObjetivo(List<? extends Combatiente> bando, UUID id, boolean vivo) {
+        return bando.stream().filter(objetivo -> objetivo.getId().equals(id) && objetivo.estaVivo() == vivo)
+                .findFirst().orElseThrow(() -> new IllegalArgumentException(
+                        vivo ? "Objetivo inválido o derrotado" : "El objetivo debe ser un aliado caído"));
     }
 
     private EventoCombate resolver(Combatiente actor, Combatiente objetivo, Habilidad habilidad) {
@@ -255,25 +297,39 @@ public final class Combate {
         int curacion = 0;
         boolean esquivado = false;
         boolean critico = false;
+        Objeto objetoRobado = null;
         switch (habilidad.efecto()) {
-            case DANIO_FISICO, DANIO_MAGICO -> {
+            case DANIO_FISICO -> {
                 int esquiva = Math.max(0, objetivo.getEsquivaEfectiva() - habilidad.precisionAdicional());
                 esquivado = azar.nextInt(100) < esquiva;
                 if (!esquivado) {
-                    critico = azar.nextInt(100) < actor.getEstadisticasBase().critico() + actor.getBonificaciones().critico()
-                            + habilidad.criticoAdicional();
+                    var base = actor.getEstadisticasBase();
+                    int criticoBase = actor instanceof Heroe ? base.destreza() : base.critico();
+                    critico = azar.nextInt(100) < criticoBase + actor.getBonificaciones().critico() + habilidad.criticoAdicional();
                     danio = Math.min(objetivo.getPvActuales(), CalculoCombate.danio(actor, objetivo, habilidad, critico));
                     objetivo.recibirDanio(danio);
                 }
             }
+            case DANIO_MAGICO -> {
+                danio = Math.min(objetivo.getPvActuales(), CalculoCombate.danio(actor, objetivo, habilidad, false));
+                objetivo.recibirDanio(danio);
+            }
             case CURACION -> curacion = objetivo.recibirCuracion(CalculoCombate.curacion(actor, habilidad));
             case ESTADO -> { }
+            case ROBO -> {
+                if (azar.nextInt(100) < ((Heroe) actor).probabilidadRobo()) {
+                    Enemigo enemigo = (Enemigo) objetivo;
+                    objetoRobado = enemigo.retirarPocionRevitalizacion();
+                    if (objetoRobado == null) objetoRobado = GeneradorBotin.elegirBotinRobado(enemigo.getTipo(), azar);
+                    objetivosRobados.add(objetivo.getId());
+                }
+            }
         }
         if (!esquivado && objetivo.estaVivo() && habilidad.estado() != null) {
             objetivo.aplicarEstado(habilidad.estado(), habilidad.duracion());
         }
         return new EventoCombate(turno, actor.getId(), tipo(actor), habilidad.id(), objetivo.getId(),
-                tipo(objetivo), danio, curacion, 0, esquivado, critico);
+                tipo(objetivo), danio, curacion, 0, esquivado, critico, objetoRobado);
     }
 
     private void avanzarTurno() {

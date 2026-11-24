@@ -86,6 +86,14 @@ public class Combatiente {
         return recuperados;
     }
 
+    int revivir(int porcentaje) {
+        if (estaVivo()) {
+            throw new IllegalArgumentException("La poción de revitalización requiere un héroe caído");
+        }
+        limpiarEstados();
+        return recibirCuracion(Math.max(1, estadisticasBase.pvMaximos() * porcentaje / 100));
+    }
+
     int recuperarMagia(int cantidad) {
         int recuperados = Math.min(cantidad, estadisticasBase.pmMaximos() - pmActuales);
         pmActuales += recuperados;

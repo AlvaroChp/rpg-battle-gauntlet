@@ -50,6 +50,18 @@ class CombateTest {
     }
 
     @Test
+    void ataqueMagicoAciertaSinTirarEsquivaNiCritico() {
+        var mago = CatalogoHeroes.crearHeroe(MAGO);
+        var rival = rival(120, 1, 0, 0, 5, 100);
+        var combate = new Combate(List.of(mago), List.of(rival), azar());
+        actuar(combate, mago, "bola_fuego", rival);
+        var golpe = combate.getHistorial().getLast();
+        assertEquals(48, golpe.danio());
+        assertFalse(golpe.esquivado());
+        assertFalse(golpe.critico());
+    }
+
+    @Test
     void curacionRespetaMaximoYRechazaEnemigos() {
         var sanador = CatalogoHeroes.crearHeroe(SANADOR);
         var rival = rival(100, 14, 0, 0, 12, 0);

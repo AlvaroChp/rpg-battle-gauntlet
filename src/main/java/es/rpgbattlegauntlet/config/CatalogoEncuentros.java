@@ -1,5 +1,6 @@
 package es.rpgbattlegauntlet.config;
 
+import es.rpgbattlegauntlet.enums.Dificultad;
 import es.rpgbattlegauntlet.enums.TipoEnemigo;
 import es.rpgbattlegauntlet.model.Enemigo;
 
@@ -30,9 +31,13 @@ public final class CatalogoEncuentros {
     }
 
     public static List<Enemigo> crearEnemigos(int ronda) {
+        return crearEnemigos(ronda, Dificultad.FACIL);
+    }
+
+    public static List<Enemigo> crearEnemigos(int ronda, Dificultad dificultad) {
         if (ronda < 1 || ronda > totalRondas()) {
             throw new IllegalArgumentException("La ronda está fuera del catálogo");
         }
-        return RONDAS.get(ronda - 1).stream().map(CatalogoEnemigos::crear).toList();
+        return RONDAS.get(ronda - 1).stream().map(tipo -> CatalogoEnemigos.crear(tipo, dificultad)).toList();
     }
 }

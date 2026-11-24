@@ -36,13 +36,13 @@ La clase `AplicacionGauntlet` está en el paquete raíz `es.rpgbattlegauntlet`. 
 
 Cada partida empieza en `SELECCION_PERSONAJES` con el equipo vacío. La selección recibe exactamente tres clases distintas y conserva el orden elegido. Se puede cambiar el equipo durante esta etapa. Repetir la misma selección en el mismo orden conserva los identificadores de los héroes. La partida permanece en selección hasta que se inicia un combate.
 
-| Clase | PV | PM | FUE | DEF | INT | RES | VEL | Crítico | Esquiva |
+| Clase | PV | PM | FUE | DEF | INT | RES | VEL | DES | Esquiva |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Guerrero | 150 | 20 | 15 | 15 | 3 | 8 | 6 | 5 % | 5 % |
-| Mago | 75 | 100 | 4 | 5 | 18 | 14 | 9 | 5 % | 5 % |
-| Arquero | 100 | 30 | 13 | 7 | 5 | 8 | 14 | 15 % | 10 % |
-| Sanador | 90 | 90 | 5 | 8 | 15 | 13 | 8 | 5 % | 5 % |
-| Pícaro | 85 | 25 | 12 | 6 | 4 | 7 | 17 | 20 % | 15 % |
+| Guerrero | 150 | 20 | 15 | 15 | 3 | 8 | 6 | 10 | 5 % |
+| Mago | 75 | 100 | 4 | 5 | 18 | 14 | 9 | 3 | 5 % |
+| Arquero | 100 | 30 | 13 | 7 | 5 | 8 | 14 | 15 | 10 % |
+| Sanador | 90 | 90 | 5 | 8 | 15 | 13 | 8 | 3 | 5 % |
+| Pícaro | 85 | 25 | 12 | 6 | 4 | 7 | 17 | 25 | 15 % |
 
 Los héroes empiezan con los PV y PM completos. El catálogo centraliza los atributos base, que servirán para comprobar requisitos. Las estadísticas base, los modificadores de equipo y los estados temporales se mantienen por separado.
 
@@ -57,7 +57,7 @@ Cada ciclo ordena a los participantes vivos por velocidad efectiva descendente. 
 - Daño físico bruto = `2 × (FUE base + FUE de equipo) + potencia de la acción`. Se resta la DEF efectiva del objetivo. Flecha perforante ignora el 50 % de esa defensa.
 - Daño mágico bruto = `INT base + INT de equipo + potencia mágica de equipo + potencia de la acción`. Las habilidades mágicas de héroe tienen un límite de 64 antes de restar la RES. El límite reserva una potencia base mayor para los pergaminos.
 - Después de restar DEF o RES, se conserva al menos el 25 % del daño bruto. Un crítico multiplica el valor por 1,5. A continuación se aplica el mayor porcentaje activo de reducción de daño, se redondea al entero más cercano y se aplica un mínimo de 1 si el golpe alcanza al objetivo.
-- La probabilidad de esquiva efectiva incorpora los estados de esquiva y incluye el equipo y se reduce según la precisión adicional del ataque. El crítico suma los aportes de equipo y habilidad a la probabilidad base. Se tira primero la esquiva y, si el ataque acierta, se tira el crítico. Los ataques de área realizan esas tiradas por separado para cada objetivo.
+- Los ataques mágicos aciertan siempre, no hacen crítico y se reducen por la resistencia y la protección del objetivo. En los ataques físicos, la esquiva efectiva incorpora los estados y el equipo, y se reduce según la precisión adicional del ataque. Cada punto de destreza aporta un punto porcentual de crítico base para los héroes. Los enemigos usan su probabilidad base propia. A la base se suman los aportes de equipo y habilidad. Se tira primero la esquiva y, si el ataque acierta, se tira el crítico. Los ataques físicos de área realizan esas tiradas por separado para cada objetivo.
 - La curación equivale a `potencia de la habilidad + 2 × (INT base + INT de equipo) + potencia mágica de equipo`, con un límite de 89 y sin superar los PV máximos del aliado vivo. La curación puede apuntar al propio sanador.
 - Los estados temporales duran hasta que el objetivo completa el número indicado de acciones posteriores a su aplicación. Volver a aplicar un estado conserva la mayor duración restante. Las reducciones de daño simultáneas usan el porcentaje mayor.
 
@@ -69,15 +69,15 @@ Cada ciclo ordena a los participantes vivos por velocidad efectiva descendente. 
 | Mago | Bola de fuego · 9 PM | Descarga arcana · 13 PM |
 | Arquero | Disparo preciso · 4 PM | Flecha perforante · 6 PM |
 | Sanador | Curación · 8 PM | Bendición · 6 PM |
-| Pícaro | Ataque furtivo · 5 PM | Esquivar · 4 PM |
+| Pícaro | Robar · 5 PM | Esquivar · 4 PM |
 
-El ataque básico y Defenderse son gratuitos y consumen una acción. Defenderse reduce el daño un 40 % durante un turno. Guardia lo reduce un 55 % durante dos turnos. Bendición aplica un 25 % a un aliado durante dos turnos. Esquivar concede 50 puntos porcentuales de esquiva durante un turno. Flecha perforante resta 4 de velocidad durante un turno al alcanzar al objetivo. Disparo preciso resta hasta 25 puntos porcentuales de esquiva en su tirada. Ataque furtivo añade 20 puntos porcentuales de crítico.
+El ataque básico y Defenderse son gratuitos y consumen una acción. Defenderse reduce el daño un 40 % durante un turno. Guardia lo reduce un 55 % durante dos turnos. Bendición aplica un 25 % a un aliado durante dos turnos. Esquivar concede 50 puntos porcentuales de esquiva durante un turno. Flecha perforante resta 4 de velocidad durante un turno al alcanzar al objetivo. Disparo preciso resta hasta 25 puntos porcentuales de esquiva en su tirada. Robar tiene una probabilidad de éxito del 20 % más dos puntos porcentuales por punto de destreza, con un tope del 90 %. Un robo exitoso coloca el objeto en el inventario y agota el botín de ese enemigo. Un intento fallido permite reintentar. El dragón puede ser objetivo de Robar y lleva el Pergamino de Dragón. El pergamino requiere 22 INT base y derrota al dragón de un solo golpe.
 
 El historial registra una entrada por objetivo afectado, con daño o curación efectiva, esquiva y crítico. Los consumibles que recuperan PM también registran la magia recuperada.
 
 ## Fase 4 · Enemigos e IA
 
-`CatalogoEnemigos` centraliza las estadísticas iniciales y las habilidades de las seis especies. Cada creación devuelve un enemigo con identidad propia y sus PV y PM completos. Los enemigos del catálogo actúan automáticamente al comenzar el combate y después de cada acción del jugador, hasta que vuelve a tocarle a un héroe o se acaba el combate. En los ataques individuales priorizan al héroe vivo con menos PV actuales. En caso de empate se conserva el orden del equipo.
+`CatalogoEnemigos` centraliza las estadísticas iniciales y las habilidades de las seis especies. Cada creación devuelve un enemigo con identidad propia y sus PV y PM completos. Los enemigos del catálogo actúan automáticamente al comenzar el combate y después de cada acción del jugador, hasta que vuelve a tocarle a un héroe o se acaba el combate. En el 75 % de los ataques individuales el objetivo se sortea entre todos los héroes vivos. En el 25 % restante se sortea entre quienes tienen el menor porcentaje de PV.
 
 | Enemigo | Comportamiento |
 | --- | --- |
@@ -85,7 +85,7 @@ El historial registra una entrada por objetivo afectado, con daño o curación e
 | Esqueleto | Usa Espadazo y Guardia ósea. La guardia reduce el daño un 45 % durante un turno. La usa en la segunda acción de cada bloque de tres y también en la primera si tiene el 35 % de sus PV o menos. |
 | Chamán | Si puede gastar 14 PM, cura al aliado vivo con la menor proporción de PV entre quienes tienen como máximo el 70 %. Puede curarse a sí mismo. Si no cura, usa Bola de fuego por 10 PM o el ataque básico si le falta magia. |
 | Ogro | Alterna Mazazo con un barrido físico. Si queda un solo héroe, usa Mazazo. |
-| Caballero oscuro | Usa Espada maldita, que resta 5 DEF durante dos turnos al acertar. En la segunda acción de cada bloque de cuatro usa Guardia oscura por 8 PM y reduce el daño un 55 % durante un turno. En la tercera puede gastar 6 PM para preparar un contraataque. Si sobrevive al siguiente golpe, reacciona una vez y registra esa reacción en el turno del atacante. |
+| Caballero oscuro | Si tiene un compañero caído y conserva su poción de revitalización, gasta el turno en revivirlo con el 25 % de sus PV máximos. Un robo exitoso se lleva esa poción mientras la conserve. En sus demás acciones usa Espada maldita, que resta 5 DEF durante dos turnos, Guardia oscura por 8 PM en la segunda acción de cada bloque de cuatro, y prepara un contraataque por 6 PM en la tercera. |
 | Dragón | Por encima del 70 % de PV usa Garra. Entre el 35 % exclusivo y el 70 % alterna Garra y Aliento de fuego. Con el 35 % o menos usa Rugido en la segunda acción de cada bloque de tres y prioriza Aliento en las otras dos. Aliento cuesta 20 PM y causa daño mágico de área. Rugido cuesta 8 PM y ralentiza a todos los héroes vivos durante un turno. Si le falta PM para la acción prevista, usa Garra. |
 
 Los ciclos y umbrales son decisiones de esta fase. Los encuentros se definen en un catálogo independiente.
@@ -111,9 +111,9 @@ Cada ronda crea enemigos nuevos con sus estadísticas de catálogo. Los héroes 
 
 ## Fase 6 · Inventario y equipamiento
 
-`CatalogoObjetos` describe el catálogo fijo y los objetos iniciales. Cada unidad adquirida o equipada tiene su propio UUID. Durante la pausa entre combates, se puede intercambiar equipo entre los héroes a través del inventario común. El objeto sustituido vuelve al inventario. Los objetos iniciales se pueden quitar, conservar y reasignar. La tienda rechaza su venta. El inventario no tiene límite de espacio.
+`CatalogoObjetos` describe el catálogo fijo y los objetos iniciales. Cada unidad adquirida o equipada tiene su propio UUID. Durante la pausa entre combates, se puede intercambiar equipo entre los héroes a través del inventario común. El objeto sustituido vuelve al inventario. Las armas equipadas solo se pueden sustituir por otra arma compatible. Las armaduras se pueden desequipar. Las armas y armaduras iniciales se pueden vender desde el inventario. El inventario no tiene límite de espacio.
 
-Cada héroe tiene una ranura de arma y otra de armadura. Capuchas, túnicas, botas, cascos y escudos usan la ranura de armadura. La FUE y la INT **base** determinan si se puede equipar una pieza, independientemente de la clase y la calidad. Las túnicas añaden potencia mágica al daño y a la curación. Las armaduras pesadas aplican su penalización a la velocidad efectiva. Las habilidades de clase siguen disponibles al cambiar de arma.
+Cada héroe tiene una ranura de arma y otra de armadura. Capuchas, túnicas, botas, cascos y escudos usan la ranura de armadura. La FUE y la INT **base** determinan si se cumplen los requisitos de atributos de una pieza. Guerrero y pícaro pueden usar espadas, dagas y garrotes. Mago y sanadora pueden usar varas. La arquera puede usar arcos y ballestas. Las túnicas añaden potencia mágica al daño y a la curación. Las armaduras pesadas aplican su penalización a la velocidad efectiva. Las habilidades de clase siguen disponibles al cambiar de arma.
 
 | Clase | Arma inicial | Armadura inicial |
 | --- | --- | --- |
@@ -128,6 +128,7 @@ Cada héroe tiene una ranura de arma y otra de armadura. Capuchas, túnicas, bot
 | Daga | Estocada rápida | 3 PM, potencia física +5, precisión +20 y crítico +5 puntos porcentuales |
 | Espada | Corte amplio | 4 PM, potencia física +10 y precisión +10 puntos porcentuales |
 | Arco | Disparo tenso | 5 PM, potencia física +10, precisión +15 puntos porcentuales y 25 % de penetración |
+| Ballesta | Virote perforante | 6 PM, potencia física +12, precisión +10 puntos porcentuales y 35 % de penetración |
 | Vara | Pulso de vara | 5 PM, potencia mágica +13 y precisión +10 puntos porcentuales |
 | Garrote | Impacto contundente | 5 PM, potencia física +14 y 15 % de penetración |
 
@@ -146,7 +147,7 @@ Cada enemigo vencido tiene una tirada independiente para soltar como máximo un 
 
 | Calidad | Probabilidad | Multiplicador | Venta sobre el valor base | Recompra sobre el valor base |
 | --- | ---: | ---: | ---: | ---: |
-| Inferior | 35 % | 0,75 | 30 % | 60 % |
+| Desgastada | 35 % | 0,75 | 30 % | 60 % |
 | Normal | 50 % | 1,00 | 50 % | 100 % |
 | Superior | 15 % | 1,25 | 75 % | 150 % |
 
@@ -173,8 +174,9 @@ La partida empieza con 0 MO. Una poción se vende por la mitad del precio habitu
 | Roja | 80 PV | 40 MO |
 | Verde | 50 PM | 40 MO |
 | Azul | 50 PV y 30 PM | 55 MO |
+| Dorada | Revive a un héroe caído con el 25 % de sus PV máximos | 120 MO |
 
-Las pociones se pueden usar en combate y durante la preparación. En combate, quien la usa gasta su acción y puede elegir un aliado vivo, incluido él mismo. En preparación, se aplica al héroe elegido. La recuperación se limita a los PV y PM máximos. Un consumo que falla la validación conserva el objeto.
+Las pociones se pueden usar en combate y durante la preparación. En combate, quien usa una poción gasta su acción. Las pociones de recuperación se aplican a un aliado vivo, incluido el propio usuario. Un héroe vivo puede revitalizar a un aliado caído en combate o durante la preparación. En combate, el héroe revivido vuelve a actuar en el siguiente ciclo. La recuperación se limita a los PV y PM máximos. Un consumo que falla la validación conserva el objeto.
 
 Los pergaminos se usan en combate, requieren la INT base indicada y gastan una acción sin consumir PM. Los ofensivos tienen potencia fija, aciertan sin tirada, no hacen crítico y se reducen por RES y protección. Los de área se aplican a los enemigos vivos y las curaciones a los aliados vivos. Si el botín del chamán es un pergamino, se elige el hechizo con probabilidad uniforme del 10 %. Después se sortea la potencia con probabilidades de 35 %, 50 % y 15 % para débil, normal y poderoso. La INT exigida es la de la tabla menos 2 en débil y más 3 en poderoso.
 
@@ -218,7 +220,7 @@ Envía la `version` de la última vista con cada operación. El servidor valida 
 | Operación | Campos JSON además de `version` |
 | --- | --- |
 | `seleccion` | `clases`, lista de tres códigos distintos |
-| `iniciar` | Ninguno |
+| `iniciar` | `dificultad` opcional (`FACIL`, `DIFICIL`, `EXPERTO` o `PRUEBAS`). El valor por defecto es `FACIL`. |
 | `accion` | `turno`, `actor`, `habilidad` y `objetivo` cuando sea individual |
 | `avanzar` | `ronda`, con la ronda recién ganada |
 | `recoger` | `objeto`, UUID del botín |
@@ -239,6 +241,8 @@ Ejemplo de cuerpo para seleccionar el equipo tras crear una partida con versión
 ## Fase 12 · Interfaz web
 
 La portada permite crear una partida y seleccionar tres clases. En combate se muestran los dos bandos, barras de PV y PM, actor actual, orden pendiente, estados, acciones con objetivos válidos e historial. El campamento contiene Recompensas, Inventario, Equipamiento, Tienda y Nivel. La tienda compara con la ranura equipada del héroe elegido. Victoria y derrota permiten reiniciar. Al recargar, el navegador recupera el progreso si el servidor sigue ejecutándose.
+
+Antes del primer combate se puede escoger Fácil, Difícil, Experto o Pruebas. Fácil usa el equilibrio original. Difícil y Experto aumentan los PV máximos de los enemigos y el daño que infligen. En Pruebas todos los enemigos tienen 1 PV. La dificultad se conserva durante toda la partida.
 
 Los archivos `index.html`, `estilos.css` y `juego.js` se sirven desde `src/main/resources/static`. Se usan símbolos provisionales y estilos locales sin imágenes externas ni frameworks. El cliente usa `fetch` para obtener el estado y enviar las decisiones del jugador. El backend calcula todos los resultados y valida las operaciones.
 

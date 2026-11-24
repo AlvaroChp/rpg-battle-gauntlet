@@ -42,8 +42,8 @@ public final class CatalogoHabilidades {
                     new Habilidad("bendicion", "Bendición", "Reduce el daño recibido por un aliado un 25 % durante dos turnos.",
                             6, ALIADO, ESTADO, 0, 0, 0, 0, BENDICION, 2)),
             ClaseHeroe.PICARO, List.of(
-                    new Habilidad("ataque_furtivo", "Ataque furtivo", "Inflige daño físico con mayor probabilidad de crítico.",
-                            5, ENEMIGO, DANIO_FISICO, 10, 0, 20, 0, null, 0),
+                    new Habilidad("robar", "Robar", "Intenta robar un objeto al enemigo. La destreza aumenta la probabilidad.",
+                            5, ENEMIGO, ROBO, 0, 0, 0, 0, null, 0),
                     new Habilidad("esquivar", "Esquivar", "Añade 50 puntos porcentuales de esquiva durante un turno.",
                             4, PROPIO, ESTADO, 0, 0, 0, 0, EVASION, 1))
     );

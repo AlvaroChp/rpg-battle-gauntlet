@@ -8,7 +8,9 @@ import es.rpgbattlegauntlet.config.Equilibrio;
 import es.rpgbattlegauntlet.enums.Atributo;
 import es.rpgbattlegauntlet.enums.Categoria;
 import es.rpgbattlegauntlet.enums.ClaseHeroe;
+import es.rpgbattlegauntlet.enums.Dificultad;
 import es.rpgbattlegauntlet.enums.EstadoPartida;
+import es.rpgbattlegauntlet.enums.TipoConsumible;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -34,6 +36,7 @@ public final class Partida {
     private int ronda;
     private List<Heroe> equipo = List.of();
     private Combate combate;
+    private Dificultad dificultad = Dificultad.FACIL;
 
     public Partida() {
         this(RandomGenerator.getDefault());
@@ -67,11 +70,21 @@ public final class Partida {
         return combate;
     }
 
+    public synchronized Dificultad getDificultad() {
+        return dificultad;
+    }
+
     public synchronized Combate iniciarCombate() {
+        return iniciarCombate(Dificultad.FACIL);
+    }
+
+    public synchronized Combate iniciarCombate(Dificultad modo) {
         if (getEstado() != EstadoPartida.SELECCION_PERSONAJES || equipo.size() != TAMANO_EQUIPO) {
             throw new IllegalStateException("Solo puedes iniciar el combate con un equipo completo en selección");
         }
-        return abrirRonda(1, 1);
+        Combate inicial = abrirRonda(1, 1, Objects.requireNonNull(modo));
+        dificultad = modo;
+        return inicial;
     }
 
     public synchronized Combate avanzarRonda(int rondaCompletada) {
@@ -81,11 +94,11 @@ public final class Partida {
         liquidarVictoria();
         botin.clear();
         historialAnterior.addAll(combate.getHistorial());
-        return abrirRonda(ronda + 1, combate.getTurno() + 1);
+        return abrirRonda(ronda + 1, combate.getTurno() + 1, dificultad);
     }
 
-    private Combate abrirRonda(int numero, int primerTurno) {
-        var siguienteCombate = new Combate(equipo, CatalogoEncuentros.crearEnemigos(numero), azar, primerTurno);
+    private Combate abrirRonda(int numero, int primerTurno, Dificultad modo) {
+        var siguienteCombate = new Combate(equipo, CatalogoEncuentros.crearEnemigos(numero, modo), azar, primerTurno);
         combate = siguienteCombate;
         ronda = numero;
         return combate;
@@ -121,7 +134,8 @@ public final class Partida {
 
     public synchronized void actuar(AccionCombate accion) {
         exigirEstado(EstadoPartida.COMBATE);
-        combate.ejecutar(accion);
+        Objeto robado = combate.ejecutar(accion);
+        if (robado != null) inventario.put(robado.id(), robado);
         liquidarVictoria();
     }
 
@@ -163,9 +177,6 @@ public final class Partida {
     public synchronized void vender(UUID idObjeto) {
         exigirEstado(EstadoPartida.ENTRE_COMBATES);
         Objeto objeto = objetoEnInventario(idObjeto);
-        if (objeto.inicial()) {
-            throw new IllegalArgumentException("El equipo inicial no se puede vender");
-        }
         inventario.remove(idObjeto);
         oro += objeto.precioVenta();
         tienda.recibir(objeto);
@@ -185,11 +196,18 @@ public final class Partida {
             }
             Heroe usuario = heroe(actor);
             Heroe destinatario = heroe(objetivo);
-            if (!usuario.estaVivo() || !destinatario.estaVivo()) {
-                throw new IllegalArgumentException("La poción requiere héroes vivos");
+            if (!usuario.estaVivo()) {
+                throw new IllegalArgumentException("Un héroe vivo debe administrar la poción");
             }
-            destinatario.recibirCuracion(objeto.efecto().cantidad());
-            destinatario.recuperarMagia(objeto.efecto().magia());
+            if (objeto.efecto().tipo() == TipoConsumible.REVITALIZACION) {
+                destinatario.revivir(objeto.efecto().cantidad());
+            } else {
+                if (!destinatario.estaVivo()) {
+                    throw new IllegalArgumentException("La poción requiere un destinatario vivo");
+                }
+                destinatario.recibirCuracion(objeto.efecto().cantidad());
+                destinatario.recuperarMagia(objeto.efecto().magia());
+            }
         }
         inventario.remove(idObjeto);
         liquidarVictoria();
@@ -213,7 +231,9 @@ public final class Partida {
         oro += monedas;
         equipo.forEach(heroe -> heroe.ganarExperiencia(experiencia));
         for (Combatiente enemigo : combate.getEnemigos()) {
-            GeneradorBotin.tirar(((Enemigo) enemigo).getTipo(), azar).ifPresent(objeto -> botin.put(objeto.id(), objeto));
+            if (!combate.fueRobado(enemigo.getId())) {
+                GeneradorBotin.tirar(((Enemigo) enemigo).getTipo(), azar).ifPresent(objeto -> botin.put(objeto.id(), objeto));
+            }
         }
     }
 

@@ -1,6 +1,7 @@
 package es.rpgbattlegauntlet.algorithm;
 
 import es.rpgbattlegauntlet.model.Combatiente;
+import es.rpgbattlegauntlet.model.Enemigo;
 import es.rpgbattlegauntlet.model.Habilidad;
 import es.rpgbattlegauntlet.model.Heroe;
 
@@ -23,17 +24,20 @@ public final class CalculoCombate {
         if (magico && atacante instanceof Heroe) {
             bruto = Math.min(64, bruto);
         }
-        return aplicarMitigacion(objetivo, bruto, mitigacion, critico);
+        double multiplicador = atacante instanceof Enemigo enemigo ? enemigo.getMultiplicadorDanio() : 1.0;
+        return aplicarMitigacion(objetivo, bruto, mitigacion, critico, multiplicador);
     }
 
     public static int danioPergamino(Combatiente objetivo, int potencia) {
-        return aplicarMitigacion(objetivo, potencia, objetivo.getResistenciaEfectiva(), false);
+        return aplicarMitigacion(objetivo, potencia, objetivo.getResistenciaEfectiva(), false, 1.0);
     }
 
-    private static int aplicarMitigacion(Combatiente objetivo, double bruto, double mitigacion, boolean critico) {
+    private static int aplicarMitigacion(Combatiente objetivo, double bruto, double mitigacion, boolean critico,
+                                        double multiplicador) {
         double reducido = Math.max(bruto * 0.25, bruto - mitigacion);
         double multiplicadorCritico = critico ? 1.5 : 1.0;
-        return Math.max(1, (int) Math.round(reducido * multiplicadorCritico * (100 - objetivo.getReduccionDanio()) / 100.0));
+        double finalTrasProteccion = reducido * multiplicadorCritico * (100 - objetivo.getReduccionDanio()) / 100.0;
+        return Math.max(1, (int) Math.round(finalTrasProteccion * multiplicador));
     }
 
     public static int curacion(Combatiente atacante, Habilidad habilidad) {

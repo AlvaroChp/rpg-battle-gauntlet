@@ -33,11 +33,22 @@ public final class GeneradorBotin {
         if (tabla == null || azar.nextInt(100) >= tabla.probabilidad()) {
             return Optional.empty();
         }
+        return Optional.of(elegirObjeto(tabla, azar));
+    }
 
+    public static boolean permiteRobo(TipoEnemigo tipo) {
+        return tipo == DRAGON || TABLAS.containsKey(tipo);
+    }
+
+    public static Objeto elegirBotinRobado(TipoEnemigo tipo, RandomGenerator azar) {
+        return tipo == DRAGON ? CatalogoObjetos.requiemDelDragon() : elegirObjeto(TABLAS.get(tipo), azar);
+    }
+
+    private static Objeto elegirObjeto(Tabla tabla, RandomGenerator azar) {
         int tirada = azar.nextInt(100);
         for (Entrada entrada : tabla.entradas()) {
             if (tirada < entrada.peso()) {
-                return Optional.of(crear(entrada.codigo(), azar));
+                return crear(entrada.codigo(), azar);
             }
             tirada -= entrada.peso();
         }

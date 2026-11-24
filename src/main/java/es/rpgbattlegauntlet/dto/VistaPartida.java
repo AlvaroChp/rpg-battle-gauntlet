@@ -2,6 +2,8 @@ package es.rpgbattlegauntlet.dto;
 
 import es.rpgbattlegauntlet.config.Equilibrio;
 import es.rpgbattlegauntlet.enums.Categoria;
+import es.rpgbattlegauntlet.enums.ClaseHeroe;
+import es.rpgbattlegauntlet.enums.Dificultad;
 import es.rpgbattlegauntlet.enums.EstadoPartida;
 import es.rpgbattlegauntlet.enums.EstadoTemporal;
 import es.rpgbattlegauntlet.model.*;
@@ -10,19 +12,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-public record VistaPartida(UUID id, long version, EstadoPartida estado, int ronda, int oro, List<Luchador> heroes,
-                           List<Luchador> enemigos, int turno, List<UUID> orden, List<Habilidad> habilidades,
+public record VistaPartida(UUID id, long version, EstadoPartida estado, Dificultad dificultad,
+                           List<Dificultad> dificultadesDisponibles, int ronda, int oro, List<Luchador> heroes,
+                           List<Luchador> enemigos, int turno, List<UUID> orden, List<Habilidad> habilidades, List<UUID> objetivosRobo,
                            List<Objeto> inventario, List<Objeto> botin, List<Oferta> tienda,
                            Recompensa recompensa, List<EventoCombate> historial) {
 
     public static VistaPartida de(Partida partida, long version) {
         Combate combate = partida.getCombate();
-        return new VistaPartida(partida.getId(), version, partida.getEstado(), partida.getRonda(), partida.getOro(),
+        return new VistaPartida(partida.getId(), version, partida.getEstado(), partida.getDificultad(),
+                List.of(Dificultad.values()), partida.getRonda(), partida.getOro(),
                 partida.getEquipo().stream().map(Luchador::de).toList(),
                 combate == null ? List.of() : combate.getEnemigos().stream().map(Luchador::de).toList(),
                 combate == null ? 0 : combate.getTurno(),
                 combate == null ? List.of() : combate.getOrdenActuacion().stream().map(Combatiente::getId).toList(),
                 combate == null ? List.of() : combate.getHabilidadesDisponibles(),
+                combate == null ? List.of() : combate.getEnemigos().stream().filter(combate::puedeSerRobado).map(Combatiente::getId).toList(),
                 partida.getInventario(), partida.getBotin(),
                 partida.getEstado() == EstadoPartida.ENTRE_COMBATES ? partida.getOfertas() : List.of(),
                 partida.getRecompensa(), partida.getHistorial());
@@ -31,7 +36,7 @@ public record VistaPartida(UUID id, long version, EstadoPartida estado, int rond
     public record Luchador(UUID id, String tipo, EstadisticasBase base, Bonificaciones modificadoresEquipo,
                            int pv, int pm, int velocidad, int defensa, int resistencia,
                            Map<EstadoTemporal, Integer> estados, Map<Categoria, Objeto> equipo, int nivel,
-                           int experiencia, int experienciaSiguiente, int puntos) {
+                           int experiencia, int experienciaSiguiente, int puntos, int probabilidadRobo) {
 
         static Luchador de(Combatiente combatiente) {
             Heroe heroe = combatiente instanceof Heroe jugador ? jugador : null;
@@ -41,7 +46,8 @@ public record VistaPartida(UUID id, long version, EstadoPartida estado, int rond
                     combatiente.getDefensaEfectiva(), combatiente.getResistenciaEfectiva(), combatiente.getEstados(),
                     heroe == null ? Map.of() : heroe.getEquipo(),
                     heroe == null ? 0 : heroe.getNivel(), heroe == null ? 0 : heroe.getExperiencia(),
-                    heroe == null ? 0 : Equilibrio.experienciaSiguiente(heroe.getNivel()), heroe == null ? 0 : heroe.getPuntos());
+                    heroe == null ? 0 : Equilibrio.experienciaSiguiente(heroe.getNivel()), heroe == null ? 0 : heroe.getPuntos(),
+                    heroe != null && heroe.getClase() == ClaseHeroe.PICARO ? heroe.probabilidadRobo() : 0);
         }
     }
 }
