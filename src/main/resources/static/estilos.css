@@ -95,19 +95,26 @@ p { line-height: 1.5; }
     :where(.escenario > section:last-of-type) > .luchador:first-child:nth-last-child(-n+2) {
         grid-column: 2;
     }
-    .escenario .luchador:nth-child(2):not(:last-child) .retrato-combate,
-    .escenario > section:last-of-type > .luchador:first-child:nth-last-child(-n+2) .retrato-combate {
-        translate: 0 -2.4rem;
+    .escenario > section:first-of-type > .luchador:first-child:not(:only-child),
+    .escenario > section:last-of-type > .luchador:last-child:not(:only-child) {
+        --escala-sprite: 1.3;
+        --capa-sprite: 3;
     }
-    .escenario > section:first-of-type > .luchador:last-child:not(:only-child) .retrato-combate,
-    .escenario > section:last-of-type > .luchador:first-child:nth-last-child(n+3) .retrato-combate {
-        translate: 0 -4.8rem;
+    .escenario .luchador:nth-child(2):not(:last-child),
+    .escenario > section:last-of-type > .luchador:first-child:nth-last-child(-n+2) {
+        --elevacion-sprite: -2.4rem;
+    }
+    .escenario > section:first-of-type > .luchador:last-child:not(:only-child),
+    .escenario > section:last-of-type > .luchador:first-child:nth-last-child(n+3) {
+        --elevacion-sprite: -4.8rem;
+        --escala-sprite: .9;
+        --capa-sprite: 1;
     }
 }
 
 .ultima-accion {
     position: absolute;
-    z-index: 2;
+    z-index: 4;
     inset: 1.15rem 0 auto;
     width: clamp(18rem, 34%, 25rem);
     max-width: calc(100% - 1.5rem);
@@ -153,18 +160,24 @@ p { line-height: 1.5; }
     padding-inline: .2rem;
     margin-bottom: .55rem;
 }
+.escenario .figura-combate {
+    position: relative;
+    z-index: var(--capa-sprite, 2);
+}
 .sprite-combate {
     display: block;
     width: auto;
     height: auto;
     max-width: min(100%, var(--ancho-sprite, 11rem));
     max-height: var(--alto-sprite, 9.25rem);
+    zoom: var(--escala-sprite, 1);
 }
 .retrato-combate {
     position: relative;
     display: flex;
     justify-content: center;
     width: 100%;
+    translate: 0 var(--elevacion-sprite, 0);
 }
 .indicador-turno {
     position: absolute;
@@ -345,6 +358,27 @@ progress.magia { accent-color: #77a9e2; }
     gap: .55rem;
 }
 .cabecera-objeto h3 { margin: 0; }
+button.accion-confirmada, button.accion-confirmada:hover:not(:disabled) {
+    position: relative;
+    z-index: 2;
+    border-color: var(--oro);
+    color: #211510;
+    background: var(--oro);
+}
+.confirmacion-campamento {
+    position: absolute;
+    inset-inline-start: 0;
+    bottom: calc(100% + .3rem);
+    width: max-content;
+    pointer-events: none;
+    padding: .28rem .5rem;
+    border: 1px solid var(--borde);
+    border-radius: 3px;
+    background: var(--panel-claro);
+    color: var(--oro);
+    font-size: .85rem;
+    font-weight: 700;
+}
 .icono-objeto {
     flex: none;
     width: 2.75rem;
@@ -352,6 +386,13 @@ progress.magia { accent-color: #77a9e2; }
     object-fit: contain;
     image-rendering: pixelated;
 }
+.icono-objeto[data-calidad] {
+    background-color: var(--fondo-calidad, #101010);
+    border: 1px solid var(--borde);
+}
+.icono-objeto[data-calidad="INFERIOR"] { --fondo-calidad: #3b414c; }
+.icono-objeto[data-calidad="NORMAL"] { --fondo-calidad: #284a68; }
+.icono-objeto[data-calidad="SUPERIOR"] { --fondo-calidad: #c99736; }
 .detalle-accion .icono-objeto { width: 2.2rem; height: 2.2rem; }
 .rejilla-equipamiento {
     display: grid;

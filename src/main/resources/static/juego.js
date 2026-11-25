@@ -24,8 +24,8 @@ const iconos = { GUERRERO: '⚔', MAGO: '✦', ARQUERO: '➶', SANADOR: '✚', P
 const spritesCombate = {
     GUERRERO: 'heroes/guerrero.png', MAGO: 'heroes/mago.png', ARQUERO: 'heroes/arquero.png', SANADOR: 'heroes/sanador.png',
     PICARO: 'heroes/picaro.png',
-    GOBLIN: 'enemigos/goblin.png', GOBLIN_ARQUERO: 'enemigos/goblin_arquero.png', ESQUELETO: 'enemigos/esqueleto.png', CHAMAN: 'enemigos/chaman.png', OGRO: 'enemigos/ogro.png',
-    CABALLERO_OSCURO: 'enemigos/caballero_oscuro.png', DRAGON: 'enemigos/dragon.png',
+    GOBLIN: 'enemigos/goblin.png?v=sprite-goblin', GOBLIN_ARQUERO: 'enemigos/goblin_arquero.png', ESQUELETO: 'enemigos/esqueleto.png', CHAMAN: 'enemigos/chaman.png', OGRO: 'enemigos/ogro.png',
+    CABALLERO_OSCURO: 'enemigos/caballero_oscuro.png?v=sprite-caballero-oscuro', DRAGON: 'enemigos/dragon.png',
     NIGROMANTE: 'enemigos/nigromante.png', GOLEM_RUNICO: 'enemigos/golem_runico.png',
     VERDUGO_ESPECTRAL: 'enemigos/verdugo_espectral.png'
 };
@@ -35,7 +35,7 @@ function cargarSpriteDerrotado(tipo) {
     if (!spritesDerrotados.has(tipo)) {
         const cargar = async () => {
             const imagen = new Image();
-            imagen.src = `imagenes/${spritesCombate[tipo].replace(/\.png$/, '_vencido.png')}`;
+            imagen.src = `imagenes/${spritesCombate[tipo].replace(/\.png(?=\?|$)/, '_vencido.png')}`;
             try {
                 await imagen.decode();
                 return imagen.src;
@@ -119,7 +119,7 @@ const historiasEnemigos = {
     NIGROMANTE: 'Expulsados de Kael-Seriv, estos estudiosos probaron a fijar un eco de la voluntad en los huesos. Algunos de sus primeros sujetos aún les sirven de escolta.',
     GOLEM_RUNICO: 'Los Kryptoi levantaron esta figura para sostener un arco durante el Cataclismo. El arco se vino abajo hace siglos, pero las runas aún le ordenan mantener su puesto.',
     VERDUGO_ESPECTRAL: 'En vida ejecutaba las sentencias de un tribunal sin testigos. Ahora recorre las celdas vacías y marca a cualquiera que responda cuando pasa lista.',
-    DRAGON: 'Lo llaman el Devorador de Reyes. Los estandartes del salón se tejieron cuando Azrath todavía custodiaba la fortaleza. Desde entonces ha quemado los nombres de todos sus señores salvo el primero.'
+    DRAGON: 'Lo llaman el Devorador de Reyes. Azrath fue invocado por un poderoso hechicero bajo las órdenes de un rey que ansiaba someter a los demás reinos. Sin embargo, el hechicero fue incapaz de controlar a la criatura y, desde entonces, toda la región se encuentra bajo el dominio del dragón. Azrath custodia celosamente el pergamino de su invocación, consciente de las consecuencias que tendría si cayera en las manos adecuadas.'
 };
 
 const armasNaturales = {
@@ -177,11 +177,12 @@ function actualizar(nueva) {
     localStorage.setItem(clave, partida.id);
 }
 
-async function operar(operacion, datos = {}) {
+async function operar(operacion, datos = {}, control) {
     if (ocupado) return false;
     ocupado = true;
     juego.setAttribute('aria-busy', 'true');
     informar('');
+    const oroAnterior = partida?.oro;
     try {
         const nueva = operacion === 'crear'
             ? await api(ruta, {})
@@ -193,6 +194,7 @@ async function operar(operacion, datos = {}) {
         }
         if (eventos.length) await reproducirAcciones(eventos, nueva);
         if (partida !== nueva) actualizar(nueva);
+        if (control) await confirmarAccionCampamento(control, nueva.oro - oroAnterior);
         return true;
     } catch (error) {
         informar(error.message);
@@ -211,6 +213,25 @@ async function operar(operacion, datos = {}) {
         juego.setAttribute('aria-busy', 'false');
         mostrar();
     }
+}
+
+async function confirmarAccionCampamento(control, monedas) {
+    const mensajes = {
+        pocion: 'Poción usada', atributo: 'Punto asignado'
+    };
+    const accion = control.dataset.accion;
+    const transaccion = ['comprar', 'recomprar', 'vender'].includes(accion);
+    const signo = monedas < 0 ? '−' : monedas > 0 ? '+' : '';
+    const texto = transaccion ? `${signo}${Math.abs(monedas)} MO` : mensajes[accion];
+    control.classList.add('accion-confirmada');
+    if (texto) {
+        const aviso = document.createElement('span');
+        aviso.className = 'confirmacion-campamento';
+        aviso.setAttribute('role', 'status');
+        control.append(aviso);
+        aviso.textContent = texto;
+    }
+    await new Promise(resolve => setTimeout(resolve, 500));
 }
 
 function agruparAcciones(eventos) {
@@ -252,6 +273,23 @@ async function reproducirAcciones(eventos, nueva) {
         [luchador.dataset.combatiente, luchador.querySelector('.figura-combate')]));
     const combatientes = new Map(partida.heroes.concat(partida.enemigos)
         .map(combatiente => [combatiente.id, { ...combatiente }]));
+    const aplicarPv = (evento, sentido, afectados) => {
+        for (const [id, diferencia] of [[evento.objetivo, evento.curacion - evento.danio],
+            [evento.actor, evento.curacionActor ?? 0]]) {
+            const combatiente = combatientes.get(id);
+            if (!combatiente || !diferencia) continue;
+            const estabaVivo = combatiente.pv > 0;
+            combatiente.pv += diferencia * sentido;
+            actualizarBarraVida(combatiente, figuras.get(id));
+            if (estabaVivo !== (combatiente.pv > 0)) afectados.add(combatiente);
+        }
+    };
+    // Al abrir un combate, la primera vista ya incluye los turnos iniciales de los enemigos.
+    if (partida === nueva) {
+        const cambios = new Set();
+        for (const evento of eventos.slice().reverse()) aplicarPv(evento, -1, cambios);
+        await Promise.all([...cambios].map(combatiente => mostrarSpriteCombatiente(combatiente, figuras.get(combatiente.id))));
+    }
     let anterior;
     for (const accion of agruparAcciones(eventos)) {
         if (anterior?.[0].turno !== accion[0].turno) {
@@ -282,6 +320,8 @@ async function reproducirAcciones(eventos, nueva) {
             sumarResultado(evento.actor, 0, evento.curacionActor ?? 0);
         }
         const indicadores = [];
+        const cambios = new Set();
+        for (const evento of accion) aplicarPv(evento, 1, cambios);
         const golpeados = [];
         const curados = [];
         const esquivaron = [];
@@ -312,19 +352,19 @@ async function reproducirAcciones(eventos, nueva) {
             animarFiguras(esquivaron, 'esquiva-realizada')
         ]);
         indicadores.forEach(indicador => indicador.remove());
-        const cambios = new Set();
-        for (const evento of accion) {
-            const combatiente = combatientes.get(evento.objetivo);
-            if (!combatiente) continue;
-            const estabaVivo = combatiente.pv > 0;
-            combatiente.pv = Math.max(0, combatiente.pv - evento.danio + evento.curacion);
-            if (estabaVivo !== (combatiente.pv > 0)) cambios.add(combatiente);
-        }
         await Promise.all([...cambios].map(combatiente => mostrarSpriteCombatiente(combatiente, figuras.get(combatiente.id))));
     }
     if (partida.estado === 'COMBATE' && ['ENTRE_COMBATES', 'VICTORIA'].includes(nueva.estado)) {
         await new Promise(resolve => setTimeout(resolve, 950));
     }
+}
+
+function actualizarBarraVida(combatiente, figura) {
+    const barra = figura?.closest('.luchador').querySelector('.barra[data-recurso="PV"]');
+    if (!barra) return;
+    const maximo = combatiente.base.pvMaximos;
+    barra.querySelector('span').textContent = `${combatiente.pv}/${maximo} PV`;
+    barra.querySelector('progress').value = combatiente.pv;
 }
 
 async function mostrarSpriteCombatiente(combatiente, figura) {
@@ -471,7 +511,7 @@ function mostrarBestiario() {
 }
 
 function barra(etiqueta, actual, maximo, clase = '') {
-    return `<div class="barra"><span>${actual}/${maximo} ${etiqueta}</span>
+    return `<div class="barra" data-recurso="${etiqueta}"><span>${actual}/${maximo} ${etiqueta}</span>
         <progress class="${clase}" aria-label="${etiqueta}" value="${actual}" max="${maximo || 1}"></progress></div>`;
 }
 
@@ -521,7 +561,7 @@ const iconosPorObjeto = {
     tormenta: 'pergaminos/tormenta_electrica.png',
     meteorito: 'pergaminos/meteorito.png',
     requiem_dragon: 'pergaminos/dragon.png',
-    vara_avanzada: 'armas/vara_avanzada.png?v=vara-avanzada',
+    vara_avanzada: 'armas/vara_avanzada.png',
     ropa: 'armaduras/ropa_ligera.png',
     capucha: 'armaduras/capucha.png',
     capucha_funeraria: 'armaduras/capucha.png',
@@ -538,7 +578,7 @@ const iconosPorObjeto = {
 
 const iconosPorFamilia = {
     ESPADA: 'armas/espada.png',
-    DAGA: 'armas/daga_goblin.png',
+    DAGA: 'armas/daga.png',
     ARCO: 'armas/arco.png',
     BALLESTA: 'armas/ballesta.png',
     GARROTE: 'armas/garrote.png',
@@ -552,7 +592,9 @@ const iconosPorCategoria = {
 function iconoObjeto(objeto) {
     const ruta = iconosPorObjeto[objeto.codigo] ?? iconosPorFamilia[objeto.familiaArma]
         ?? iconosPorCategoria[objeto.categoria];
-    return ruta ? `<img class="icono-objeto" src="imagenes/${ruta}" alt="" width="40" height="40">` : '';
+    const calidad = escapar(objeto.calidad ?? 'SIN_CALIDAD');
+    if (!ruta) return `<span class="icono-objeto" data-calidad="${calidad}" aria-hidden="true"></span>`;
+    return `<img class="icono-objeto" data-calidad="${calidad}" src="imagenes/${ruta}?v=consumibles-44" alt="" width="40" height="40">`;
 }
 
 const nombrePergaminoDragon = 'Pergamino de Dragón';
@@ -871,16 +913,16 @@ document.addEventListener('click', async evento => {
         case 'recoger': await operar('recoger', { objeto: valor }); break;
         case 'equipar': await operar('equipar', { actor: heroeElegido, objeto: valor }); break;
         case 'desequipar': await operar('desequipar', { actor: heroeElegido, ranura: valor }); break;
-        case 'comprar': await operar('comprar', { codigo: valor }); break;
-        case 'recomprar': await operar('comprar', { objeto: valor }); break;
-        case 'vender': await operar('vender', { objeto: valor }); break;
+        case 'comprar': await operar('comprar', { codigo: valor }, boton); break;
+        case 'recomprar': await operar('comprar', { objeto: valor }, boton); break;
+        case 'vender': await operar('vender', { objeto: valor }, boton); break;
         case 'pocion': {
             const objetivo = partida.heroes.find(heroe => heroe.id === heroeElegido);
             const usuario = objetivo.pv > 0 ? objetivo : partida.heroes.find(heroe => heroe.pv > 0);
-            await operar('consumir', { actor: usuario.id, objetivo: objetivo.id, objeto: valor });
+            await operar('consumir', { actor: usuario.id, objetivo: objetivo.id, objeto: valor }, boton);
             break;
         }
-        case 'atributo': await operar('atributos', { actor: heroeElegido, atributo: valor, cantidad: 1 }); break;
+        case 'atributo': await operar('atributos', { actor: heroeElegido, atributo: valor, cantidad: 1 }, boton); break;
         case 'avanzar':
             if (partida.botin.length && !window.confirm('¿Avanzar sin recoger el botín restante?')) break;
             await operar('avanzar', { ronda: partida.ronda });
