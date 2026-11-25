@@ -54,9 +54,9 @@ class EnemigoTest {
 
     @ParameterizedTest
     @CsvSource({
-            "GOBLIN,0,estocada_rapida,3", "GOBLIN,1,puntada_traicionera,5", "GOBLIN,2,corte_al_tendon,4",
+            "GOBLIN,0,corte_al_tendon,4",
             "GOBLIN_ARQUERO,0,flecha_envenenada,4",
-            "ESQUELETO,0,corte_ultratumba,4", "CHAMAN,0,destello_arcano,4", "CHAMAN,1,eco_de_la_tormenta,9",
+            "ESQUELETO,0,corte_ultratumba,4", "CHAMAN,0,eco_de_la_tormenta,9",
             "OGRO,0,impacto,5", "CABALLERO_OSCURO,0,filo_maldicion,6"
     })
     void enemigosGastanLosMismosPcQueLosHeroesAlUsarUnArmaDelBotin(TipoEnemigo tipo, int variante, String habilidad, int coste) {

@@ -29,6 +29,25 @@ const spritesCombate = {
     NIGROMANTE: 'enemigos/nigromante.png', GOLEM_RUNICO: 'enemigos/golem_runico.png',
     VERDUGO_ESPECTRAL: 'enemigos/verdugo_espectral.png'
 };
+const spritesDerrotados = new Map();
+
+function cargarSpriteDerrotado(tipo) {
+    if (!spritesDerrotados.has(tipo)) {
+        const cargar = async () => {
+            const imagen = new Image();
+            imagen.src = `imagenes/${spritesCombate[tipo].replace(/\.png$/, '_vencido.png')}`;
+            try {
+                await imagen.decode();
+                return imagen.src;
+            } catch {
+                    // El sprite de este combatiente puede estar pendiente de dibujar.
+                return null;
+            }
+        };
+        spritesDerrotados.set(tipo, cargar());
+    }
+    return spritesDerrotados.get(tipo);
+}
 const biografias = {
     GUERRERO: {
         titulo: 'Therakos - Guerrero',
@@ -87,6 +106,28 @@ const observarNombresCombate = new ResizeObserver(entradas => {
 });
 let partida;
 let perfiles = [];
+let fichasBestiario;
+let viendoBestiario = false;
+
+const historiasEnemigos = {
+    GOBLIN: 'Los goblins de las galerías marcan sus dagas curvas con una muesca por cada incursión. La hoja curvada les permite cortar los tendones de enemigos más altos y huir antes de que puedan responder.',
+    GOBLIN_ARQUERO: 'Los vigías goblin aprenden a disparar guiándose por el eco de los pasos. Recubren sus flechas con savia de los hongos que crecen bajo la fortaleza.',
+    ESQUELETO: 'Los guardianes del antiguo puesto de avanzada siguen haciendo ronda. Conservan el escudo y la espada que recibieron al prestar juramento.',
+    CHAMAN: 'Los chamanes guardan brasas de sus primeras hogueras en nudos de tela. Enseñan que el fuego recuerda el nombre de todo aquel que lo alimenta.',
+    OGRO: 'El antiguo guardián de las mazmorras sigue en su puesto a cambio de poder comer lo que quiera y devorar a quien le plazca. Suele comerse a los prisioneros, aunque de vez en cuando cae algún goblin despistado.',
+    CABALLERO_OSCURO: 'Antiguos guerreros al servicio del Concilio de Thar’Kael, la Luna del Juicio. Convencidos de que el mundo debe ser purificado antes de la llegada del fin, recorren sus tierras impartiendo una justicia implacable en nombre de los Exégetas del Fin.',
+    NIGROMANTE: 'Expulsados de Kael-Seriv, estos estudiosos probaron a fijar un eco de la voluntad en los huesos. Algunos de sus primeros sujetos aún les sirven de escolta.',
+    GOLEM_RUNICO: 'Los Kryptoi levantaron esta figura para sostener un arco durante el Cataclismo. El arco se vino abajo hace siglos, pero las runas aún le ordenan mantener su puesto.',
+    VERDUGO_ESPECTRAL: 'En vida ejecutaba las sentencias de un tribunal sin testigos. Ahora recorre las celdas vacías y marca a cualquiera que responda cuando pasa lista.',
+    DRAGON: 'Lo llaman el Devorador de Reyes. Los estandartes del salón se tejieron cuando Azrath todavía custodiaba la fortaleza. Desde entonces ha quemado los nombres de todos sus señores salvo el primero.'
+};
+
+const armasNaturales = {
+    NIGROMANTE: 'Magia funeraria. La Vara de osario puede aparecer como botín.',
+    GOLEM_RUNICO: 'Puños de piedra.',
+    VERDUGO_ESPECTRAL: 'Hacha espectral.',
+    DRAGON: 'Garras y aliento de fuego.'
+};
 let seleccion = [];
 let dificultadElegida = 'FACIL';
 let panel = 'recompensas';
@@ -150,7 +191,7 @@ async function operar(operacion, datos = {}) {
             actualizar(nueva);
             mostrar();
         }
-        if (eventos.length) await reproducirAcciones(eventos);
+        if (eventos.length) await reproducirAcciones(eventos, nueva);
         if (partida !== nueva) actualizar(nueva);
         return true;
     } catch (error) {
@@ -193,13 +234,34 @@ function textoAccion(accion, anterior) {
     return (intercepto ? anterior.concat(accion) : accion).map(textoEvento).join(' ');
 }
 
-async function reproducirAcciones(eventos) {
+async function reproducirAcciones(eventos, nueva) {
     const aviso = juego.querySelector('.ultima-accion');
     if (!aviso) return;
+    const turnoActual = juego.querySelector('.turno-actual');
+    const siguientes = juego.querySelector('.turnos-siguientes');
+    const heroes = new Set(nueva.heroes.map(heroe => heroe.id));
+    const turnos = new Map();
+    for (const evento of eventos) {
+        if (!turnos.has(evento.turno) && evento.habilidad !== 'golpe_interceptado') {
+            turnos.set(evento.turno, { nombre: nombre(evento.tipoActor), esHeroe: heroes.has(evento.actor) });
+        }
+    }
+    const actores = [...turnos.values()];
+    const previstos = nueva.estado === 'COMBATE' ? siguientesTurnos(nueva, true) : [];
     const figuras = new Map([...juego.querySelectorAll('[data-combatiente]')].map(luchador =>
         [luchador.dataset.combatiente, luchador.querySelector('.figura-combate')]));
+    const combatientes = new Map(partida.heroes.concat(partida.enemigos)
+        .map(combatiente => [combatiente.id, { ...combatiente }]));
     let anterior;
     for (const accion of agruparAcciones(eventos)) {
+        if (anterior?.[0].turno !== accion[0].turno) {
+            const actor = actores.shift();
+            if (actor) {
+                turnoActual.querySelector('strong').textContent = actor.nombre;
+                turnoActual.dataset.bando = actor.esHeroe ? 'heroe' : 'enemigo';
+                siguientes.innerHTML = textoSiguientesTurnos(actores.concat(previstos).slice(0, 4));
+            }
+        }
         aviso.textContent = textoAccion(accion, anterior);
         aviso.scrollTop = 0;
         anterior = accion;
@@ -250,7 +312,28 @@ async function reproducirAcciones(eventos) {
             animarFiguras(esquivaron, 'esquiva-realizada')
         ]);
         indicadores.forEach(indicador => indicador.remove());
+        const cambios = new Set();
+        for (const evento of accion) {
+            const combatiente = combatientes.get(evento.objetivo);
+            if (!combatiente) continue;
+            const estabaVivo = combatiente.pv > 0;
+            combatiente.pv = Math.max(0, combatiente.pv - evento.danio + evento.curacion);
+            if (estabaVivo !== (combatiente.pv > 0)) cambios.add(combatiente);
+        }
+        await Promise.all([...cambios].map(combatiente => mostrarSpriteCombatiente(combatiente, figuras.get(combatiente.id))));
     }
+    if (partida.estado === 'COMBATE' && ['ENTRE_COMBATES', 'VICTORIA'].includes(nueva.estado)) {
+        await new Promise(resolve => setTimeout(resolve, 950));
+    }
+}
+
+async function mostrarSpriteCombatiente(combatiente, figura) {
+    const imagen = figura?.querySelector('.sprite-combate');
+    if (!imagen) return;
+    figura.closest('.luchador').classList.toggle('caido', combatiente.pv === 0);
+    const derrotado = combatiente.pv === 0 ? await cargarSpriteDerrotado(combatiente.tipo) : null;
+    imagen.src = derrotado ?? `imagenes/${spritesCombate[combatiente.tipo]}`;
+    imagen.classList.toggle('sprite-vencido', Boolean(derrotado));
 }
 
 function etiquetaResultado(texto, clase) {
@@ -287,7 +370,9 @@ function mostrar() {
     resumen.innerHTML = partida ? `
         ${partida.ronda ? `<span>${dificultades[partida.dificultad] ?? dificultades.FACIL}</span><span>Ronda ${partida.ronda} de ${partida.totalRondas}</span><span>${partida.oroIlimitado ? '∞' : partida.oro} MO</span>` : ''}
         ${boton('Reiniciar', 'reiniciar')}` : '';
-    if (!partida) {
+    if (viendoBestiario) {
+        mostrarBestiario();
+    } else if (!partida) {
         juego.innerHTML = `<section class="inicio">
             <div class="insignia" aria-hidden="true">⚔</div><h1>RPG Battle Gauntlet</h1>
             <p>Reúne a tres héroes y derrota al dragón. Juega diez rondas o amplía el desafío a quince en Experto o Pruebas.</p>
@@ -344,11 +429,45 @@ function mostrarSeleccion() {
                     <p><strong>Crítico.</strong> Cuando un golpe físico acierta, puede infligir un 50 % más de daño. Cada punto de destreza (DES) aporta un punto porcentual de crítico base. El equipo y el ataque pueden añadir bonos, como los de la daga y su Estocada rápida.</p>
                     <p><strong>Campamento.</strong> Entre rondas puedes recoger botín, comprar equipo y gastar puntos de nivel. Cada arma concede un ataque propio. La Poción dorada revive a un aliado caído con el 25 % de sus PV máximos.</p>
                 </details>
+                ${boton('Abrir bestiario', 'bestiario')}
             </article>
         </div>
         <div class="fila"><label>Dificultad <select id="dificultad">${modos.map(codigo =>
             `<option value="${codigo}" ${codigo === dificultadElegida ? 'selected' : ''}>${dificultades[codigo]}</option>`).join('')}</select></label>
             ${boton('Iniciar combate', 'iniciar', '', `class="principal" ${seleccion.length === 3 ? '' : 'disabled'}`)}</div>`;
+}
+
+function listaHabilidadesEnemigo(habilidades) {
+    return `<ul>${habilidades.map(habilidad => `<li><strong>${escapar(habilidad.nombre)}</strong>
+        · ${habilidad.costePm} PC <small>${escapar(habilidad.descripcion)}</small></li>`).join('')}</ul>`;
+}
+
+function mostrarBestiario() {
+    juego.innerHTML = `<div class="fila">${boton('Volver a la selección', 'cerrar-bestiario')}</div>
+        <h1>Bestiario</h1>
+        <p>Estadísticas de Normal. Los PV y el daño de los enemigos varían según la dificultad.</p>
+        <div class="rejilla seleccion-heroes bestiario">${fichasBestiario.map(({ tipo, base, habilidades, botin }) => {
+            const armas = botin.armas.map(arma => nombreObjeto(arma)).join(' / ');
+            const habilidadesArma = botin.armas.map(arma => arma.habilidad).filter(Boolean);
+            return `<article class="tarjeta ficha-seleccion">
+                <div class="retrato-seleccion"><img src="imagenes/${spritesCombate[tipo]}" alt=""></div>
+                <h2>${tipo === 'DRAGON' ? 'Azrath' : escapar(nombre(tipo))}</h2>
+                <small>${base.pvMaximos} PV · ${base.pmMaximos} PC · Esquiva ${base.esquiva} · Crítico ${base.critico}</small>
+                <small>${Object.entries(atributosBase).filter(([clave]) => clave in base)
+                    .map(([clave, etiqueta]) => `${etiqueta} ${base[clave]}`).join(' · ')}</small>
+                <p>${escapar(historiasEnemigos[tipo])}</p>
+                <h3>Armas</h3>
+                <p>${escapar(armas || armasNaturales[tipo])}</p>
+                <h3>Ataques y habilidades</h3>
+                ${listaHabilidadesEnemigo(habilidades.concat(habilidadesArma))}
+                ${tipo === 'CABALLERO_OSCURO' ? '<p>Puede usar una Poción dorada para revivir a un aliado si aún la conserva.</p>' : ''}
+                <h3>Botín al vencerlo</h3>
+                ${botin.probabilidad ? `<p>${botin.probabilidad} % de probabilidad de soltar un objeto.</p>
+                    <ul>${botin.objetos.map(objeto => `<li>${escapar(nombreObjeto(objeto))}</li>`).join('')}</ul>`
+                    : '<p>Sin botín al vencerlo.</p>'}
+                ${tipo === 'DRAGON' ? '<p>Se le puede robar el Pergamino de Dragón.</p>' : ''}
+            </article>`;
+        }).join('')}</div>`;
 }
 
 function barra(etiqueta, actual, maximo, clase = '') {
@@ -365,19 +484,19 @@ function luchador(datos, enCampamento = false) {
         : `<span class="icono" aria-hidden="true">${iconos[datos.tipo]}</span>`;
     const estados = Object.entries(datos.estados).map(([estado, turnos]) =>
         `<small>${escapar(nombre(estado))}${estado === 'MARCA_ESPECTRAL' ? '' : ` · ${turnos} ${turnos === 1 ? 'turno' : 'turnos'}`}</small>`).join('');
+    const indicador = indicarTurno ? '<span class="indicador-turno" aria-hidden="true"></span>' : '';
     return `<article class="luchador ${datos.pv === 0 ? 'caido' : ''}" data-tipo="${datos.tipo}" data-combatiente="${datos.id}">
         <div class="figura-combate">
             <div class="retrato-combate">
                 ${imagen}
-                ${indicarTurno ? '<span class="indicador-turno" aria-hidden="true"></span>' : ''}
-                ${estados ? `<div class="estados-combate">${estados}</div>` : ''}
+                ${estados ? `<div class="estados-combate">${estados}${indicador}</div>` : indicador}
             </div>
         </div>
         <div class="tarjeta ${turnoActual ? 'activo' : ''}">
             <h3><span>${nombre(datos.tipo)}</span></h3>
             ${enCampamento ? `<small>Nivel ${datos.nivel}</small>` : ''}
             ${barra('PV', datos.pv, datos.base.pvMaximos)}${barra('PC', datos.pm, datos.base.pmMaximos, 'magia')}
-            ${enCampamento ? `<small>${datos.pv > 0 ? 'En pie' : 'Fuera de combate'}</small>` : '<small class="aviso-caida">Fuera de combate</small>'}
+            ${enCampamento ? `<small>${datos.pv > 0 ? 'En pie' : 'Fuera de combate'}</small>` : ''}
             ${enCampamento ? `<dl class="equipo-estado">
                 ${Object.entries(ranurasEquipo).map(([ranura, etiqueta]) =>
                     `<dt>${etiqueta}</dt><dd>${escapar(datos.equipo[ranura]?.nombre ?? 'Sin equipar')}</dd>`).join('')}
@@ -414,7 +533,7 @@ const iconosPorObjeto = {
     sombrero_mago: 'armaduras/sombrero_mago.png',
     tunica_aprendiz: 'armaduras/tunica_mago.png',
     tunica_mago: 'armaduras/tunica_mago.png',
-    tunica_chaman: 'armaduras/sombrero_mago.png'
+    tunica_chaman: 'armaduras/tunica_mago.png'
 };
 
 const iconosPorFamilia = {
@@ -487,8 +606,15 @@ function historial() {
             `<li>${evento.turno} · ${escapar(textoEvento(evento))}</li>`).join('')}</ol></details>`;
 }
 
-function nombresDeLosSiguientesTurnos() {
-    const vivos = partida.heroes.concat(partida.enemigos).filter(combatiente => combatiente.pv > 0);
+function textoSiguientesTurnos(turnos) {
+    if (!turnos.length) return '';
+    return `Siguientes: ${turnos.map(({ nombre, esHeroe }) =>
+        `<span data-bando="${esHeroe ? 'heroe' : 'enemigo'}">${escapar(nombre)}</span>`).join(' / ')}`;
+}
+
+function siguientesTurnos(estado = partida, incluirActual = false) {
+    const heroes = new Set(estado.heroes.map(heroe => heroe.id));
+    const vivos = estado.heroes.concat(estado.enemigos).filter(combatiente => combatiente.pv > 0);
     const combatientes = new Map(vivos.map(combatiente => [combatiente.id, {
         nombre: nombre(combatiente.tipo),
         velocidadBase: combatiente.base.velocidad + (combatiente.modificadoresEquipo?.velocidad ?? 0),
@@ -498,15 +624,16 @@ function nombresDeLosSiguientesTurnos() {
         const datos = combatientes.get(id);
         return Math.max(1, datos.velocidadBase - (datos.turnosRalentizado > 0 ? 4 : 0));
     };
-    let pendientes = partida.orden.filter(id => combatientes.has(id));
-    const nombres = [];
+    let pendientes = estado.orden.filter(id => combatientes.has(id));
+    const siguientes = [];
     for (let turno = 0; turno <= 4; turno++) {
         if (!pendientes.length) pendientes = [...combatientes.keys()].sort((a, b) => velocidad(b) - velocidad(a));
-        const datos = combatientes.get(pendientes.shift());
-        if (turno > 0) nombres.push(datos.nombre);
+        const id = pendientes.shift();
+        const datos = combatientes.get(id);
+        if (incluirActual || turno > 0) siguientes.push({ nombre: datos.nombre, esHeroe: heroes.has(id) });
         if (datos.turnosRalentizado > 0) datos.turnosRalentizado--;
     }
-    return nombres;
+    return siguientes;
 }
 
 function mostrarCombate() {
@@ -559,8 +686,8 @@ function mostrarCombate() {
                 ${opcion.avisoBloqueo ? 'disabled' : ''}>${escapar(opcion.texto)}${opcion.avisoBloqueo ? ` · ${escapar(opcion.avisoBloqueo)}` : ''}</option>`).join('')}
                 </select></label>${elegirObjetivo}<button class="principal" type="submit">Actuar</button></div>
                 <p class="orden">
-                    <span class="turno-actual">Turno de <strong>${nombre(actor.tipo)}</strong></span>
-                    <span>Siguientes: ${nombresDeLosSiguientesTurnos().join(' / ')}</span>
+                    <span class="turno-actual" data-bando="heroe">Turno de <strong>${nombre(actor.tipo)}</strong></span>
+                    <span class="turnos-siguientes">${textoSiguientesTurnos(siguientesTurnos())}</span>
                 </p>
             </div>
             <div class="detalle-accion">
@@ -569,6 +696,14 @@ function mostrarCombate() {
             </div>
         </form>${historial()}`;
     juego.querySelectorAll('.escenario .luchador h3').forEach(titulo => observarNombresCombate.observe(titulo));
+    for (const combatiente of partida.heroes.concat(partida.enemigos)) {
+        if (combatiente.pv === 0) {
+            const figura = juego.querySelector(`[data-combatiente="${combatiente.id}"] .figura-combate`);
+            void mostrarSpriteCombatiente(combatiente, figura);
+        } else if (spritesCombate[combatiente.tipo]) {
+            void cargarSpriteDerrotado(combatiente.tipo);
+        }
+    }
 }
 
 function describir(objeto) {
@@ -699,8 +834,27 @@ document.addEventListener('click', async evento => {
     switch (accion) {
         case 'crear': seleccion = []; dificultadElegida = 'FACIL'; await operar('crear'); break;
         case 'reiniciar':
+            viendoBestiario = false;
             if (partida.ronda && !window.confirm('¿Empezar una nueva partida? Se perderá el progreso actual.')) break;
             if (await operar('reiniciar')) { seleccion = []; dificultadElegida = 'FACIL'; mostrar(); }
+            break;
+        case 'bestiario':
+            ocupado = true;
+            try {
+                fichasBestiario ??= await api(`${ruta}/bestiario`);
+                viendoBestiario = true;
+                mostrar();
+                juego.querySelector('button[data-accion="cerrar-bestiario"]').focus();
+            } catch (error) {
+                informar(error.message);
+            } finally {
+                ocupado = false;
+            }
+            break;
+        case 'cerrar-bestiario':
+            viendoBestiario = false;
+            mostrar();
+            juego.querySelector('button[data-accion="bestiario"]').focus();
             break;
         case 'clase':
             if (seleccion.includes(valor)) seleccion = seleccion.filter(clase => clase !== valor);

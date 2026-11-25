@@ -21,6 +21,22 @@ class ApiPartidasTest {
     private TestRestTemplate cliente;
 
     @Test
+    void bestiarioIncluyeEstadisticasArmasHabilidadesYBotin() {
+        var respuesta = cliente.getForEntity("/api/partidas/bestiario", JsonNode.class);
+        assertEquals(HttpStatus.OK, respuesta.getStatusCode());
+        var fichas = respuesta.getBody();
+        assertEquals(10, fichas.size());
+        var arquero = fichas.valueStream().filter(ficha -> ficha.path("tipo").asText().equals("GOBLIN_ARQUERO"))
+                .findFirst().orElseThrow();
+        assertEquals(55, arquero.path("base").path("pvMaximos").asInt());
+        assertEquals("flechazo_goblin", arquero.path("habilidades").get(0).path("id").asText());
+        assertEquals(40, arquero.path("botin").path("probabilidad").asInt());
+        assertEquals("arco_goblin", arquero.path("botin").path("armas").get(0).path("codigo").asText());
+        assertEquals("arco_goblin", arquero.path("botin").path("objetos").get(0).path("codigo").asText());
+        assertEquals("daga_curva", arquero.path("botin").path("objetos").get(1).path("codigo").asText());
+    }
+
+    @Test
     void sirveLaPortadaYCreaUnaPartidaQueSePuedeReiniciar() {
         var portada = cliente.getForEntity("/", String.class);
         assertEquals(HttpStatus.OK, portada.getStatusCode());

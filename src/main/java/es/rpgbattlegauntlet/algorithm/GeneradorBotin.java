@@ -22,12 +22,12 @@ public final class GeneradorBotin {
     private record Tabla(int probabilidad, List<Entrada> entradas) {}
 
     private static final Map<TipoEnemigo, Tabla> TABLAS = Map.of(
-            GOBLIN, new Tabla(35, List.of(new Entrada("daga", 25), new Entrada("daga_duelo", 12), new Entrada("daga_curva", 8),
+            GOBLIN, new Tabla(35, List.of(new Entrada("daga_curva", 45),
                     new Entrada("capucha", 30), new Entrada("ligera", 25))),
-            GOBLIN_ARQUERO, new Tabla(40, List.of(new Entrada("arco_goblin", 100))),
+            GOBLIN_ARQUERO, new Tabla(40, List.of(new Entrada("arco_goblin", 75), new Entrada("daga_curva", 25, false))),
             ESQUELETO, new Tabla(40, List.of(new Entrada("espada_esqueleto", 40), new Entrada("escudo", 35), new Entrada("antigua", 25))),
-            CHAMAN, new Tabla(50, List.of(new Entrada("vara_magica", 30), new Entrada("vara_chaman", 15),
-                    new Entrada("tunica_mago", 10), new Entrada("daga_ritual", 10, false), new Entrada("tunica_chaman", 15), new Entrada("pergamino", 20))),
+            CHAMAN, new Tabla(50, List.of(new Entrada("vara_chaman", 30),
+                    new Entrada("tunica_chaman", 30), new Entrada("proyectil", 40))),
             OGRO, new Tabla(65, List.of(new Entrada("garrote", 50), new Entrada("pesada", 30), new Entrada("botas", 20))),
             CABALLERO_OSCURO, new Tabla(75, List.of(new Entrada("maldita", 40), new Entrada("oscura", 35), new Entrada("casco_oscuro", 25))),
             NIGROMANTE, new Tabla(60, List.of(new Entrada("vara_osario", 35, false),
@@ -39,6 +39,24 @@ public final class GeneradorBotin {
     );
 
     private GeneradorBotin() {
+    }
+
+    public record BotinPosible(int probabilidad, List<Objeto> objetos, List<Objeto> armas) {}
+
+    public static BotinPosible consultar(TipoEnemigo tipo) {
+        Tabla tabla = TABLAS.get(tipo);
+        if (tabla == null) return new BotinPosible(0, List.of(), List.of());
+        var objetos = tabla.entradas().stream().map(Entrada::codigo).map(GeneradorBotin::objetoDeReferencia).toList();
+        var armas = tabla.entradas().stream().filter(Entrada::enemigoUsaArma).map(Entrada::codigo)
+                .filter(codigo -> CatalogoObjetos.habilidadArma(codigo).isPresent())
+                .map(GeneradorBotin::objetoDeReferencia).toList();
+        return new BotinPosible(tabla.probabilidad(), objetos, armas);
+    }
+
+    private static Objeto objetoDeReferencia(String codigo) {
+        if (CatalogoObjetos.codigosPergaminos().contains(codigo)) return CatalogoObjetos.pergamino(codigo);
+        if (codigo.equals("revitalizacion")) return CatalogoObjetos.pocionRevitalizacion();
+        return CatalogoObjetos.equipo(codigo, Calidad.NORMAL, false);
     }
 
     public static List<Habilidad> habilidadesDeArmas(TipoEnemigo tipo) {
@@ -77,11 +95,7 @@ public final class GeneradorBotin {
 
     private static Objeto crear(String codigo, RandomGenerator azar) {
         return switch (codigo) {
-            case "pergamino" -> {
-                var hechizos = CatalogoObjetos.codigosPergaminos();
-                yield CatalogoObjetos.pergamino(hechizos.get(azar.nextInt(hechizos.size())));
-            }
-            case "proteccion", "cura_mayor" -> CatalogoObjetos.pergamino(codigo);
+            case "proyectil", "proteccion", "cura_mayor" -> CatalogoObjetos.pergamino(codigo);
             case "revitalizacion" -> CatalogoObjetos.pocionRevitalizacion();
             default -> CatalogoObjetos.equipo(codigo, Calidad.values()[tramo(azar.nextInt(100))], false);
         };

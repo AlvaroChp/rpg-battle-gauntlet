@@ -171,7 +171,7 @@ class ProgresionTest {
         assertNull(combate.ejecutar(new AccionCombate(combate.getTurno(), picaro.getId(), "robar", goblin.getId())));
         assertTrue(combate.puedeSerRobado(goblin));
         var robado = combate.ejecutar(new AccionCombate(combate.getTurno(), picaro.getId(), "robar", goblin.getId()));
-        assertEquals("daga", robado.codigo());
+        assertEquals("daga_curva", robado.codigo());
         assertFalse(combate.puedeSerRobado(goblin));
         assertThrows(IllegalArgumentException.class, () -> combate.ejecutar(
                 new AccionCombate(combate.getTurno(), picaro.getId(), "robar", goblin.getId())));
@@ -186,7 +186,7 @@ class ProgresionTest {
         var goblin = combate.getEnemigos().getFirst();
         var picaro = partida.getEquipo().getFirst();
         partida.actuar(new AccionCombate(combate.getTurno(), picaro.getId(), "robar", goblin.getId()));
-        assertSame(objeto(partida, "daga"), partida.getHistorial().getFirst().objetoRobado());
+        assertSame(objeto(partida, "daga_curva"), partida.getHistorial().getFirst().objetoRobado());
         partida.actuar(new AccionCombate(combate.getTurno(), partida.getEquipo().get(1).getId(), "ataque_basico", goblin.getId()));
         assertTrue(partida.getBotin().isEmpty());
         partida.invertir(picaro.getId(), DES, 3);
@@ -393,14 +393,14 @@ class ProgresionTest {
     }
 
     @Test
-    void dagaRitualEsBotinDelChamanPeroNoFormaParteDeSusAtaques() {
-        var daga = GeneradorBotin.tirar(CHAMAN, azar(49, 55, 35)).orElseThrow();
+    void dagaRitualEsBotinDelNigromantePeroNoFormaParteDeSusAtaques() {
+        var daga = GeneradorBotin.tirar(NIGROMANTE, azar(59, 60, 35)).orElseThrow();
 
         assertEquals("daga_ritual", daga.codigo());
         assertEquals("sangria_ritual", daga.habilidad().id());
         assertEquals(50, daga.habilidad().porcentajeRoboVida());
         assertEquals(List.of(GUERRERO, PICARO), daga.getClasesCompatibles());
-        assertTrue(GeneradorBotin.habilidadesDeArmas(CHAMAN).stream()
+        assertTrue(GeneradorBotin.habilidadesDeArmas(NIGROMANTE).stream()
                 .noneMatch(habilidad -> habilidad.id().equals("sangria_ritual")));
         assertTrue(CatalogoObjetos.tienda().stream().noneMatch(objeto -> objeto.codigo().equals("daga_ritual")));
     }
@@ -409,34 +409,33 @@ class ProgresionTest {
     void tiradasSeparanProbabilidadTipoYCalidad() {
         assertTrue(GeneradorBotin.tirar(GOBLIN, azar(35)).isEmpty());
         var daga = GeneradorBotin.tirar(GOBLIN, azar(34, 24, 34)).orElseThrow();
-        assertEquals("Daga mellada", daga.nombre());
+        assertEquals("Daga curva astillada", daga.nombre());
         assertEquals(INFERIOR, daga.calidad());
-        assertEquals(12, daga.precioVenta());
-        assertEquals(24, daga.precioRecompra());
-        assertEquals("Daga de duelo bruñida", GeneradorBotin.tirar(GOBLIN, azar(34, 25, 85)).orElseThrow().nombre());
+        assertEquals(35, daga.precioVenta());
+        assertEquals(69, daga.precioRecompra());
+        assertEquals("Daga curva afilada", GeneradorBotin.tirar(GOBLIN, azar(34, 25, 85)).orElseThrow().nombre());
         assertEquals("Daga curva astillada", GeneradorBotin.tirar(GOBLIN, azar(34, 44, 34)).orElseThrow().nombre());
         assertTrue(GeneradorBotin.tirar(GOBLIN_ARQUERO, azar(40)).isEmpty());
-        assertEquals("Arco goblin reforzado", GeneradorBotin.tirar(GOBLIN_ARQUERO, azar(39, 99, 85)).orElseThrow().nombre());
+        assertEquals("Arco goblin reforzado", GeneradorBotin.tirar(GOBLIN_ARQUERO, azar(39, 74, 85)).orElseThrow().nombre());
+        assertEquals("daga_curva", GeneradorBotin.tirar(GOBLIN_ARQUERO, azar(39, 75, 35)).orElseThrow().codigo());
         var capucha = GeneradorBotin.tirar(GOBLIN, azar(0, 45, 35)).orElseThrow();
         assertEquals(NORMAL, capucha.calidad());
         var oscura = GeneradorBotin.tirar(CABALLERO_OSCURO, azar(74, 40, 85)).orElseThrow();
         assertEquals(SUPERIOR, oscura.calidad());
         assertEquals(-5, oscura.bonificaciones().velocidad());
         assertEquals(20, oscura.fuerzaMinima());
-        assertEquals("vara_magica", GeneradorBotin.tirar(CHAMAN, azar(49, 29, 35)).orElseThrow().codigo());
-        assertEquals("Vara de chamán ritual", GeneradorBotin.tirar(CHAMAN, azar(49, 30, 85)).orElseThrow().nombre());
-        assertEquals("Túnica de chamán ritual", GeneradorBotin.tirar(CHAMAN, azar(49, 65, 85)).orElseThrow().nombre());
-        assertEquals("tunica_chaman", GeneradorBotin.elegirBotinRobado(CHAMAN, azar(79, 35)).codigo());
-        var meteorito = GeneradorBotin.tirar(CHAMAN, azar(49, 80, 9)).orElseThrow();
+        assertEquals("Vara de chamán ritual", GeneradorBotin.tirar(CHAMAN, azar(49, 29, 85)).orElseThrow().nombre());
+        assertEquals("Túnica de chamán ritual", GeneradorBotin.tirar(CHAMAN, azar(49, 30, 85)).orElseThrow().nombre());
+        assertEquals("tunica_chaman", GeneradorBotin.elegirBotinRobado(CHAMAN, azar(59, 35)).codigo());
+        var proyectil = GeneradorBotin.tirar(CHAMAN, azar(49, 60)).orElseThrow();
         var comprado = CatalogoObjetos.tienda().stream()
-                .filter(objeto -> objeto.codigo().equals("meteorito")).findFirst().orElseThrow();
-        var robado = GeneradorBotin.elegirBotinRobado(CHAMAN, azar(80, 9));
-        assertNull(meteorito.calidad());
-        assertEquals(140, meteorito.efecto().cantidad());
-        assertEquals(comprado.efecto(), meteorito.efecto());
+                .filter(objeto -> objeto.codigo().equals("proyectil")).findFirst().orElseThrow();
+        var robado = GeneradorBotin.elegirBotinRobado(CHAMAN, azar(99));
+        assertEquals("proyectil", proyectil.codigo());
+        assertEquals("proyectil", robado.codigo());
+        assertNull(proyectil.calidad());
+        assertEquals(comprado.efecto(), proyectil.efecto());
         assertEquals(comprado.efecto(), robado.efecto());
-        assertEquals(22, meteorito.inteligenciaMinima());
-        assertEquals(250, meteorito.precioRecompra());
         assertTrue(GeneradorBotin.tirar(DRAGON, azar()).isEmpty());
     }
 

@@ -23,6 +23,21 @@ public final class InteligenciaEnemiga {
     private InteligenciaEnemiga() {
     }
 
+    public static List<Habilidad> habilidadesPropias(TipoEnemigo tipo) {
+        return switch (tipo) {
+            case GOBLIN -> List.of(CUCHILLADA, ATAQUE_DOBLE);
+            case GOBLIN_ARQUERO -> List.of(FLECHAZO_GOBLIN);
+            case ESQUELETO -> List.of(ESPADAZO, GUARDIA_OSEA);
+            case CHAMAN -> List.of(BOLA_FUEGO, CURACION_OSCURA, ATAQUE_BASICO);
+            case OGRO -> List.of(MAZAZO, BARRIDO, PREPARAR_FURIA_ANIMAL, FURIA_ANIMAL);
+            case CABALLERO_OSCURO -> List.of(ESPADA_MALDITA, GUARDIA_OSCURA, PREPARAR_CONTRAATAQUE, CONTRAATAQUE);
+            case NIGROMANTE -> List.of(DESCARGA_FUNEBRE, REANIMAR, ATAQUE_BASICO);
+            case GOLEM_RUNICO -> List.of(PUNO_DE_PIEDRA, PREPARAR_ONDA_RUNICA, ONDA_RUNICA);
+            case VERDUGO_ESPECTRAL -> List.of(TAJO_ESPECTRAL, MARCAR_SENTENCIA, SENTENCIA, BARRIDO_ESPECTRAL);
+            case DRAGON -> List.of(GARRA, ALIENTO, RUGIDO, PREPARAR_INCENDIO_CENIZA, INCENDIO_CENIZA);
+        };
+    }
+
     public static Combatiente aliadoParaRevitalizar(Enemigo enemigo, List<Combatiente> aliados) {
         if (!enemigo.tienePocionRevitalizacion()) return null;
         return aliados.stream().filter(aliado -> !aliado.estaVivo()).findFirst().orElse(null);

@@ -1,11 +1,16 @@
 package es.rpgbattlegauntlet.controller;
 
 import es.rpgbattlegauntlet.config.CatalogoHeroes;
+import es.rpgbattlegauntlet.config.CatalogoEnemigos;
+import es.rpgbattlegauntlet.algorithm.GeneradorBotin;
+import es.rpgbattlegauntlet.algorithm.InteligenciaEnemiga;
 import es.rpgbattlegauntlet.dto.PeticionPartida;
 import es.rpgbattlegauntlet.dto.VistaPartida;
 import es.rpgbattlegauntlet.enums.ClaseHeroe;
+import es.rpgbattlegauntlet.enums.TipoEnemigo;
 import es.rpgbattlegauntlet.model.EstadisticasBase;
 import es.rpgbattlegauntlet.model.EventoCombate;
+import es.rpgbattlegauntlet.model.Habilidad;
 import es.rpgbattlegauntlet.service.GestorPartidas;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +31,15 @@ public class ControladorPartidas {
     }
 
     public record Perfil(ClaseHeroe clase, EstadisticasBase base) {}
+    public record FichaEnemigo(TipoEnemigo tipo, EstadisticasBase base, List<Habilidad> habilidades,
+                               GeneradorBotin.BotinPosible botin) {}
+
+    @GetMapping("/bestiario")
+    public List<FichaEnemigo> bestiario() {
+        return Arrays.stream(TipoEnemigo.values()).map(tipo -> new FichaEnemigo(tipo,
+                CatalogoEnemigos.crear(tipo).getEstadisticasBase(), InteligenciaEnemiga.habilidadesPropias(tipo),
+                GeneradorBotin.consultar(tipo))).toList();
+    }
 
     @GetMapping("/clases")
     public List<Perfil> clases() {

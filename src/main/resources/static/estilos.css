@@ -54,6 +54,11 @@ p { line-height: 1.5; }
 .detalle-seleccion:not([open]) summary span:last-child, .detalle-seleccion[open] summary span:first-child { display: none; }
 .detalle-seleccion summary + p { margin-top: .65rem; }
 .ficha-seleccion button { align-self: start; margin-top: auto; }
+.bestiario h3 { margin: .65rem 0 .25rem; }
+.bestiario h3 + p, .bestiario ul { margin: 0; }
+.bestiario ul { padding-inline-start: 1.25rem; }
+.bestiario li small { display: block; }
+.bestiario article > small + p { margin: .65rem 0 0; }
 .icono { display: inline-grid; place-items: center; width: 2.5rem; height: 2.5rem; margin-bottom: .55rem; border: 1px solid var(--borde); color: var(--oro); background: #3c2921; box-shadow: inset 0 0 0 3px var(--panel); font-size: 1.35rem; }
 .bandos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1rem, 2.5vw, 2rem); margin-bottom: 1rem; }
 .bandos .rejilla {
@@ -65,17 +70,40 @@ p { line-height: 1.5; }
 }
 .escenario {
     position: relative;
+    isolation: isolate;
     align-content: end;
     min-height: clamp(22rem, 49vw, 36rem);
     padding: clamp(.75rem, 2vw, 1.5rem);
     padding-top: 6rem;
-    padding-bottom: clamp(1.5rem, 4vw, 3.75rem);
+    padding-bottom: clamp(.65rem, 1.5vw, 1.3rem);
     border: 1px solid var(--borde);
-    background: linear-gradient(transparent 45%, #17121140), var(--fondo-escenario) center bottom / cover;
+}
+.escenario::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 0 0 -1.5rem;
+    clip-path: inset(0 0 1.5rem);
+    background: linear-gradient(transparent 45%, #17121140), var(--fondo-escenario) center top / cover;
+    pointer-events: none;
 }
 .escenario[data-escenario="1"] { --fondo-escenario: url('imagenes/escenarios/escenario1.png'); }
 .escenario[data-escenario="2"] { --fondo-escenario: url('imagenes/escenarios/escenario2.png'); }
 .escenario[data-escenario="3"] { --fondo-escenario: url('imagenes/escenarios/escenario3.png'); }
+
+@container (min-width: 22.3rem) {
+    :where(.escenario > section:last-of-type) > .luchador:first-child:nth-last-child(-n+2) {
+        grid-column: 2;
+    }
+    .escenario .luchador:nth-child(2):not(:last-child) .retrato-combate,
+    .escenario > section:last-of-type > .luchador:first-child:nth-last-child(-n+2) .retrato-combate {
+        translate: 0 -2.4rem;
+    }
+    .escenario > section:first-of-type > .luchador:last-child:not(:only-child) .retrato-combate,
+    .escenario > section:last-of-type > .luchador:first-child:nth-last-child(n+3) .retrato-combate {
+        translate: 0 -4.8rem;
+    }
+}
 
 .ultima-accion {
     position: absolute;
@@ -97,8 +125,12 @@ p { line-height: 1.5; }
 .ultima-accion:empty { visibility: hidden; }
 .luchador { min-width: 0; }
 .luchador.caido { opacity: .65; }
-.luchador:not(.caido) .aviso-caida { visibility: hidden; }
+.escenario .luchador.caido { opacity: 1; }
+.escenario .luchador.caido .tarjeta { opacity: .65; }
+.escenario .sprite-vencido { translate: 0 calc(1.6rem + 10px); }
 .luchador .tarjeta { background: #241b19e8; padding-inline: .6rem; }
+.escenario .luchador .tarjeta { padding-block: .55rem; }
+.escenario .luchador.caido h3 { text-decoration: line-through; }
 .escenario .luchador h3 { line-height: 1.35rem; white-space: nowrap; }
 .escenario .luchador h3 span { display: inline-block; }
 .luchador .barra { grid-template-columns: minmax(4.75rem, max-content) minmax(0, 1fr); }
@@ -144,6 +176,12 @@ p { line-height: 1.5; }
     filter: drop-shadow(0 2px 0 #120c09);
     pointer-events: none;
 }
+@media (prefers-reduced-motion: no-preference) {
+    .indicador-turno { animation: flotar-indicador .75s ease-in-out infinite alternate; }
+    @keyframes flotar-indicador {
+        to { transform: translate(-50%, -.3rem); }
+    }
+}
 .indicador-turno::before {
     content: "";
     display: block;
@@ -169,7 +207,6 @@ p { line-height: 1.5; }
         70% 40%, 80% 40%, 80% 20%, 90% 20%
     );
 }
-.indicador-turno + .estados-combate { bottom: calc(100% + 2rem); }
 .estados-combate {
     position: absolute;
     inset-inline: 0;
@@ -199,7 +236,7 @@ p { line-height: 1.5; }
     pointer-events: none;
 }
 .estados-combate > .resultado-combate { bottom: calc(100% + .2rem); }
-.indicador-turno ~ .resultado-combate { bottom: calc(100% + 2rem); }
+.indicador-turno ~ .resultado-combate { bottom: calc(100% + 2.35rem); }
 .resultado-combate span {
     padding: .12rem .35rem;
     border: 1px solid currentColor;
@@ -236,13 +273,15 @@ p { line-height: 1.5; }
     }
 }
 .luchador:is([data-tipo="GOBLIN"], [data-tipo="GOBLIN_ARQUERO"]) { --ancho-sprite: 7.5rem; --alto-sprite: 6.75rem; }
-.luchador[data-tipo="CABALLERO_OSCURO"] { --ancho-sprite: 15rem; --alto-sprite: 13rem; }
-.luchador[data-tipo="CABALLERO_OSCURO"] .figura-combate { padding-inline: 0; }
-.luchador[data-tipo="CABALLERO_OSCURO"] .sprite-combate {
+.luchador:is([data-tipo="CABALLERO_OSCURO"], [data-tipo="NIGROMANTE"]) {
+    --ancho-sprite: 15rem;
+    --alto-sprite: 13rem;
+}
+.luchador:is([data-tipo="CABALLERO_OSCURO"], [data-tipo="NIGROMANTE"]) .figura-combate { padding-inline: 0; }
+.luchador:is([data-tipo="CABALLERO_OSCURO"], [data-tipo="NIGROMANTE"]) .sprite-combate {
     max-width: min(calc(100% + 1.6rem), var(--ancho-sprite));
 }
 .luchador[data-tipo="OGRO"] { --ancho-sprite: 19rem; --alto-sprite: 16rem; }
-.luchador[data-tipo="NIGROMANTE"] { --ancho-sprite: 12rem; --alto-sprite: 11rem; }
 .luchador[data-tipo="GOLEM_RUNICO"] { --ancho-sprite: 23rem; --alto-sprite: 20rem; }
 .luchador[data-tipo="VERDUGO_ESPECTRAL"] { --ancho-sprite: 22rem; --alto-sprite: 19.5rem; }
 .luchador[data-tipo="DRAGON"] { --ancho-sprite: 27rem; --alto-sprite: 19rem; }
@@ -293,6 +332,11 @@ progress.magia { accent-color: #77a9e2; }
     padding-inline-end: .75rem;
 }
 .controles-combate .turno-actual { font-size: 1.15rem; }
+.orden [data-bando="heroe"] { --brillo-turno: #409bff; }
+.orden [data-bando="enemigo"] { --brillo-turno: #ff534b; }
+.turno-actual strong, .turnos-siguientes [data-bando] {
+    text-shadow: 0 0 .45rem var(--brillo-turno), 0 0 .85rem var(--brillo-turno);
+}
 .acciones label { display: grid; gap: .35rem; max-width: 23rem; }
 .articulo { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; }
 .cabecera-objeto, .detalle-accion {

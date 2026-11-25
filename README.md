@@ -202,10 +202,10 @@ Cada enemigo vencido tiene una tirada independiente para soltar como máximo un 
 
 | Enemigo | Probabilidad de soltar | Reparto si suelta |
 | --- | ---: | --- |
-| Goblin | 35 % | Daga 25 %, daga de duelo 12 %, daga curva 8 %, capucha 30 %, armadura ligera 25 % |
-| Goblin arquero | 40 % | Arco goblin 100 % |
+| Goblin | 35 % | Daga curva 45 %, capucha 30 %, armadura ligera 25 % |
+| Goblin arquero | 40 % | Arco goblin 75 %, daga curva 25 % |
 | Esqueleto | 40 % | Espada 40 %, escudo 35 %, armadura antigua 25 % |
-| Chamán | 50 % | Vara mágica 30 %, vara de chamán 15 %, túnica de mago 10 %, daga ritual 10 %, túnica de chamán 15 %, pergamino 20 % |
+| Chamán | 50 % | Vara de chamán 30 %, túnica de chamán 30 %, Proyectil mágico 40 % |
 | Ogro | 65 % | Garrote 50 %, armadura pesada 30 %, botas reforzadas 20 % |
 | Caballero oscuro | 75 % | Espada maldita 40 %, armadura oscura 35 %, casco oscuro 25 % |
 | Nigromante | 60 % | Vara de osario 35 %, capucha funeraria 25 %, daga ritual 10 %, poción dorada 30 % |
@@ -257,7 +257,7 @@ La partida empieza con 0 MO. Una poción se vende por la mitad del precio habitu
 
 Las pociones se pueden usar en combate y durante la preparación. En combate, quien usa una poción gasta su acción. Las pociones de recuperación se aplican a un aliado vivo, incluido el propio usuario. Un héroe vivo puede revitalizar a un aliado caído en combate o durante la preparación. En combate, el héroe revivido vuelve a actuar en el siguiente ciclo. La recuperación se limita a los PV y PC máximos. Un consumo que falla la validación conserva el objeto.
 
-Los pergaminos se usan en combate, requieren la INT base indicada y gastan una acción sin consumir PC. Los ofensivos tienen potencia fija, aciertan sin tirada, no hacen crítico y se reducen por RES y protección. Los de área se aplican a los enemigos vivos y las curaciones a los aliados vivos. Si el botín del chamán es un pergamino, se elige el hechizo con probabilidad uniforme del 10 %. Cada hechizo tiene una única versión con los mismos efectos y requisitos al comprarlo, encontrarlo o robarlo.
+Los pergaminos se usan en combate, requieren la INT base indicada y gastan una acción sin consumir PC. Los ofensivos tienen potencia fija, aciertan sin tirada, no hacen crítico y se reducen por RES y protección. Los de área se aplican a los enemigos vivos y las curaciones a los aliados vivos. El chamán puede soltar el pergamino Proyectil mágico. Cada hechizo tiene una única versión con los mismos efectos y requisitos al comprarlo, encontrarlo o robarlo.
 
 | Pergamino | Efecto | INT base | Precio fijo |
 | --- | --- | ---: | ---: |
