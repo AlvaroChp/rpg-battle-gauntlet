@@ -74,7 +74,17 @@ public class Combatiente {
 
     public int getDefensaEfectiva() {
         int penalizacion = estados.containsKey(EstadoTemporal.DEFENSA_DEBILITADA) ? 5 : 0;
+        if (tieneEstado(EstadoTemporal.CORAZA_AGRIETADA)) penalizacion += 24;
         return Math.max(0, estadisticasBase.defensa() + getBonificaciones().defensa() - penalizacion);
+    }
+
+    public int costeHabilidad(Habilidad habilidad) {
+        int coste = habilidad.costePm();
+        return coste > 0 && tieneEstado(EstadoTemporal.ESCARCHA) ? coste + 4 : coste;
+    }
+
+    public int getResistenciaFuego() {
+        return 0;
     }
 
     boolean retirarEstado(EstadoTemporal estado) {

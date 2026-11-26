@@ -23,6 +23,55 @@ import static org.junit.jupiter.api.Assertions.*;
 class CombateTest {
 
     @ParameterizedTest
+    @CsvSource({"MAGO,vara_aprendiz,Golpe de vara", "SANADOR,vara_aprendiz,Golpe de vara", "PICARO,daga,Puñalada",
+            "GUERRERO,daga,Puñalada", "PICARO,espada_basica,Espadazo", "GUERRERO,espada_basica,Espadazo",
+            "GUERRERO,espada_pesada,Mandoble", "ARQUERO,arco_corto,Disparo", "ARQUERO,ballesta,Disparo"})
+    void ataqueBasicoUsaElNombreDelArmaEnElMenuYElHistorial(ClaseHeroe clase, String codigo, String nombre) {
+        var heroe = new Heroe(clase, new EstadisticasBase(150, 90, 25, 15, 25, 13, 20, 0, 0));
+        heroe.equipar(CatalogoObjetos.equipo(codigo, Calidad.NORMAL, false));
+        var objetivo = rival(150, 1, 0, 0, 1, 0);
+        var combate = new Combate(List.of(heroe), List.of(objetivo), azar(99, 99));
+        var ataque = combate.getHabilidadesDelTurno().getFirst();
+        assertEquals(nombre, ataque.nombre());
+        assertEquals(0, ataque.costePm());
+        actuar(combate, heroe, "ataque_basico", objetivo);
+        assertEquals(nombre, combate.getHistorial().getFirst().nombreHabilidad());
+    }
+
+    @Test
+    void lasHabilidadesDelPicaroSePuedenMostrarAunqueNoTengaPc() {
+        var picaro = CatalogoHeroes.crearHeroe(PICARO);
+        picaro.equipar(CatalogoObjetos.equipo("daga", Calidad.NORMAL, true));
+        picaro.consumirMagia(picaro.getPmActuales());
+        var combate = new Combate(List.of(picaro), List.of(rival(100, 1, 0, 0, 1, 0)), azar());
+        assertEquals(List.of("ataque_basico", "defender"),
+                combate.getHabilidadesDisponibles().stream().map(Habilidad::id).toList());
+        var habilidades = combate.getHabilidadesDelTurno();
+        assertTrue(habilidades.stream().anyMatch(h -> h.id().equals("robar") && h.costePm() == 5));
+        assertTrue(habilidades.stream().anyMatch(h -> h.id().equals("estocada_rapida") && h.costePm() == 3));
+    }
+
+    @Test
+    void bendicionSeRegistraYProtegeAntesDelTurnoEnemigo() {
+        var sanadora = new Heroe(SANADOR, new EstadisticasBase(100, 90, 5, 8, 15, 13, 20, 0, 0));
+        var guerrero = CatalogoHeroes.crearHeroe(GUERRERO);
+        guerrero.recibirDanio(10);
+        var caballero = CatalogoEnemigos.crear(TipoEnemigo.CABALLERO_OSCURO);
+        int danioSinBendicion = CalculoCombate.danio(caballero, guerrero, CatalogoEnemigos.ESPADA_MALDITA, false);
+        var combate = new Combate(List.of(sanadora, guerrero), List.of(caballero), azar(0, 99, 99));
+
+        actuar(combate, sanadora, "bendicion", guerrero);
+
+        var bendicion = combate.getHistorial().get(0);
+        assertEquals("bendicion", bendicion.habilidad());
+        assertTrue(bendicion.cambioEstados().antes().isEmpty());
+        assertEquals(2, bendicion.cambioEstados().despues().get(EstadoTemporal.BENDICION));
+        var golpe = combate.getHistorial().get(1);
+        assertEquals(guerrero.getId(), golpe.objetivo());
+        assertEquals(Math.round(danioSinBendicion * .75), golpe.danio());
+    }
+
+    @ParameterizedTest
     @CsvSource({"100,50,99,99,36,18", "100,50,99,0,54,27", "15,50,99,99,15,7",
             "100,98,99,99,36,2", "100,50,0,99,0,0"})
     void sangriaRitualCuraSegunDanioRealSinSuperarLosPvMaximos(int pvRival, int pvPortador,

@@ -23,11 +23,25 @@ public final class Equilibrio {
     }
 
     public static int experienciaRonda(int ronda) {
-        return 75 + 18 * (ronda - 1) + (ronda == 14 ? EXP_ADICIONAL_RONDA_14 : 0);
+        int ajuste = switch (ronda) {
+            case 14 -> EXP_ADICIONAL_RONDA_14;
+            case 19 -> -3; // Los supervivientes llegan al nivel 15 con 4235 EXP acumuladas.
+            default -> 0;
+        };
+        return 75 + 18 * (ronda - 1) + ajuste;
     }
 
     public static int oroRonda(int ronda, int turnos, int supervivientes, int consumibles) {
-        return Math.max(60 + 13 * ronda,
-                95 + 14 * ronda + 12 * supervivientes - 2 * turnos - 6 * consumibles);
+        return desgloseOroRonda(ronda, turnos, supervivientes, consumibles).total();
+    }
+
+    public static DesgloseOro desgloseOroRonda(int ronda, int turnos, int supervivientes, int consumibles) {
+        return new DesgloseOro(95 + 14 * ronda, 12 * supervivientes, 2 * turnos, 6 * consumibles, 60 + 13 * ronda);
+    }
+
+    public record DesgloseOro(int base, int bonoSupervivientes, int costeAcciones, int costeConsumibles, int minimo) {
+        public int total() {
+            return Math.max(minimo, base + bonoSupervivientes - costeAcciones - costeConsumibles);
+        }
     }
 }

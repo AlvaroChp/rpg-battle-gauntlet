@@ -1,5 +1,6 @@
 package es.rpgbattlegauntlet.dto;
 
+import es.rpgbattlegauntlet.config.CatalogoEncuentros;
 import es.rpgbattlegauntlet.config.Equilibrio;
 import es.rpgbattlegauntlet.enums.RanuraEquipo;
 import es.rpgbattlegauntlet.enums.ClaseHeroe;
@@ -16,7 +17,8 @@ public record VistaPartida(UUID id, long version, EstadoPartida estado, Dificult
                            List<Dificultad> dificultadesDisponibles, int ronda, int totalRondas, int oro, boolean oroIlimitado, List<Luchador> heroes,
                            List<Luchador> enemigos, int turno, int primerTurnoCombate, List<UUID> orden, List<Habilidad> habilidades, List<UUID> objetivosRobo,
                            List<Objeto> inventario, List<Objeto> botin, List<Oferta> tienda,
-                           Recompensa recompensa, List<EventoCombate> historial) {
+                           Recompensa recompensa, List<EventoCombate> historial,
+                           List<CatalogoEncuentros.CombateDePruebas> combatesDePruebas) {
 
     public static VistaPartida de(Partida partida, long version) {
         Combate combate = partida.getCombate();
@@ -27,11 +29,13 @@ public record VistaPartida(UUID id, long version, EstadoPartida estado, Dificult
                 combate == null ? 0 : combate.getTurno(),
                 combate == null ? 0 : combate.getPrimerTurno(),
                 combate == null ? List.of() : combate.getOrdenActuacion().stream().map(Combatiente::getId).toList(),
-                combate == null ? List.of() : combate.getHabilidadesDisponibles(),
+                combate == null ? List.of() : combate.getHabilidadesDelTurno(),
                 combate == null ? List.of() : combate.getEnemigos().stream().filter(combate::puedeSerRobado).map(Combatiente::getId).toList(),
                 partida.getInventario(), partida.getBotin(),
-                partida.getEstado() == EstadoPartida.ENTRE_COMBATES ? partida.getOfertas() : List.of(),
-                partida.getRecompensa(), partida.getHistorial());
+                partida.getEstado() == EstadoPartida.ENTRE_COMBATES || partida.getEstado() == EstadoPartida.CAMPAMENTO_INICIAL
+                        ? partida.getOfertas() : List.of(),
+                partida.getRecompensa(), partida.getHistorial(),
+                combate == null ? CatalogoEncuentros.combatesDePruebas() : List.of());
     }
 
     public record Luchador(UUID id, String tipo, EstadisticasBase base, Bonificaciones modificadoresEquipo,

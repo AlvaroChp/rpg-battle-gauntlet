@@ -48,6 +48,16 @@ p { line-height: 1.5; }
 .retrato-seleccion { display: grid; place-items: end center; height: 11rem; margin-bottom: .8rem; }
 .retrato-seleccion img { max-width: 100%; max-height: 11rem; }
 .ficha-seleccion h2 { margin-bottom: .35rem; }
+.ficha-seleccion > small + h3 { margin-top: .75rem; }
+.equipo-seleccion {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+    gap: .45rem .75rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 .75rem;
+}
+.equipo-seleccion small { overflow-wrap: anywhere; }
 .detalle-seleccion { margin: .8rem 0 1rem; font-size: .92rem; }
 .detalle-seleccion summary { width: fit-content; color: var(--oro); cursor: pointer; }
 .detalle-seleccion summary:focus-visible { outline: 2px solid #ffd598; outline-offset: 3px; }
@@ -59,6 +69,13 @@ p { line-height: 1.5; }
 .bestiario ul { padding-inline-start: 1.25rem; }
 .bestiario li small { display: block; }
 .bestiario article > small + p { margin: .65rem 0 0; }
+.bestiario .botin-bestiario ul {
+    display: grid;
+    gap: .45rem;
+    padding-inline-start: 0;
+    list-style: none;
+}
+.botin-bestiario li { display: flex; align-items: center; gap: .55rem; }
 .icono { display: inline-grid; place-items: center; width: 2.5rem; height: 2.5rem; margin-bottom: .55rem; border: 1px solid var(--borde); color: var(--oro); background: #3c2921; box-shadow: inset 0 0 0 3px var(--panel); font-size: 1.35rem; }
 .bandos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1rem, 2.5vw, 2rem); margin-bottom: 1rem; }
 .bandos .rejilla {
@@ -69,6 +86,7 @@ p { line-height: 1.5; }
     gap: var(--separacion);
 }
 .escenario {
+    --elevacion-central: -2.4rem;
     position: relative;
     isolation: isolate;
     align-content: end;
@@ -90,6 +108,19 @@ p { line-height: 1.5; }
 .escenario[data-escenario="1"] { --fondo-escenario: url('imagenes/escenarios/escenario1.png'); }
 .escenario[data-escenario="2"] { --fondo-escenario: url('imagenes/escenarios/escenario2.png'); }
 .escenario[data-escenario="3"] { --fondo-escenario: url('imagenes/escenarios/escenario3.png'); }
+.escenario[data-escenario="4"] {
+    --fondo-escenario: url('imagenes/escenarios/escenario4.png');
+    --escala-fondo: .8;
+    --escala-frente: 1.35;
+}
+.escenario:has(> section:last-of-type > [data-tipo="DIOS_DRAGON"]) {
+    --fondo-escenario: url('imagenes/escenarios/escenariofinal.png');
+}
+.escenario[data-escenario="4"] > section:last-of-type:has(> [data-tipo="DRACONIANO_CIMITARRA"])
+    > [data-tipo="DRAGON"] .sprite-combate {
+    position: relative;
+    left: 60px;
+}
 
 @container (min-width: 22.3rem) {
     :where(.escenario > section:last-of-type) > .luchador:first-child:nth-last-child(-n+2) {
@@ -97,17 +128,22 @@ p { line-height: 1.5; }
     }
     .escenario > section:first-of-type > .luchador:first-child:not(:only-child),
     .escenario > section:last-of-type > .luchador:last-child:not(:only-child) {
-        --escala-sprite: 1.3;
+        --escala-sprite: var(--escala-frente, 1.3);
         --capa-sprite: 3;
     }
     .escenario .luchador:nth-child(2):not(:last-child),
     .escenario > section:last-of-type > .luchador:first-child:nth-last-child(-n+2) {
-        --elevacion-sprite: -2.4rem;
+        --elevacion-sprite: var(--elevacion-central);
+    }
+    .escenario > section:last-of-type > .luchador:only-child:is(
+        [data-tipo="GUIVERNO"], [data-tipo="DRAGON_ESCARCHA"], [data-tipo="DRAGON_OBSIDIANA"], [data-tipo="DIOS_DRAGON"]
+    ) {
+        --elevacion-sprite: 0rem;
     }
     .escenario > section:first-of-type > .luchador:last-child:not(:only-child),
     .escenario > section:last-of-type > .luchador:first-child:nth-last-child(n+3) {
         --elevacion-sprite: -4.8rem;
-        --escala-sprite: .9;
+        --escala-sprite: var(--escala-fondo, .9);
         --capa-sprite: 1;
     }
 }
@@ -135,6 +171,7 @@ p { line-height: 1.5; }
 .escenario .luchador.caido { opacity: 1; }
 .escenario .luchador.caido .tarjeta { opacity: .65; }
 .escenario .sprite-vencido { translate: 0 calc(1.6rem + 10px); }
+.escenario [data-tipo="CABALLERO_OSCURO"] .sprite-vencido { translate: none; }
 .luchador .tarjeta { background: #241b19e8; padding-inline: .6rem; }
 .escenario .luchador .tarjeta { padding-block: .55rem; }
 .escenario .luchador.caido h3 { text-decoration: line-through; }
@@ -142,7 +179,25 @@ p { line-height: 1.5; }
 .escenario .luchador h3 span { display: inline-block; }
 .luchador .barra { grid-template-columns: minmax(4.75rem, max-content) minmax(0, 1fr); }
 .luchador .barra span { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.estado-equipo .figura-combate { height: 10rem; }
+.ficha-grupo .figura-combate {
+    height: 10rem;
+    margin: 0 0 .8rem;
+    padding-bottom: .7rem;
+    border-bottom: 1px solid var(--borde);
+}
+.datos-grupo > small { color: var(--tenue); }
+.campamento-con-ficha {
+    display: grid;
+    grid-template-columns: clamp(12rem, 25%, 16rem) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+.columna-heroe > .fila { margin-top: 0; }
+.contenido-heroe { container-type: inline-size; }
+@media (max-width: 43rem) {
+    .campamento-con-ficha { grid-template-columns: minmax(0, 1fr); }
+    .columna-heroe { width: min(100%, 16rem); }
+}
 .equipo-estado {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
@@ -170,7 +225,13 @@ p { line-height: 1.5; }
     height: auto;
     max-width: min(100%, var(--ancho-sprite, 11rem));
     max-height: var(--alto-sprite, 9.25rem);
-    zoom: var(--escala-sprite, 1);
+    zoom: calc(var(--escala-sprite, 1) * var(--escala-bando, 1));
+}
+.escenario[data-escenario="4"] > section:first-of-type {
+    --escala-bando: .8;
+}
+.escenario[data-escenario="4"]:has(> section:last-of-type > [data-tipo="DIOS_DRAGON"]) > section:first-of-type {
+    --escala-bando: .65;
 }
 .retrato-combate {
     position: relative;
@@ -286,39 +347,61 @@ p { line-height: 1.5; }
     }
 }
 .luchador:is([data-tipo="GOBLIN"], [data-tipo="GOBLIN_ARQUERO"]) { --ancho-sprite: 7.5rem; --alto-sprite: 6.75rem; }
-.luchador:is([data-tipo="CABALLERO_OSCURO"], [data-tipo="NIGROMANTE"]) {
+.luchador:is([data-tipo="CABALLERO_OSCURO"], [data-tipo="NIGROMANTE"], [data-tipo^="DRACONIANO_"]) {
     --ancho-sprite: 15rem;
     --alto-sprite: 13rem;
 }
-.luchador:is([data-tipo="CABALLERO_OSCURO"], [data-tipo="NIGROMANTE"]) .figura-combate { padding-inline: 0; }
-.luchador:is([data-tipo="CABALLERO_OSCURO"], [data-tipo="NIGROMANTE"]) .sprite-combate {
+.luchador:is([data-tipo="CABALLERO_OSCURO"], [data-tipo="NIGROMANTE"], [data-tipo^="DRACONIANO_"]) .figura-combate { padding-inline: 0; }
+.luchador:is([data-tipo="CABALLERO_OSCURO"], [data-tipo="NIGROMANTE"], [data-tipo^="DRACONIANO_"]) .sprite-combate {
     max-width: min(calc(100% + 1.6rem), var(--ancho-sprite));
 }
-.luchador[data-tipo="OGRO"] { --ancho-sprite: 19rem; --alto-sprite: 16rem; }
+.luchador:is([data-tipo="OGRO"], [data-tipo="GUIVERNO"]) { --ancho-sprite: 19rem; --alto-sprite: 16rem; }
 .luchador[data-tipo="GOLEM_RUNICO"] { --ancho-sprite: 23rem; --alto-sprite: 20rem; }
 .luchador[data-tipo="VERDUGO_ESPECTRAL"] { --ancho-sprite: 22rem; --alto-sprite: 19.5rem; }
-.luchador[data-tipo="DRAGON"] { --ancho-sprite: 27rem; --alto-sprite: 19rem; }
-.escenario:has(.luchador:only-child:is([data-tipo="OGRO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo="DRAGON"])) {
+.luchador:is([data-tipo^="DRAGON"], [data-tipo="DIOS_DRAGON"]) { --ancho-sprite: 27rem; --alto-sprite: 19rem; }
+.escenario:has(.luchador[data-tipo="DRAGON"], .luchador:only-child:is([data-tipo="OGRO"], [data-tipo="GUIVERNO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo^="DRAGON"], [data-tipo="DIOS_DRAGON"])) {
     --altura-figura: clamp(12rem, 25vw, 19rem);
 }
 .escenario:has(.luchador:only-child:is([data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"])) {
     --altura-figura: clamp(15rem, 28vw, 20rem);
 }
-.luchador:only-child:is([data-tipo="OGRO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo="DRAGON"]) {
+.luchador:is([data-tipo="DRAGON"], :only-child:is([data-tipo="OGRO"], [data-tipo="GUIVERNO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo^="DRAGON"], [data-tipo="DIOS_DRAGON"])) {
     display: grid;
     grid-column: 1 / -1;
     grid-template-columns: subgrid;
 }
-.luchador:only-child:is([data-tipo="OGRO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo="DRAGON"]) .figura-combate {
+.luchador:is([data-tipo="DRAGON"], :only-child:is([data-tipo="OGRO"], [data-tipo="GUIVERNO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo^="DRAGON"], [data-tipo="DIOS_DRAGON"])) .figura-combate {
     grid-column: 1 / -1;
 }
-.luchador:only-child:is([data-tipo="OGRO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo="DRAGON"]) .sprite-combate {
+.luchador:is([data-tipo="DRAGON"], :only-child:is([data-tipo="OGRO"], [data-tipo="GUIVERNO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo^="DRAGON"], [data-tipo="DIOS_DRAGON"])) .sprite-combate {
     max-height: min(var(--altura-figura), var(--alto-sprite));
 }
 @container (min-width: 22.3rem) {
-    .luchador:only-child:is([data-tipo="OGRO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo="DRAGON"]) .tarjeta { grid-column: 2; }
+    .luchador:is([data-tipo="DRAGON"], :only-child:is([data-tipo="OGRO"], [data-tipo="GUIVERNO"], [data-tipo="GOLEM_RUNICO"], [data-tipo="VERDUGO_ESPECTRAL"], [data-tipo^="DRAGON"], [data-tipo="DIOS_DRAGON"])) .tarjeta { grid-column: 2; }
+    .escenario > section:last-of-type:has(> [data-tipo="DRAGON"]) > .luchador:is([data-tipo="DRAGON"], [data-tipo^="DRACONIANO_"]) {
+        grid-row: 1;
+        --escala-sprite: 1;
+        --capa-sprite: 3;
+        --elevacion-sprite: 0;
+    }
+    .escenario > section:last-of-type:has(> [data-tipo="DRAGON"]) > .luchador[data-tipo="DRAGON"] {
+        --capa-sprite: 2;
+        --elevacion-sprite: var(--elevacion-central);
+    }
+    .escenario > section:last-of-type:has(> [data-tipo="DRAGON"]) > .luchador[data-tipo="DRACONIANO_CIMITARRA"] {
+        grid-column: 1;
+        --escala-sprite: .65;
+        --elevacion-sprite: -4.8rem;
+        --capa-sprite: 1;
+    }
+    .escenario > section:last-of-type:has(> [data-tipo="DRAGON"]) > .luchador[data-tipo="DRACONIANO_BALLESTA"] {
+        grid-column: 3;
+        --escala-sprite: 1.4;
+    }
 }
 .fila, .pestanas { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; margin: .85rem 0; }
+.selector-combate-pruebas { min-width: 0; max-width: 100%; }
+.selector-combate-pruebas select { max-width: 100%; }
 .fila form { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .pestanas { border-bottom: 1px solid var(--borde); padding-bottom: .65rem; }
 .ayuda, small { color: var(--tenue); }
@@ -338,7 +421,43 @@ progress.magia { accent-color: #77a9e2; }
     gap: .55rem 1rem;
     margin-bottom: .65rem;
 }
-.controles-combate .fila { margin: 0; max-width: 100%; }
+.menu-acciones {
+    flex: 1 1 32rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .55rem;
+}
+.columna-acciones { display: grid; gap: .4rem; align-content: start; min-width: 0; }
+.opcion-combate { position: relative; }
+.opcion-combate > button { width: 100%; }
+.menu-acciones button { overflow-wrap: anywhere; }
+.menu-acciones button[aria-expanded="true"] { border-color: var(--oro); background: #423024; }
+.objetos-combate, .objetivos-accion {
+    position: absolute;
+    z-index: 5;
+    inset-inline-start: 0;
+    bottom: calc(100% + .35rem);
+    display: grid;
+    gap: .35rem;
+    width: max(100%, 12rem);
+    padding: .55rem;
+    background: var(--panel);
+    border: 1px solid var(--oro);
+    box-shadow: 0 4px 14px var(--sombra);
+}
+.columna-acciones:last-child .objetivos-accion { inset-inline: auto 0; }
+.objetos-combate {
+    inset-inline: auto 0;
+    width: max(100%, min(13rem, 72vw));
+    max-height: min(22rem, 50vh);
+    overflow-y: auto;
+}
+.objetos-combate .opcion-combate { display: flex; flex-direction: column; gap: .35rem; }
+.objetos-combate .opcion-combate .objetivos-accion { position: static; order: -1; width: 100%; }
+@media (max-width: 36rem) {
+    .menu-acciones button { padding-inline: .35rem; font-size: .85rem; }
+    .objetivos-accion { width: 100%; min-width: min(8rem, 37vw); }
+}
 .controles-combate .orden {
     display: grid;
     margin: 0 0 0 auto;
@@ -350,20 +469,42 @@ progress.magia { accent-color: #77a9e2; }
 .turno-actual strong, .turnos-siguientes [data-bando] {
     text-shadow: 0 0 .45rem var(--brillo-turno), 0 0 .85rem var(--brillo-turno);
 }
-.acciones label { display: grid; gap: .35rem; max-width: 23rem; }
-.articulo { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; }
-.cabecera-objeto, .detalle-accion {
-    display: flex;
+.articulo { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; container-type: inline-size; }
+.habilidad-arma { font-size: .85rem; max-width: 100%; }
+.habilidad-arma summary { width: fit-content; color: var(--oro); cursor: pointer; }
+.habilidad-arma summary:focus-visible { outline: 2px solid #ffd598; outline-offset: 3px; }
+.habilidad-arma > small { margin-top: .35rem; font-size: inherit; }
+.cabecera-objeto {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     gap: .55rem;
+    width: 100%;
 }
-.cabecera-objeto h3 { margin: 0; }
-button.accion-confirmada, button.accion-confirmada:hover:not(:disabled) {
+.cabecera-objeto h3 {
+    margin: 0;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+}
+@container (max-width: 11.5rem) {
+    .cabecera-objeto { gap: .35rem; }
+    .cabecera-objeto h3 { font-size: .875rem; }
+}
+button.accion-confirmada, button:has(> .confirmacion-campamento) {
     position: relative;
     z-index: 2;
+}
+button.accion-confirmada, button.accion-confirmada:hover:not(:disabled) {
     border-color: var(--oro);
     color: #211510;
     background: var(--oro);
+}
+.confirmacion-campamento.confirmacion-sin-boton {
+    position: fixed;
+    z-index: 2;
+    bottom: auto;
+    translate: 0 calc(-100% - .3rem);
 }
 .confirmacion-campamento {
     position: absolute;
@@ -393,7 +534,6 @@ button.accion-confirmada, button.accion-confirmada:hover:not(:disabled) {
 .icono-objeto[data-calidad="INFERIOR"] { --fondo-calidad: #3b414c; }
 .icono-objeto[data-calidad="NORMAL"] { --fondo-calidad: #284a68; }
 .icono-objeto[data-calidad="SUPERIOR"] { --fondo-calidad: #c99736; }
-.detalle-accion .icono-objeto { width: 2.2rem; height: 2.2rem; }
 .rejilla-equipamiento {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -410,7 +550,6 @@ button.accion-confirmada, button.accion-confirmada:hover:not(:disabled) {
 .ranura-equipo[data-ranura="ESCUDO"] { grid-area: escudo; }
 .ranura-equipo[data-ranura="BOTAS"] { grid-area: botas; }
 .ranura-equipo .tarjeta { height: 100%; overflow-wrap: anywhere; }
-.ranura-equipo .cabecera-objeto { flex-wrap: wrap; }
 .ranura-equipo button { max-width: 100%; white-space: normal; }
 
 @media (max-width: 43rem) {
@@ -424,6 +563,14 @@ button.accion-confirmada, button.accion-confirmada:hover:not(:disabled) {
     }
     .ranura-equipo .tarjeta, .ranura-equipo button { padding-inline: .3rem; }
     .ranura-equipo button { font-size: .8rem; }
+}
+
+@container (max-width: 47rem) {
+    .rejilla-equipamiento {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+        grid-template-areas: none;
+    }
+    .rejilla-equipamiento > .ranura-equipo { grid-area: auto; }
 }
 
 .articulo .fila { margin: auto 0 0; padding-top: .4rem; }

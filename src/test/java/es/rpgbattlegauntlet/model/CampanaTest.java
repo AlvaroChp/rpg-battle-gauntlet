@@ -127,8 +127,6 @@ class CampanaTest {
         reponer(partida, "verde", ronda >= 8 ? 2 : 1, sanador);
         if (ronda >= 6 && partida.getOro() >= 180) {
             comprar(partida, "guantes_reforzados", guerrero);
-            comprar(partida, "capucha", sanador);
-            comprar(partida, "guantes", sanador);
             comprar(partida, "botas", arquero);
         }
     }

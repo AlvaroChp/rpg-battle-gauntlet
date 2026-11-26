@@ -1,5 +1,7 @@
 package es.rpgbattlegauntlet.model;
 
+import es.rpgbattlegauntlet.algorithm.CalculoCombate;
+
 import es.rpgbattlegauntlet.algorithm.GeneradorBotin;
 import es.rpgbattlegauntlet.config.CatalogoObjetos;
 import es.rpgbattlegauntlet.config.CatalogoEnemigos;
@@ -26,15 +28,30 @@ import static org.junit.jupiter.api.Assertions.*;
 class ProgresionTest {
 
     @Test
+    void laTiendaCompraElEquipoInicialPeroNoLoOfrece() {
+        var partida = trasPrimerEncuentro();
+        var guerrero = partida.getEquipo().getFirst();
+        partida.desequipar(guerrero.getId(), RanuraEquipo.ARMADURAS);
+        var armadura = objeto(partida, "pesada_basica");
+        int oro = partida.getOro();
+
+        partida.vender(armadura.id());
+        assertEquals(oro + 50, partida.getOro());
+        assertThrows(IllegalArgumentException.class, () -> partida.comprar(null, armadura.id()));
+        assertThrows(IllegalArgumentException.class, () -> partida.comprar("pesada_basica", null));
+        assertTrue(partida.getOfertas().stream().noneMatch(oferta -> CatalogoObjetos.esEquipoInicial(oferta.objeto().codigo())));
+    }
+
+    @Test
     void equipoInicialAplicaBonosYSoloLosAtributosBaseCumplenRequisitos() {
         var partida = trasPrimerEncuentro();
         var guerrero = partida.getEquipo().getFirst();
         var arquero = partida.getEquipo().get(1);
         var mago = partida.getEquipo().getLast();
         assertEquals(19, guerrero.getEstadisticasBase().fuerza() + guerrero.getBonificaciones().fuerza());
-        assertEquals(23, guerrero.getDefensaEfectiva());
+        assertEquals(25, guerrero.getDefensaEfectiva());
         assertEquals(3, guerrero.getVelocidadEfectiva());
-        assertEquals(3, mago.getBonificaciones().potenciaMagica());
+        assertEquals(5, mago.getBonificaciones().potenciaMagica());
 
         partida.comprar("arco_largo", null);
         var arco = objeto(partida, "arco_largo");
@@ -50,23 +67,18 @@ class ProgresionTest {
         partida.vender(inicial.id());
         assertEquals(oro + inicial.precioVenta(), partida.getOro());
         assertFalse(partida.getInventario().contains(inicial));
-        assertTrue(partida.getOfertas().stream().anyMatch(oferta -> oferta.objeto() == inicial));
+        assertTrue(partida.getOfertas().stream().noneMatch(oferta -> oferta.objeto() == inicial));
         partida.desequipar(arquero.getId(), RanuraEquipo.ARMADURAS);
         var armaduraInicial = objeto(partida, "ligera_basica");
         oro = partida.getOro();
         partida.vender(armaduraInicial.id());
         assertEquals(oro + armaduraInicial.precioVenta(), partida.getOro());
         assertFalse(partida.getInventario().contains(armaduraInicial));
-        assertTrue(partida.getOfertas().stream().anyMatch(oferta -> oferta.objeto() == armaduraInicial));
+        assertTrue(partida.getOfertas().stream().noneMatch(oferta -> oferta.objeto() == armaduraInicial));
         assertThrows(IllegalArgumentException.class, () -> partida.desequipar(arquero.getId(), RanuraEquipo.ARMAS));
         assertSame(arco, arquero.getEquipo().get(RanuraEquipo.ARMAS));
         assertEquals("flecha_de_alcance", arquero.habilidadArma().id());
 
-        partida.comprar("daga", null);
-        var daga = objeto(partida, "daga");
-        assertThrows(IllegalArgumentException.class, () -> partida.equipar(arquero.getId(), daga.id()));
-        assertSame(daga, objeto(partida, "daga"));
-        assertSame(arco, arquero.getEquipo().get(RanuraEquipo.ARMAS));
     }
 
     @Test
@@ -204,7 +216,7 @@ class ProgresionTest {
                 combate.getEnemigos().getFirst().getId()));
 
         assertTrue(partida.tieneOroIlimitado());
-        assertEquals(0, partida.getOro());
+        assertEquals(100, partida.getOro());
         partida.comprar("vara_avanzada", null);
         partida.comprar("meteorito", null);
         partida.comprar("meteorito", null);
@@ -220,7 +232,7 @@ class ProgresionTest {
         partida.comprar(null, pergamino.id());
         assertTrue(partida.getInventario().contains(pergamino));
         assertThrows(IllegalArgumentException.class, () -> partida.comprar(null, pergamino.id()));
-        assertEquals(0, partida.getOro());
+        assertEquals(100, partida.getOro());
         assertFalse(trasPrimerEncuentro().tieneOroIlimitado());
     }
 
@@ -228,7 +240,7 @@ class ProgresionTest {
     void recompraConservaIdentidadYElCatalogoFijoNoSeRepone() {
         var partida = trasPrimerEncuentro();
         partida.comprar("proyectil", null);
-        var pergamino = objeto(partida, "proyectil");
+        var pergamino = partida.getInventario().getLast();
         assertThrows(IllegalArgumentException.class, () -> partida.comprar("proyectil", null));
 
         partida.vender(pergamino.id());
@@ -237,7 +249,7 @@ class ProgresionTest {
                 .findFirst().orElseThrow();
         assertEquals(pergamino.precioVenta() * 2, segundaMano.precio());
         partida.comprar(null, pergamino.id());
-        assertSame(pergamino, objeto(partida, "proyectil"));
+        assertSame(pergamino, partida.getInventario().getLast());
         assertThrows(IllegalArgumentException.class, () -> partida.comprar(null, pergamino.id()));
         assertThrows(IllegalArgumentException.class, () -> partida.comprar("proyectil", null));
     }
@@ -250,12 +262,13 @@ class ProgresionTest {
         mago.consumirMagia(21);
         partida.comprar("azul", null);
         partida.comprar("azul", null);
-        assertEquals(2, partida.getInventario().stream().map(Objeto::id).distinct().count());
-        var primera = objeto(partida, "azul");
+        assertEquals(3, partida.getInventario().stream().filter(objeto -> objeto.codigo().equals("azul"))
+                .map(Objeto::id).distinct().count());
+        var primera = partida.getInventario().getLast();
         partida.usarConsumible(0, mago.getId(), primera.id(), mago.getId());
         assertEquals(75, mago.getPvActuales());
         assertEquals(100, mago.getPmActuales());
-        assertEquals(1, partida.getInventario().size());
+        assertEquals(2, partida.getInventario().stream().filter(objeto -> objeto.codigo().equals("azul")).count());
         assertThrows(IllegalArgumentException.class, () -> partida.usarConsumible(0, mago.getId(), primera.id(), mago.getId()));
         assertNull(partida.getOfertas().stream().filter(oferta -> oferta.objeto().codigo().equals("azul"))
                 .findFirst().orElseThrow().existencias());
@@ -286,15 +299,15 @@ class ProgresionTest {
         assertEquals(4, enemigo.getPvActuales());
         assertEquals(1, combate.getConsumiblesUsados());
         assertTrue(combate.getTurno() > turno);
-        assertTrue(partida.getInventario().isEmpty());
+        assertFalse(partida.getInventario().contains(pergamino));
     }
 
     @Test
     void catalogoTieneCuatroApartadosYCuatroPociones() {
-        var ofertas = new Tienda().ofertas(false);
+        var ofertas = new Tienda().ofertas(false, false, false);
         assertEquals(4, ofertas.stream().map(oferta -> oferta.objeto().categoria()).distinct().count());
-        assertEquals(13, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == ARMAS).count());
-        assertEquals(12, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == ARMADURAS).count());
+        assertEquals(8, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == ARMAS).count());
+        assertEquals(7, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == ARMADURAS).count());
         assertEquals(4, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == POCIONES).count());
         assertEquals(10, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == PERGAMINOS).count());
         assertTrue(ofertas.stream().filter(oferta -> oferta.objeto().categoria() == PERGAMINOS)
@@ -368,7 +381,27 @@ class ProgresionTest {
         assertEquals(95, mago.getPmActuales());
         assertEquals(1, combate.getConsumiblesUsados());
         assertEquals(50, combate.getHistorial().getFirst().magiaRecuperada());
-        assertTrue(partida.getInventario().isEmpty());
+        assertFalse(partida.getInventario().contains(pocion));
+    }
+
+    @Test
+    void pocionSinRecuperacionNoSaleDelInventarioNiConsumeTurno() {
+        var partida = trasPrimerEncuentro();
+        var mago = partida.getEquipo().getLast();
+        partida.comprar("verde", null);
+        var pocion = objeto(partida, "verde");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> partida.usarConsumible(0, mago.getId(), pocion.id(), mago.getId()));
+        assertTrue(partida.getInventario().contains(pocion));
+
+        var combate = partida.avanzarRonda(1);
+        int turno = combate.getTurno();
+        var actor = combate.getOrdenActuacion().getFirst();
+        assertThrows(IllegalArgumentException.class,
+                () -> partida.usarConsumible(turno, actor.getId(), pocion.id(), mago.getId()));
+        assertEquals(turno, combate.getTurno());
+        assertTrue(partida.getInventario().contains(pocion));
     }
 
     @Test
@@ -390,6 +423,9 @@ class ProgresionTest {
         combate.ejecutar(new AccionCombate(4, rival.getId(), "defender", null));
         combate.ejecutar(new AccionCombate(5, mago.getId(), "defender", null));
         assertFalse(mago.getEstados().containsKey(EstadoTemporal.PROTECCION_50));
+        var caducidad = combate.getHistorial().getLast().ajustesPrevios().getFirst();
+        assertEquals(1, caducidad.estados().antes().get(EstadoTemporal.PROTECCION_50));
+        assertFalse(caducidad.estados().despues().containsKey(EstadoTemporal.PROTECCION_50));
     }
 
     @Test
@@ -440,6 +476,82 @@ class ProgresionTest {
     }
 
     @Test
+    void botinDraconicoUsaLaBallestaSuperiorYVentiscaAplicaEscarcha() {
+        for (var tipo : List.of(DRACONIANO_CIMITARRA, DRACONIANO_BALLESTA)) {
+            assertEquals("cimitarra_draconica", GeneradorBotin.tirar(tipo, azar(64, 49, 35)).orElseThrow().codigo());
+            var robado = GeneradorBotin.elegirBotinRobado(tipo, azar(50));
+            assertEquals("Ballesta dracónica", robado.nombre());
+            assertEquals(SUPERIOR, robado.calidad());
+        }
+        var ventisca = GeneradorBotin.tirar(DRAGON_ESCARCHA, azar(64, 0)).orElseThrow();
+        assertEquals("ventisca", ventisca.codigo());
+        assertEquals("cetro_invierno", GeneradorBotin.tirar(DRAGON_ESCARCHA, azar(64, 50, 35)).orElseThrow().codigo());
+        assertEquals("armadura_escarcha", GeneradorBotin.tirar(DRAGON_ESCARCHA, azar(64, 70, 35)).orElseThrow().codigo());
+        assertTrue(GeneradorBotin.permiteRobo(DRAGON_ESCARCHA));
+        assertEquals("armadura_escarcha", GeneradorBotin.elegirBotinRobado(DRAGON_ESCARCHA, azar(70, 35)).codigo());
+        assertEquals("aguijon_riscos", GeneradorBotin.tirar(GUIVERNO, azar(64, 0, 35)).orElseThrow().codigo());
+        assertEquals("espada_obsidiana", GeneradorBotin.tirar(DRAGON_OBSIDIANA, azar(74, 49, 35)).orElseThrow().codigo());
+        assertEquals("armadura_obsidiana", GeneradorBotin.tirar(DRAGON_OBSIDIANA, azar(74, 50, 35)).orElseThrow().codigo());
+        assertTrue(GeneradorBotin.permiteRobo(DRAGON_OBSIDIANA));
+        assertEquals("espada_obsidiana", GeneradorBotin.elegirBotinRobado(DRAGON_OBSIDIANA, azar(49, 35)).codigo());
+        assertEquals("armadura_obsidiana", GeneradorBotin.elegirBotinRobado(DRAGON_OBSIDIANA, azar(50, 35)).codigo());
+        var mago = CatalogoHeroes.crearHeroe(MAGO);
+        var guerrero = CatalogoHeroes.crearHeroe(GUERRERO);
+        var ogro = CatalogoEnemigos.crear(OGRO);
+        var combate = new Combate(List.of(mago, guerrero), List.of(ogro), azar());
+        int saludInicial = ogro.getPvActuales();
+        combate.usarConsumible(combate.getTurno(), mago.getId(), ventisca, null);
+        assertTrue(ogro.getPvActuales() < saludInicial);
+        assertTrue(ogro.tieneEstado(EstadoTemporal.ESCARCHA));
+
+        guerrero.aplicarEstado(EstadoTemporal.ESCARCHA, 1);
+        var interceptar = combate.getHabilidadesDisponibles().stream()
+                .filter(habilidad -> habilidad.id().equals("interceptar")).findFirst().orElseThrow();
+        assertEquals(8, interceptar.costePm());
+        int pc = guerrero.getPmActuales();
+        combate.ejecutar(new AccionCombate(combate.getTurno(), guerrero.getId(), interceptar.id(), null));
+        assertEquals(pc - 8, guerrero.getPmActuales());
+        assertFalse(guerrero.tieneEstado(EstadoTemporal.ESCARCHA));
+    }
+
+    @Test
+    void equipoDeLosDragonesAplicaSusEfectosEspeciales() {
+        var stats = new EstadisticasBase(300, 40, 24, 10, 24, 10, 10, 0, 0);
+        var guerrero = new Heroe(GUERRERO, stats);
+        var enemigo = new Enemigo(GOBLIN, stats);
+        var dragon = new Enemigo(DRAGON_ESCARCHA, stats);
+        for (var codigo : List.of("espada_obsidiana", "cetro_invierno")) {
+            var habilidad = CatalogoObjetos.habilidadArma(codigo).orElseThrow();
+            int normal = CalculoCombate.danio(guerrero, enemigo, habilidad, false);
+            assertEquals(Math.round(normal * habilidad.multiplicadorContraDragones()),
+                    CalculoCombate.danio(guerrero, dragon, habilidad, false));
+        }
+        var daga = CatalogoObjetos.habilidadArma("aguijon_riscos").orElseThrow();
+        assertEquals(EstadoTemporal.ENVENENADO, daga.estado());
+        assertEquals(2, daga.duracion());
+        guerrero.equipar(CatalogoObjetos.equipo("armadura_obsidiana", NORMAL, false));
+        assertEquals(70, guerrero.getResistenciaFuego());
+        int danioBase = CalculoCombate.danioPergamino(guerrero, 100);
+        assertEquals(Math.round(danioBase * .3), CalculoCombate.danioPergamino(guerrero, 100, true));
+        assertEquals(2, CalculoCombate.danioQuemadura(guerrero));
+    }
+
+    @Test
+    void armaduraDeEscarchaBloqueaElEstadoEnTodasSusCalidades() {
+        var stats = new EstadisticasBase(300, 40, 24, 10, 24, 10, 1, 0, 0);
+        for (var calidad : es.rpgbattlegauntlet.enums.Calidad.values()) {
+            var guerrero = new Heroe(GUERRERO, stats);
+            var vorgath = CatalogoEnemigos.crear(DRAGON_ESCARCHA);
+            vorgath.registrarAccion();
+            guerrero.equipar(CatalogoObjetos.equipo("armadura_escarcha", calidad, false));
+            var combate = new Combate(List.of(guerrero), List.of(vorgath), azar());
+            assertEquals("lanza_hielo", combate.getHistorial().getFirst().habilidad());
+            assertTrue(combate.getHistorial().getFirst().danio() > 0);
+            assertFalse(guerrero.tieneEstado(EstadoTemporal.ESCARCHA));
+        }
+    }
+
+    @Test
     void recompensaSeEntregaUnaVezYElBotinSoloSeRecogeUnaVez() {
         var partida = primerEncuentro(azar(99, 99, 0, 0, 35));
         var combate = partida.getCombate();
@@ -454,8 +566,8 @@ class ProgresionTest {
         partida.recoger(botin.id());
         assertThrows(IllegalArgumentException.class, () -> partida.recoger(botin.id()));
         partida.avanzarRonda(1);
-        assertEquals(recompensa.oro(), partida.getOro());
-        assertEquals(1, partida.getInventario().size());
+        assertEquals(100 + recompensa.oro(), partida.getOro());
+        assertTrue(partida.getInventario().contains(botin));
     }
 
     private static Partida trasPrimerEncuentro() {

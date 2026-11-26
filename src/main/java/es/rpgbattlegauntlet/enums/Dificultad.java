@@ -18,4 +18,8 @@ public enum Dificultad {
     public double multiplicadorDanioEnemigo() {
         return porcentajeDanio / 100.0;
     }
+
+    public boolean permiteRutaDraconica() {
+        return this == EXPERTO || this == PRUEBAS;
+    }
 }

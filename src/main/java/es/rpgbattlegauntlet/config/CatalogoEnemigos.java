@@ -40,25 +40,46 @@ public final class CatalogoEnemigos {
             "Levanta a un aliado caído con el 25 % de sus PV máximos una vez por combate.",
             18, ALIADO_CAIDO, REVIVIR, 25, 0, 0, 0, null, 0);
     public static final Habilidad PUNO_DE_PIEDRA = ataque(
-            "puno_de_piedra", "Puño de piedra", DANIO_FISICO, ENEMIGO, 0, 5, null);
+            "puno_de_piedra", "Puño de piedra", DANIO_FISICO, ENEMIGO, 4, 5, null);
     public static final Habilidad PREPARAR_ONDA_RUNICA = estado(
-            "preparar_onda_runica", "Prepara Onda rúnica", PROPIO, 0, CARGA_ONDA_RUNICA);
+            "preparar_onda_runica", "Prepara Onda rúnica", PROPIO, 5, CARGA_ONDA_RUNICA);
     public static final Habilidad ONDA_RUNICA = ataque(
-            "onda_runica", "Onda rúnica", DANIO_FISICO, ENEMIGOS, 0, -18, null);
+            "onda_runica", "Onda rúnica", DANIO_FISICO, ENEMIGOS, 12, -18, null);
     public static final Habilidad TAJO_ESPECTRAL = ataque(
-            "tajo_espectral", "Tajo espectral", DANIO_FISICO, ENEMIGO, 0, 3, null);
+            "tajo_espectral", "Tajo espectral", DANIO_FISICO, ENEMIGO, 3, 3, null);
     public static final Habilidad MARCAR_SENTENCIA = new Habilidad(
             "marcar_sentencia", "Marca espectral", "Marca a un héroe para atacarlo en el siguiente turno del verdugo.",
-            0, ENEMIGO, MARCAR, 0, 0, 0, 0, null, 0);
+            5, ENEMIGO, MARCAR, 0, 0, 0, 0, null, 0);
     public static final Habilidad SENTENCIA = ataque(
-            "sentencia_espectral", "Sentencia espectral", DANIO_FISICO, ENEMIGO, 0, 15, null);
+            "sentencia_espectral", "Sentencia espectral", DANIO_FISICO, ENEMIGO, 11, 15, null);
     public static final Habilidad BARRIDO_ESPECTRAL = ataque(
-            "barrido_espectral", "Barrido espectral", DANIO_FISICO, ENEMIGOS, 0, -12, null);
+            "barrido_espectral", "Barrido espectral", DANIO_FISICO, ENEMIGOS, 9, -12, null);
     public static final Habilidad GARRA = ataque("garra", "Garra", DANIO_FISICO, ENEMIGO, 0, 10, null);
     public static final Habilidad ALIENTO = ataqueDeFuego("aliento_fuego", "Aliento de fuego", ENEMIGOS, 20, 28, 50);
     public static final Habilidad PREPARAR_INCENDIO_CENIZA = estado("preparar_incendio_ceniza", "Prepara Incendio de ceniza", PROPIO, 0, CARGA_INCENDIO_CENIZA);
-    public static final Habilidad INCENDIO_CENIZA = ataqueDeFuego("incendio_ceniza", "Incendio de ceniza", ENEMIGOS, 0, 40, 100);
+    public static final Habilidad INCENDIO_CENIZA = ataqueDeFuego("incendio_ceniza", "Incendio de ceniza", ENEMIGOS, 30, 40, 100);
     public static final Habilidad RUGIDO = estado("rugido", "Rugido", ENEMIGOS, 8, RALENTIZACION);
+    public static final Habilidad TAJO_DRACONICO = ataque("tajo_draconico", "Tajo dracónico", DANIO_FISICO, ENEMIGO, 0, 8, null);
+    public static final Habilidad CORTE_ESCAMAS = ataque("corte_escamas", "Corte de escamas", DANIO_FISICO, ENEMIGO, 6, 14, DEFENSA_DEBILITADA);
+    public static final Habilidad VIROTE_DRACONICO = ataque("virote_draconico", "Virote dracónico", DANIO_FISICO, ENEMIGO, 0, 8, null);
+    public static final Habilidad AGUIJONAZO = new Habilidad("aguijonazo", "Aguijonazo", "Puede envenenar durante dos turnos.",
+            0, ENEMIGO, DANIO_FISICO, 5, 0, 0, 0, ENVENENADO, 2, 1, 50);
+    public static final Habilidad PICADO = ataque("picado", "Picado", DANIO_FISICO, ENEMIGO, 8, 21, null);
+    public static final Habilidad PREPARAR_NUBE = estado("preparar_nube", "Prepara Nube ponzoñosa", PROPIO, 0, CARGA_NUBE_PONZONOSA);
+    public static final Habilidad NUBE = new Habilidad("nube_ponzonosa", "Nube ponzoñosa", "Daño mágico de área. Puede envenenar.",
+            14, ENEMIGOS, DANIO_MAGICO, 18, 0, 0, 0, ENVENENADO, 2, 1, 50);
+    public static final Habilidad GARRA_HELADA = ataque("garra_helada", "Garra helada", DANIO_FISICO, ENEMIGO, 0, 9, null);
+    public static final Habilidad LANZA_HIELO = hielo("lanza_hielo", "Lanza de hielo", ENEMIGO, 10, 24);
+    public static final Habilidad PREPARAR_ALIENTO_GLACIAL = estado("preparar_aliento_glacial", "Prepara Aliento glacial", PROPIO, 0, CARGA_ALIENTO_GLACIAL);
+    public static final Habilidad ALIENTO_GLACIAL = hielo("aliento_glacial", "Aliento glacial", ENEMIGOS, 20, 21);
+    public static final Habilidad COLETAZO = ataque("coletazo_obsidiana", "Coletazo de obsidiana", DANIO_FISICO, ENEMIGO, 0, 13, null);
+    public static final Habilidad ALIENTO_MAGMA = ataqueDeFuego("aliento_magma", "Aliento de magma", ENEMIGO, 18, 38, 50);
+    public static final Habilidad PREPARAR_DERRUMBE = estado("preparar_derrumbe", "Prepara Derrumbe", PROPIO, 0, CARGA_DERRUMBE);
+    public static final Habilidad DERRUMBE = ataque("derrumbe", "Derrumbe", DANIO_FISICO, ENEMIGOS, 12, 10, null);
+    public static final Habilidad GARRA_ANCESTRAL = ataque("garra_ancestral", "Garra ancestral", DANIO_FISICO, ENEMIGO, 0, 18, null);
+    public static final Habilidad ALIENTO_ANCESTRAL = ataqueDeFuego("aliento_ancestral", "Aliento ancestral", ENEMIGOS, 18, 30, 50);
+    public static final Habilidad PREPARAR_RUPTURA = estado("preparar_ruptura", "Prepara Ruptura del vínculo", PROPIO, 0, CARGA_RUPTURA_VINCULO);
+    public static final Habilidad RUPTURA = ataque("ruptura_vinculo", "Ruptura del vínculo", DANIO_MAGICO, ENEMIGOS, 0, 48, null);
 
     private static final Map<TipoEnemigo, EstadisticasBase> ESTADISTICAS = Map.of(
             TipoEnemigo.GOBLIN, new EstadisticasBase(65, 12, 10, 5, 0, 4, 11, 5, 10),
@@ -68,8 +89,8 @@ public final class CatalogoEnemigos {
             TipoEnemigo.OGRO, new EstadisticasBase(220, 24, 20, 14, 0, 8, 4, 10, 0),
             TipoEnemigo.CABALLERO_OSCURO, new EstadisticasBase(240, 40, 20, 18, 10, 15, 10, 10, 5),
             TipoEnemigo.NIGROMANTE, new EstadisticasBase(125, 58, 6, 8, 19, 15, 8, 5, 5),
-            TipoEnemigo.GOLEM_RUNICO, new EstadisticasBase(280, 0, 20, 27, 0, 6, 4, 5, 0),
-            TipoEnemigo.VERDUGO_ESPECTRAL, new EstadisticasBase(185, 0, 20, 13, 0, 12, 9, 8, 8),
+            TipoEnemigo.GOLEM_RUNICO, new EstadisticasBase(280, 45, 20, 27, 0, 6, 4, 5, 0),
+            TipoEnemigo.VERDUGO_ESPECTRAL, new EstadisticasBase(185, 40, 20, 13, 0, 12, 9, 8, 8),
             TipoEnemigo.DRAGON, new EstadisticasBase(650, 120, 27, 20, 22, 18, 12, 15, 5)
     );
 
@@ -81,10 +102,23 @@ public final class CatalogoEnemigos {
     }
 
     public static Enemigo crear(TipoEnemigo tipo, Dificultad dificultad) {
-        var base = ESTADISTICAS.get(tipo);
+        var base = switch (tipo) {
+            case DRACONIANO_CIMITARRA -> new EstadisticasBase(133, 45, 28, 22, 5, 16, 12, 12, 8);
+            case DRACONIANO_BALLESTA -> new EstadisticasBase(118, 45, 25, 17, 5, 16, 15, 14, 10);
+            case GUIVERNO -> new EstadisticasBase(555, 86, 34, 22, 23, 22, 17, 14, 12);
+            case DRAGON_ESCARCHA -> new EstadisticasBase(660, 125, 35, 26, 34, 29, 12, 10, 7);
+            case DRAGON_OBSIDIANA -> new EstadisticasBase(730, 90, 39, 49, 12, 21, 8, 14, 3);
+            case DIOS_DRAGON -> new EstadisticasBase(925, 150, 44, 33, 40, 32, 14, 17, 8);
+            default -> ESTADISTICAS.get(tipo);
+        };
         var ajustada = new EstadisticasBase(dificultad.vidaEnemiga(base.pvMaximos()), base.pmMaximos(), base.fuerza(),
                 base.defensa(), base.inteligencia(), base.resistencia(), base.velocidad(), base.critico(), base.esquiva());
         return new Enemigo(tipo, ajustada, dificultad.multiplicadorDanioEnemigo());
+    }
+
+    private static Habilidad hielo(String id, String nombre, TipoObjetivo objetivo, int pc, int potencia) {
+        return new Habilidad(id, nombre, "Inflige daño mágico de hielo y aplica Escarcha.",
+                pc, objetivo, DANIO_MAGICO, potencia, 0, 0, 0, ESCARCHA, 1);
     }
 
     private static Habilidad ataque(String id, String nombre, TipoEfecto efecto, TipoObjetivo objetivo,

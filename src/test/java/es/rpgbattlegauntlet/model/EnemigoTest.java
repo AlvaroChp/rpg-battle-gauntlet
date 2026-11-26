@@ -157,6 +157,16 @@ class EnemigoTest {
     }
 
     @Test
+    void vitrionGastaPcAlUsarAlientoDeMagma() {
+        var vitrion = CatalogoEnemigos.crear(DRAGON_OBSIDIANA);
+        var guerrero = new Heroe(GUERRERO, new EstadisticasBase(300, 20, 15, 15, 3, 8, 1, 5, 0));
+        vitrion.registrarAccion();
+        var combate = new Combate(List.of(guerrero), List.of(vitrion), azar());
+        assertEquals("aliento_magma", combate.getHistorial().getFirst().habilidad());
+        assertEquals(72, vitrion.getPmActuales());
+    }
+
+    @Test
     void dragonCambiaDeFasePorVidaYRecurreAGarraSinPm() {
         var dragon = CatalogoEnemigos.crear(DRAGON);
         var heroes = List.of(CatalogoHeroes.crearHeroe(GUERRERO));
@@ -168,6 +178,9 @@ class EnemigoTest {
         assertEquals(CatalogoEnemigos.ALIENTO, InteligenciaEnemiga.decidir(dragon, aliados, heroes, azar()).habilidad());
         dragon.recibirDanio(228);
         assertEquals(CatalogoEnemigos.PREPARAR_INCENDIO_CENIZA, InteligenciaEnemiga.decidir(dragon, aliados, heroes, azar()).habilidad());
+        dragon.consumirMagia(91);
+        assertEquals(CatalogoEnemigos.RUGIDO, InteligenciaEnemiga.decidir(dragon, aliados, heroes, azar()).habilidad());
+        dragon.recuperarMagia(91);
         dragon.iniciarAtaqueUnico();
         assertEquals(CatalogoEnemigos.RUGIDO, InteligenciaEnemiga.decidir(dragon, aliados, heroes, azar()).habilidad());
         dragon.registrarAccion();
@@ -187,11 +200,13 @@ class EnemigoTest {
         defender(combate, protegido);
         defender(combate, descubierto);
         assertTrue(dragon.tieneEstado(EstadoTemporal.CARGA_INCENDIO_CENIZA));
+        assertEquals(120, dragon.getPmActuales());
         defender(combate, protegido);
         combate.ejecutar(new AccionCombate(combate.getTurno(), descubierto.getId(), "ataque_basico", dragon.getId()));
         assertTrue(descubierto.tieneEstado(EstadoTemporal.QUEMADO));
         assertEquals(protegidoSeQuema, protegido.tieneEstado(EstadoTemporal.QUEMADO));
         assertFalse(dragon.tieneEstado(EstadoTemporal.CARGA_INCENDIO_CENIZA));
+        assertEquals(90, dragon.getPmActuales());
         assertEquals(2, combate.getHistorial().stream().filter(evento -> evento.habilidad().equals("incendio_ceniza")).count());
     }
 

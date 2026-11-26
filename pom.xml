@@ -38,6 +38,13 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <spring.web.resources.static-locations>file:./src/main/resources/static/,classpath:/static/</spring.web.resources.static-locations>
+                        <spring.web.resources.cache.cachecontrol.no-store>true</spring.web.resources.cache.cachecontrol.no-store>
+                        <spring.web.resources.cache.use-last-modified>false</spring.web.resources.cache.use-last-modified>
+                    </systemPropertyVariables>
+                </configuration>
             </plugin>
         </plugins>
     </build>

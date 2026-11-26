@@ -1,6 +1,6 @@
 # RPG Battle Gauntlet
 
-Proyecto individual de segundo de DAW para el módulo de DWES. El objetivo es crear un RPG medieval para navegador en el que un equipo de tres héroes supere diez combates por turnos, o quince en Experto y Pruebas, con un dragón como jefe final.
+Proyecto individual de segundo de DAW para el módulo de DWES. El objetivo es crear un RPG medieval para navegador en el que un equipo de tres héroes supere diez combates por turnos en Normal, o quince en Difícil, Experto y Pruebas, con un dragón como jefe final.
 
 ## Fase 1 · Preparación del proyecto
 
@@ -16,6 +16,8 @@ Con un JDK 21 instalado, ejecuta desde la raíz:
 ```
 
 En Windows, usa `mvnw.cmd` con los mismos argumentos. El servidor arranca en el puerto 8080 por defecto. Las pruebas JUnit comprueban el arranque del servidor, las estadísticas iniciales de las cinco clases, la validación de equipos y las reglas del motor de combate. Abre **http://localhost:8080** para jugar. Pulsa **Ctrl+C** para detener el servidor. Si el puerto está ocupado, puedes pasar otro con `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8081` y abrir el puerto elegido.
+
+Al iniciar con `spring-boot:run`, Maven configura el servidor para leer los recursos directamente de `src/main/resources/static`. Para actualizar una imagen, sustituye el PNG conservando su ruta y recarga la página. Las imágenes se vuelven a descargar en cada recarga, incluso si conservan el mismo nombre.
 
 ## Arquitectura
 
@@ -90,7 +92,7 @@ El historial registra una entrada por objetivo afectado, con daño o curación e
 | Caballero oscuro | Si tiene un compañero caído y conserva su poción de revitalización, gasta el turno en revivirlo con el 25 % de sus PV máximos. Un robo exitoso se lleva esa poción mientras la conserve. En sus demás acciones usa Espada maldita, que resta 5 DEF durante dos turnos, Guardia oscura por 8 PC en la segunda acción de cada bloque de cuatro, y prepara un contraataque por 6 PC en la tercera. |
 | Dragón | Por encima del 70 % de PV usa Garra. Entre el 35 % exclusivo y el 70 % alterna Garra y Aliento de fuego. Con el 35 % o menos usa Rugido en la segunda acción de cada bloque de tres y prioriza Aliento en las otras dos. Aliento cuesta 20 PC y causa daño mágico de área. Rugido cuesta 8 PC y ralentiza a todos los héroes vivos durante un turno. Si le falta PC para la acción prevista, usa Garra. |
 
-El ogro anuncia Furia animal al llegar al 50 % de PV o menos. En su siguiente turno lanza un ataque físico de área. Un crítico físico que le alcance durante la carga lo interrumpe. El dragón anuncia Incendio de ceniza al llegar al 35 % de PV o menos y en su siguiente turno lanza un ataque mágico de área que puede quemar. Cada preparación ocurre una vez por combate.
+El ogro anuncia Furia animal al llegar al 50 % de PV o menos. En su siguiente turno lanza un ataque físico de área. Un crítico físico que le alcance durante la carga lo interrumpe. Azrath anuncia Incendio de ceniza al llegar al 35 % de PV o menos si tiene PC suficientes. En su siguiente turno gasta 30 PC para lanzar el ataque mágico de área. Cada preparación ocurre una vez por combate.
 
 En su tercer turno de cada bloque de tres, los enemigos que pueden soltar armas pueden usar un ataque de esas armas en lugar de su ataque individual habitual. El caballero oscuro lo hace en el cuarto turno de su ciclo y el goblin arquero, en los turnos pares. La IA sortea entre las armas cuyo ataque pueda pagar con sus PC. Los ataques cuestan lo mismo que a los héroes y las acciones de curación, defensa o área previstas conservan la prioridad.
 
@@ -125,9 +127,9 @@ Estas estadísticas base son el punto de partida para probar los nuevos encuentr
 | 9 | Dos caballeros oscuros |
 | 10 | Dragón |
 
-Experto y Pruebas comparten la campaña de quince rondas. Las rondas 1 a 9 son comunes a todos los modos y el tramo final ampliado tiene seis encuentros.
+Difícil, Experto y Pruebas comparten la campaña de quince rondas. Las rondas 1 a 9 son comunes a todos los modos y el tramo final ampliado tiene seis encuentros.
 
-| Ronda | Enemigos en Experto y Pruebas |
+| Ronda | Enemigos en Difícil, Experto y Pruebas |
 | ---: | --- |
 | 10 | Verdugo espectral en solitario (minijefe) |
 | 11 | Nigromante y caballero oscuro |
@@ -204,7 +206,7 @@ Cada enemigo vencido tiene una tirada independiente para soltar como máximo un 
 | --- | ---: | --- |
 | Goblin | 35 % | Daga curva 45 %, capucha 30 %, armadura ligera 25 % |
 | Goblin arquero | 40 % | Arco goblin 75 %, daga curva 25 % |
-| Esqueleto | 40 % | Espada 40 %, escudo 35 %, armadura antigua 25 % |
+| Esqueleto | 40 % | Espada antigua 40 %, escudo 35 %, armadura antigua 25 % |
 | Chamán | 50 % | Vara de chamán 30 %, túnica de chamán 30 %, Proyectil mágico 40 % |
 | Ogro | 65 % | Garrote 50 %, armadura pesada 30 %, botas reforzadas 20 % |
 | Caballero oscuro | 75 % | Espada maldita 40 %, armadura oscura 35 %, casco oscuro 25 % |
@@ -265,7 +267,7 @@ Los pergaminos se usan en combate, requieren la INT base indicada y gastan una a
 | Cura | 90 PV a un aliado | 6 | 75 MO |
 | Cura mayor | 120 PV a un aliado | 8 | 100 MO |
 | Llamarada | 100 de daño individual | 10 | 110 MO |
-| Ventisca | 65 de daño de área | 12 | 140 MO |
+| Ventisca | 65 de daño mágico de hielo de área y Escarcha durante un turno. Las habilidades de pago cuestan 4 PC adicionales | 12 | 140 MO |
 | Cura grupal | 70 PV por aliado vivo | 14 | 150 MO |
 | Tormenta eléctrica | 80 de daño de área | 15 | 170 MO |
 | Protección divina | 50 % de reducción de daño para el equipo durante dos turnos | 16 | 160 MO |
@@ -276,7 +278,7 @@ Los pergaminos se usan en combate, requieren la INT base indicada y gastan una a
 
 En cada victoria anterior al dragón se ingresan automáticamente el oro y la experiencia. Cada héroe que esté en pie al terminar recibe la misma experiencia. El botín queda disponible para recoger. Cada ronda liquida sus recompensas una sola vez. Derrotar al dragón otorga la victoria inmediatamente y conserva el oro, la experiencia y el inventario sin añadir nuevas recompensas.
 
-- Experiencia por ronda = `75 + 18 × (ronda − 1)`. En Experto y Pruebas, la ronda 14 da 62 EXP adicionales, para un total de 2.750 EXP y nivel 12 antes del dragón para los héroes que sobreviven a todas las rondas.
+- Experiencia por ronda = `75 + 18 × (ronda − 1)`. En Difícil, Experto y Pruebas, la ronda 14 da 62 EXP adicionales, para un total de 2.750 EXP y nivel 12 antes del dragón para los héroes que sobreviven a todas las rondas.
 - Experiencia para subir = `75 + 35 × (nivel actual − 1)`. El sobrante pasa al siguiente nivel.
 - Oro = el mayor valor entre `60 + 13 × ronda` y `95 + 14 × ronda + 12 × supervivientes − 2 × acciones − 6 × consumibles`. Se cuenta cada acción de héroe o enemigo como un turno. Los golpes múltiples y contraataques no añaden turnos, y solo se cuentan los consumibles usados durante ese combate.
 - Cada subida concede tres puntos. Al alcanzar el nivel 12 se conceden cinco. Un punto de PV añade 12 PV máximos y uno de PC añade 8 PC máximos. El resto de atributos gana una unidad base por punto. Invertir en PV o PC también suma ese incremento al recurso actual de un héroe vivo.

@@ -7,6 +7,8 @@ import es.rpgbattlegauntlet.model.Heroe;
 
 import static es.rpgbattlegauntlet.enums.TipoEfecto.DANIO_FISICO;
 import static es.rpgbattlegauntlet.enums.TipoEfecto.DANIO_MAGICO;
+import static es.rpgbattlegauntlet.enums.EstadoTemporal.VINCULO_ROTO;
+import static es.rpgbattlegauntlet.enums.EstadoTemporal.QUEMADO;
 
 public final class CalculoCombate {
 
@@ -35,11 +37,32 @@ public final class CalculoCombate {
             multiplicador *= 1 + fraccionVidaPerdida * atacante.getBonoMaximoFuriaMaldita() / 100;
         }
         int reduccion = Math.max(objetivo.getReduccionDanio(), reduccionMinima);
-        return aplicarMitigacion(bruto, mitigacion, critico, multiplicador, reduccion);
+        if (objetivo instanceof Enemigo enemigo && enemigo.getTipo().esDragon()) {
+            multiplicador *= habilidad.multiplicadorContraDragones();
+        }
+        if (habilidad.estado() == QUEMADO) multiplicador *= multiplicadorFuego(objetivo);
+        return aplicarMitigacion(bruto, mitigacion, critico, multiplicador * vulnerabilidad(objetivo), reduccion);
     }
 
     public static int danioPergamino(Combatiente objetivo, int potencia) {
-        return aplicarMitigacion(potencia, objetivo.getResistenciaEfectiva(), false, 1.0, objetivo.getReduccionDanio());
+        return danioPergamino(objetivo, potencia, false);
+    }
+
+    public static int danioPergamino(Combatiente objetivo, int potencia, boolean incendiario) {
+        double multiplicador = vulnerabilidad(objetivo) * (incendiario ? multiplicadorFuego(objetivo) : 1);
+        return aplicarMitigacion(potencia, objetivo.getResistenciaEfectiva(), false, multiplicador, objetivo.getReduccionDanio());
+    }
+
+    public static int danioQuemadura(Combatiente objetivo) {
+        return (int) Math.round(QUEMADO.danioPeriodico() * multiplicadorFuego(objetivo));
+    }
+
+    private static double multiplicadorFuego(Combatiente objetivo) {
+        return (100 - objetivo.getResistenciaFuego()) / 100.0;
+    }
+
+    private static double vulnerabilidad(Combatiente objetivo) {
+        return objetivo.tieneEstado(VINCULO_ROTO) ? 1.25 : 1.0;
     }
 
     private static int aplicarMitigacion(double bruto, double mitigacion, boolean critico, double multiplicador, int reduccion) {

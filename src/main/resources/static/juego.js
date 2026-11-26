@@ -8,26 +8,36 @@ const clave = 'gauntlet-partida';
 const nombres = {
     GUERRERO: 'Guerrero', MAGO: 'Mago', ARQUERO: 'Arquera', SANADOR: 'Sanadora', PICARO: 'Pícaro',
     GOBLIN: 'Goblin', GOBLIN_ARQUERO: 'Goblin arquero', ESQUELETO: 'Esqueleto', CHAMAN: 'Chamán', OGRO: 'Ogro',
-    CABALLERO_OSCURO: 'Caballero oscuro', DRAGON: 'Dragón',
+    CABALLERO_OSCURO: 'Caballero oscuro', DRAGON: 'Azrath',
     NIGROMANTE: 'Nigromante', GOLEM_RUNICO: 'Gólem rúnico', VERDUGO_ESPECTRAL: 'Verdugo espectral',
+    DRACONIANO_CIMITARRA: 'Draconiano con cimitarra', DRACONIANO_BALLESTA: 'Draconiano con ballesta',
+    GUIVERNO: 'Guiverno', DRAGON_ESCARCHA: 'Vorgath', DRAGON_OBSIDIANA: 'Vitrion',
+    DIOS_DRAGON: 'Dios Dragón',
     ARMAS: 'Armas', ARMADURAS: 'Armaduras', POCIONES: 'Pociones', PERGAMINOS: 'Pergaminos',
     NORMAL: 'Normal', INFERIOR: 'Desgastada', SUPERIOR: 'Superior',
     DEFENSA: 'Defensa', INTERCEPTANDO: 'Listo para interceptar', BENDICION: 'Bendición', EVASION: 'Esquiva',
     RALENTIZACION: 'Ralentización', ENVENENADO: 'Veneno', QUEMADO: 'Quemadura', DEFENSA_DEBILITADA: 'Defensa debilitada',
+    ESCARCHA: 'Escarcha · +4 PC', CORAZA_AGRIETADA: 'Coraza agrietada', VINCULO_ROTO: 'Vínculo roto',
+    CARGA_NUBE_PONZONOSA: 'Prepara Nube ponzoñosa', CARGA_ALIENTO_GLACIAL: 'Prepara Aliento glacial',
+    CARGA_DERRUMBE: 'Prepara Derrumbe', CARGA_RUPTURA_VINCULO: 'Prepara Ruptura del vínculo',
     CARGA_FURIA_ANIMAL: 'Prepara Furia animal', CARGA_INCENDIO_CENIZA: 'Prepara Incendio de ceniza',
     CARGA_ONDA_RUNICA: 'Prepara Onda rúnica', MARCA_ESPECTRAL: 'Marca espectral',
     GUARDIA_OSEA_ACTIVA: 'Guardia ósea', GUARDIA_OSCURA_ACTIVA: 'Guardia oscura',
     CONTRAATAQUE_LISTO: 'Contraataque preparado', PROTECCION_50: 'Protección del 50 %'
 };
 const iconos = { GUERRERO: '⚔', MAGO: '✦', ARQUERO: '➶', SANADOR: '✚', PICARO: '◆',
-    GOBLIN: '♦', ESQUELETO: '☠', CHAMAN: '✷', OGRO: '⬟', CABALLERO_OSCURO: '♜', DRAGON: '♞' };
+    GOBLIN: '♦', ESQUELETO: '☠', CHAMAN: '✷', OGRO: '⬟', CABALLERO_OSCURO: '♜', DRAGON: '♞',
+    DRACONIANO_BALLESTA: '➶' };
 const spritesCombate = {
-    GUERRERO: 'heroes/guerrero.png', MAGO: 'heroes/mago.png', ARQUERO: 'heroes/arquero.png', SANADOR: 'heroes/sanador.png',
+    GUERRERO: 'heroes/guerrero.png', MAGO: 'heroes/mago.png', ARQUERO: 'heroes/arquero.png', SANADOR: 'heroes/sanador.png?v=dabria',
     PICARO: 'heroes/picaro.png',
     GOBLIN: 'enemigos/goblin.png?v=sprite-goblin', GOBLIN_ARQUERO: 'enemigos/goblin_arquero.png', ESQUELETO: 'enemigos/esqueleto.png', CHAMAN: 'enemigos/chaman.png', OGRO: 'enemigos/ogro.png',
-    CABALLERO_OSCURO: 'enemigos/caballero_oscuro.png?v=sprite-caballero-oscuro', DRAGON: 'enemigos/dragon.png',
+    CABALLERO_OSCURO: 'enemigos/caballero_oscuro.png?v=sprite-caballero-oscuro', DRAGON: 'enemigos/dragon_rojo.png',
     NIGROMANTE: 'enemigos/nigromante.png', GOLEM_RUNICO: 'enemigos/golem_runico.png',
-    VERDUGO_ESPECTRAL: 'enemigos/verdugo_espectral.png'
+    VERDUGO_ESPECTRAL: 'enemigos/verdugo_espectral.png',
+    DRACONIANO_CIMITARRA: 'enemigos/draconiano_cimitarra.png', DRACONIANO_BALLESTA: 'enemigos/draconiano_ballesta.png',
+    GUIVERNO: 'enemigos/guiverno.png', DRAGON_ESCARCHA: 'enemigos/dragon_escarcha.png',
+    DRAGON_OBSIDIANA: 'enemigos/dragon_obsidiana.png', DIOS_DRAGON: 'enemigos/dios_dragon.png'
 };
 const spritesDerrotados = new Map();
 
@@ -92,7 +102,7 @@ const ranurasEquipo = { ARMAS: 'Arma', ESCUDO: 'Escudo', CABEZA: 'Cabeza',
     ARMADURAS: 'Torso', GUANTES: 'Guantes', BOTAS: 'Botas' };
 const clasesConEscudo = ['GUERRERO', 'PICARO'];
 const categorias = ['ARMAS', 'ARMADURAS', 'POCIONES', 'PERGAMINOS'];
-const paneles = { recompensas: 'Recompensas', estado: 'Estado', inventario: 'Inventario', equipo: 'Equipamiento', tienda: 'Tienda', nivel: 'Nivel' };
+const paneles = { recompensas: 'Recompensas', estado: 'Grupo', inventario: 'Inventario', equipo: 'Equipamiento', tienda: 'Tienda', nivel: 'Nivel' };
 const dificultades = { PRUEBAS: 'Pruebas', FACIL: 'Normal', DIFICIL: 'Difícil', EXPERTO: 'Experto' };
 const observarNombresCombate = new ResizeObserver(entradas => {
     for (const { target: titulo, contentRect } of entradas) {
@@ -119,21 +129,37 @@ const historiasEnemigos = {
     NIGROMANTE: 'Expulsados de Kael-Seriv, estos estudiosos probaron a fijar un eco de la voluntad en los huesos. Algunos de sus primeros sujetos aún les sirven de escolta.',
     GOLEM_RUNICO: 'Los Kryptoi levantaron esta figura para sostener un arco durante el Cataclismo. El arco se vino abajo hace siglos, pero las runas aún le ordenan mantener su puesto.',
     VERDUGO_ESPECTRAL: 'En vida ejecutaba las sentencias de un tribunal sin testigos. Ahora recorre las celdas vacías y marca a cualquiera que responda cuando pasa lista.',
-    DRAGON: 'Lo llaman el Devorador de Reyes. Azrath fue invocado por un poderoso hechicero bajo las órdenes de un rey que ansiaba someter a los demás reinos. Sin embargo, el hechicero fue incapaz de controlar a la criatura y, desde entonces, toda la región se encuentra bajo el dominio del dragón. Azrath custodia celosamente el pergamino de su invocación, consciente de las consecuencias que tendría si cayera en las manos adecuadas.'
+    DRAGON: 'Lo llaman el Devorador de Reyes. Azrath fue invocado por un poderoso hechicero bajo las órdenes de un rey que ansiaba someter a los demás reinos. Incapaz de controlar a la criatura, el hechicero condenó a toda la región al dominio del dragón. Desde entonces, Azrath custodia celosamente el pergamino de su invocación, el único vínculo que permanece entre ambos mundos.',
+    DRACONIANO_CIMITARRA: 'Creados con magia antigua para ser los guardianes de los pasos de montaña. Llevan hojas curvadas que aprenden a usar desde jóvenes. En combate buscan las junturas de la armadura para abrir paso a los virotes de sus compañeros.',
+    DRACONIANO_BALLESTA: 'Los ballesteros vigilan los pasos desde cornisas talladas en la roca. Sus virotes se diseñaron para atravesar escamas, y su puntería letal hace que sus enemigos se escondan al ver sus sombras.',
+    GUIVERNO: 'Los guivernos son una estirpe inferior y deformada de los dragones verdaderos. Anidan en riscos escarpados. Sus presas rara vez caen por el golpe del aguijón. El veneno hace el resto mientras el guiverno vigila desde lo alto. Los cazadores de dragones fabrican dagas con la punta de su cola, que conserva el veneno incluso después de la muerte.',
+    DRAGON_ESCARCHA: 'Vorgath es el último de los dragones de hielo. Cuando su padre, el Dios Dragón, inició la Era del Fuego, redujo a cenizas al resto de su estirpe con un solo aliento. Se dice que el frío que albergaba Vorgath era tan profundo que ni siquiera aquellas llamas pudieron consumirlo. Su resistencia le granjeó el respeto de su padre, que desde entonces le permite morar cerca de su trono, solo a él le confió su verdadero nombre.',
+    DRAGON_OBSIDIANA: 'Vitrion es el hijo más poderoso del Dios Dragón. Durante milenios ha templado su cuerpo en el magma que rodea el trono de su padre. Su aliento es puro magma y su coraza puede resistir el peso de una montaña. Todo ese tiempo se ha preparado para un solo día: aquel en su padre que decida iniciar la Era del Hielo. Entonces será el último dragón de fuego y su padre le confiará su verdadero nombre.',
+    DIOS_DRAGON: 'Antes de que se alzara el primer reino, antes de que los mortales aprendieran a despertar la magia, él ya reinaba. Padre de todos los dragones, lleva en una cabeza el fuego que consume y en la otra el hielo que preserva. Cuando despliega sus cuatro alas, se oscurece el firmamento. Ninguna espada mortal ha hendido jamás sus escamas doradas. Se dice que, cuando llegue la hora, su aliento helado sepultará a todos los dragones de fuego salvo a uno y a él y solo a él le confiará su verdadero nombre. Así comenzará una nueva era de hielo, como tantas otras en el ciclo que impone a su reino desde hace eones.\n\nNingún mortal ha regresado de su reino para contar lo que vio. Y ahora, por vuestra osadía, sois vosotros quienes comparecéis ante su trono.'
 };
 
 const armasNaturales = {
     NIGROMANTE: 'Magia funeraria. La Vara de osario puede aparecer como botín.',
     GOLEM_RUNICO: 'Puños de piedra.',
     VERDUGO_ESPECTRAL: 'Hacha espectral.',
-    DRAGON: 'Garras y aliento de fuego.'
+    DRAGON: 'Garras y aliento de fuego.',
+    GUIVERNO: 'Garras, aguijón y veneno.',
+    DRAGON_ESCARCHA: 'Garras y magia de hielo.',
+    DRAGON_OBSIDIANA: 'Cola acorazada y aliento de magma.',
+    DIOS_DRAGON: 'Garras, fuego y magia del vínculo.',
+    DRACONIANO_CIMITARRA: 'Cimitarra dracónica.',
+    DRACONIANO_BALLESTA: 'Ballesta dracónica.'
 };
 let seleccion = [];
 let dificultadElegida = 'FACIL';
+let rondaInicial = 1;
 let panel = 'recompensas';
 let categoria = 'ARMAS';
+let categoriaInventario = 'ARMAS';
 let heroeElegido;
 let accionElegida;
+let objetosAbiertos = false;
+let heroesQueSubieron = [];
 let ocupado = false;
 let tiempoAviso;
 
@@ -169,9 +195,17 @@ async function api(url, datos) {
 }
 
 function actualizar(nueva) {
+    if (nueva.id !== partida?.id || nueva.ronda !== partida?.ronda || nueva.estado !== partida?.estado) {
+        heroesQueSubieron = [];
+    }
+    if (nueva.id === partida?.id && nueva.estado === 'ENTRE_COMBATES' && partida.estado === 'COMBATE') {
+        const nivelesPrevios = new Map(partida.heroes.map(heroe => [heroe.id, heroe.nivel]));
+        heroesQueSubieron = nueva.heroes.filter(heroe => heroe.nivel > nivelesPrevios.get(heroe.id));
+    }
     if (nueva.id !== partida?.id || nueva.estado !== partida?.estado) {
-        panel = 'recompensas';
+        panel = nueva.estado === 'CAMPAMENTO_INICIAL' ? 'estado' : 'recompensas';
         accionElegida = null;
+        objetosAbiertos = false;
     }
     partida = nueva;
     localStorage.setItem(clave, partida.id);
@@ -182,19 +216,21 @@ async function operar(operacion, datos = {}, control) {
     ocupado = true;
     juego.setAttribute('aria-busy', 'true');
     informar('');
-    const oroAnterior = partida?.oro;
     try {
         const nueva = operacion === 'crear'
             ? await api(ruta, {})
             : await api(`${ruta}/${partida.id}/${operacion}`, { version: partida.version, ...datos });
-        const eventos = nueva.id === partida?.id ? nueva.historial.slice(partida.historial.length) : [];
-        if (eventos.length && partida.estado !== 'COMBATE' && nueva.estado === 'COMBATE') {
+        let eventos = nueva.id === partida?.id ? nueva.historial.slice(partida.historial.length) : [];
+        if (eventos.length && (partida.ronda !== nueva.ronda || partida.estado === 'CAMPAMENTO_INICIAL')) {
+            const anteriores = eventos.filter(evento => evento.turno < nueva.primerTurnoCombate);
+            if (anteriores.length) await reproducirAcciones(anteriores, nueva);
+            eventos = eventos.filter(evento => evento.turno >= nueva.primerTurnoCombate);
             actualizar(nueva);
             mostrar();
         }
         if (eventos.length) await reproducirAcciones(eventos, nueva);
         if (partida !== nueva) actualizar(nueva);
-        if (control) await confirmarAccionCampamento(control, nueva.oro - oroAnterior);
+        if (control) await confirmarAccionCampamento(control);
         return true;
     } catch (error) {
         informar(error.message);
@@ -215,14 +251,12 @@ async function operar(operacion, datos = {}, control) {
     }
 }
 
-async function confirmarAccionCampamento(control, monedas) {
+async function confirmarAccionCampamento(control) {
     const mensajes = {
-        pocion: 'Poción usada', atributo: 'Punto asignado'
+        pocion: 'Poción usada'
     };
     const accion = control.dataset.accion;
-    const transaccion = ['comprar', 'recomprar', 'vender'].includes(accion);
-    const signo = monedas < 0 ? '−' : monedas > 0 ? '+' : '';
-    const texto = transaccion ? `${signo}${Math.abs(monedas)} MO` : mensajes[accion];
+    const texto = mensajes[accion];
     control.classList.add('accion-confirmada');
     if (texto) {
         const aviso = document.createElement('span');
@@ -232,6 +266,33 @@ async function confirmarAccionCampamento(control, monedas) {
         aviso.textContent = texto;
     }
     await new Promise(resolve => setTimeout(resolve, 500));
+}
+
+async function operarTransaccion(control, operacion, datos) {
+    const oroAnterior = partida.oro;
+    const { accion, valor } = control.dataset;
+    const posicion = control.getBoundingClientRect();
+    if (operacion === 'comprar') control.classList.add('accion-confirmada');
+    if (!await operar(operacion, datos)) return;
+
+    const saldo = partida.oro - oroAnterior;
+    const signo = saldo < 0 ? '−' : saldo > 0 ? '+' : '';
+    const aviso = document.createElement('span');
+    aviso.className = 'confirmacion-campamento';
+    aviso.setAttribute('role', 'status');
+    aviso.textContent = `${signo}${Math.abs(saldo)} MO`;
+    const botonActual = juego.querySelector(`button[data-accion="${accion}"][data-valor="${CSS.escape(valor)}"]`);
+    if (botonActual) {
+        botonActual.classList.add('accion-confirmada');
+        botonActual.append(aviso);
+        setTimeout(() => botonActual.classList.remove('accion-confirmada'), 150);
+    } else {
+        aviso.classList.add('confirmacion-sin-boton');
+        aviso.style.left = `${posicion.left}px`;
+        aviso.style.top = `${posicion.top}px`;
+        document.body.append(aviso);
+    }
+    setTimeout(() => aviso.remove(), 500);
 }
 
 function agruparAcciones(eventos) {
@@ -273,25 +334,67 @@ async function reproducirAcciones(eventos, nueva) {
         [luchador.dataset.combatiente, luchador.querySelector('.figura-combate')]));
     const combatientes = new Map(partida.heroes.concat(partida.enemigos)
         .map(combatiente => [combatiente.id, { ...combatiente }]));
-    const aplicarPv = (evento, sentido, afectados) => {
+    const lleganRefuerzos = eventos.some(evento => evento.habilidad === 'llegan_draconianos');
+    const refuerzos = lleganRefuerzos
+        ? nueva.enemigos.filter(enemigo => !combatientes.has(enemigo.id)
+            || enemigo.tipo === 'DRACONIANO_CIMITARRA' || enemigo.tipo === 'DRACONIANO_BALLESTA')
+        : [];
+    for (const enemigo of refuerzos) {
+        figuras.get(enemigo.id)?.closest('.luchador').remove();
+        figuras.delete(enemigo.id);
+        combatientes.set(enemigo.id, { ...enemigo });
+    }
+    const aplicarPc = (id, diferencia) => {
+        const combatiente = combatientes.get(id);
+        if (!combatiente || !diferencia) return;
+        combatiente.pm += diferencia;
+        actualizarBarraRecurso(combatiente, figuras.get(id), 'PC');
+    };
+    const aplicarEstados = (id, estados) => {
+        const combatiente = combatientes.get(id);
+        if (!combatiente || !estados) return;
+        combatiente.estados = estados;
+        mostrarEstados(figuras.get(id), estados);
+    };
+    const aplicarAjuste = (ajuste, sentido) => {
+        aplicarPc(ajuste.combatiente, ajuste.cambioPc * sentido);
+        aplicarEstados(ajuste.combatiente, sentido > 0 ? ajuste.estados?.despues : ajuste.estados?.antes);
+    };
+    const aplicarEfectos = (evento, sentido, afectados) => {
         for (const [id, diferencia] of [[evento.objetivo, evento.curacion - evento.danio],
             [evento.actor, evento.curacionActor ?? 0]]) {
             const combatiente = combatientes.get(id);
             if (!combatiente || !diferencia) continue;
             const estabaVivo = combatiente.pv > 0;
             combatiente.pv += diferencia * sentido;
-            actualizarBarraVida(combatiente, figuras.get(id));
+            actualizarBarraRecurso(combatiente, figuras.get(id), 'PV');
             if (estabaVivo !== (combatiente.pv > 0)) afectados.add(combatiente);
         }
+        aplicarPc(evento.objetivo, (evento.magiaRecuperada ?? 0) * sentido);
+        aplicarEstados(evento.objetivo, sentido > 0 ? evento.cambioEstados?.despues : evento.cambioEstados?.antes);
     };
     // Al abrir un combate, la primera vista ya incluye los turnos iniciales de los enemigos.
-    if (partida === nueva) {
+    if (partida === nueva || refuerzos.length) {
         const cambios = new Set();
-        for (const evento of eventos.slice().reverse()) aplicarPv(evento, -1, cambios);
+        const rebobinar = id => partida === nueva || refuerzos.some(enemigo => enemigo.id === id);
+        for (const evento of eventos.slice().reverse()) {
+            for (const ajuste of (evento.ajustesPosteriores ?? []).slice().reverse()) {
+                if (rebobinar(ajuste.combatiente)) aplicarAjuste(ajuste, -1);
+            }
+            aplicarEfectos({
+                ...evento,
+                objetivo: rebobinar(evento.objetivo) ? evento.objetivo : null,
+                actor: rebobinar(evento.actor) ? evento.actor : null
+            }, -1, cambios);
+            for (const ajuste of (evento.ajustesPrevios ?? []).slice().reverse()) {
+                if (rebobinar(ajuste.combatiente)) aplicarAjuste(ajuste, -1);
+            }
+        }
         await Promise.all([...cambios].map(combatiente => mostrarSpriteCombatiente(combatiente, figuras.get(combatiente.id))));
     }
     let anterior;
     for (const accion of agruparAcciones(eventos)) {
+        const lleganGuardias = accion[0].habilidad === 'llegan_draconianos';
         if (anterior?.[0].turno !== accion[0].turno) {
             const actor = actores.shift();
             if (actor) {
@@ -303,25 +406,48 @@ async function reproducirAcciones(eventos, nueva) {
         aviso.textContent = textoAccion(accion, anterior);
         aviso.scrollTop = 0;
         anterior = accion;
+        if (lleganGuardias) {
+            const bando = juego.querySelector('.escenario > section:last-of-type');
+            for (const { id } of refuerzos) {
+                const enemigo = combatientes.get(id);
+                bando.insertAdjacentHTML('beforeend', luchador(enemigo));
+                const figura = bando.lastElementChild.querySelector('.figura-combate');
+                figuras.set(enemigo.id, figura);
+                await mostrarSpriteCombatiente(enemigo, figura);
+            }
+            for (const evento of accion) {
+                for (const ajuste of evento.ajustesPosteriores ?? []) aplicarAjuste(ajuste, 1);
+            }
+            await new Promise(resolve => setTimeout(resolve, 650));
+            continue;
+        }
+        for (const ajuste of accion[0].ajustesPrevios ?? []) aplicarAjuste(ajuste, 1);
         await animarFiguras([figuras.get(accion[0].actor)], 'accion-en-curso');
 
         const resultados = new Map();
-        const sumarResultado = (id, danio, curacion, esquivado = false) => {
+        const sumarResultado = (id, danio, curacion, esquivado = false, pc = 0) => {
             const figura = figuras.get(id);
-            if (!figura || !(danio || curacion || esquivado)) return;
-            const resultado = resultados.get(figura) ?? { danio: 0, curacion: 0, esquivado: false };
+            if (!figura || !(danio || curacion || esquivado || pc)) return;
+            const resultado = resultados.get(figura) ?? { danio: 0, curacion: 0, esquivado: false, pc: 0 };
             resultado.danio += danio;
             resultado.curacion += curacion;
             resultado.esquivado ||= esquivado;
+            resultado.pc += pc;
             resultados.set(figura, resultado);
         };
         for (const evento of accion) {
-            sumarResultado(evento.objetivo, evento.danio, evento.curacion, evento.esquivado);
+            sumarResultado(evento.objetivo, evento.danio, evento.curacion, evento.esquivado, evento.magiaRecuperada);
             sumarResultado(evento.actor, 0, evento.curacionActor ?? 0);
         }
         const indicadores = [];
         const cambios = new Set();
-        for (const evento of accion) aplicarPv(evento, 1, cambios);
+        for (const evento of accion) {
+            if (evento !== accion[0]) {
+                for (const ajuste of evento.ajustesPrevios ?? []) aplicarAjuste(ajuste, 1);
+            }
+            aplicarEfectos(evento, 1, cambios);
+            for (const ajuste of evento.ajustesPosteriores ?? []) aplicarAjuste(ajuste, 1);
+        }
         const golpeados = [];
         const curados = [];
         const esquivaron = [];
@@ -336,6 +462,10 @@ async function reproducirAcciones(eventos, nueva) {
             if (resultado.curacion) {
                 indicador.append(etiquetaResultado(`+${resultado.curacion} PV`, 'curacion'));
                 if (!resultado.danio) curados.push(figura);
+            }
+            if (resultado.pc) {
+                indicador.append(etiquetaResultado(`+${resultado.pc} PC`, 'curacion'));
+                if (!resultado.danio && !resultado.curacion) curados.push(figura);
             }
             if (resultado.esquivado) {
                 indicador.append(etiquetaResultado('Esquiva', 'esquiva'));
@@ -359,12 +489,13 @@ async function reproducirAcciones(eventos, nueva) {
     }
 }
 
-function actualizarBarraVida(combatiente, figura) {
-    const barra = figura?.closest('.luchador').querySelector('.barra[data-recurso="PV"]');
+function actualizarBarraRecurso(combatiente, figura, recurso) {
+    const barra = figura?.closest('.luchador').querySelector(`.barra[data-recurso="${recurso}"]`);
     if (!barra) return;
-    const maximo = combatiente.base.pvMaximos;
-    barra.querySelector('span').textContent = `${combatiente.pv}/${maximo} PV`;
-    barra.querySelector('progress').value = combatiente.pv;
+    const clave = recurso === 'PV' ? 'pv' : 'pm';
+    const maximo = combatiente.base[`${clave}Maximos`];
+    barra.querySelector('span').textContent = `${combatiente[clave]}/${maximo} ${recurso}`;
+    barra.querySelector('progress').value = combatiente[clave];
 }
 
 async function mostrarSpriteCombatiente(combatiente, figura) {
@@ -408,39 +539,50 @@ function boton(texto, accion, valor = '', opciones = '') {
 function mostrar() {
     observarNombresCombate.disconnect();
     resumen.innerHTML = partida ? `
-        ${partida.ronda ? `<span>${dificultades[partida.dificultad] ?? dificultades.FACIL}</span><span>Ronda ${partida.ronda} de ${partida.totalRondas}</span><span>${partida.oroIlimitado ? '∞' : partida.oro} MO</span>` : ''}
+        ${partida.ronda ? `<span>${dificultades[partida.dificultad] ?? dificultades.FACIL}</span><span>Ronda ${partida.ronda} de ${partida.totalRondas}</span><span>${partida.oroIlimitado && partida.estado !== 'CAMPAMENTO_INICIAL' ? '∞' : partida.oro} MO</span>` : ''}
         ${boton('Reiniciar', 'reiniciar')}` : '';
     if (viendoBestiario) {
         mostrarBestiario();
     } else if (!partida) {
         juego.innerHTML = `<section class="inicio">
             <div class="insignia" aria-hidden="true">⚔</div><h1>RPG Battle Gauntlet</h1>
-            <p>Reúne a tres héroes y derrota al dragón. Juega diez rondas o amplía el desafío a quince en Experto o Pruebas.</p>
+            <p>Reúne a tres héroes y derrota al dragón. Juega diez rondas en Normal o quince en Difícil, Experto y Pruebas.</p>
             ${boton('Nueva partida', 'crear', '', 'class="principal"')}
         </section>`;
     } else if (partida.estado === 'SELECCION_PERSONAJES') {
         mostrarSeleccion();
     } else if (partida.estado === 'COMBATE') {
         mostrarCombate();
-    } else if (partida.estado === 'ENTRE_COMBATES') {
+    } else if (partida.estado === 'ENTRE_COMBATES' || partida.estado === 'CAMPAMENTO_INICIAL') {
         mostrarCampamento();
     } else {
         const victoria = partida.estado === 'VICTORIA';
         juego.innerHTML = `<section class="inicio">
             <div class="insignia" aria-hidden="true">${victoria ? '♜' : '⚔'}</div>
             <h1>${victoria ? 'Victoria' : 'Derrota'}</h1>
-            <p>${victoria ? `El dragón ha caído. Has superado las ${partida.totalRondas} rondas.` : `Tu equipo cayó en la ronda ${partida.ronda}.`}</p>
+            <p>${victoria ? (partida.ronda > 15
+                ? 'El Dios Dragón ha caído. Los héroes regresan a su mundo por última vez antes de que se cierre el vínculo.'
+                : `Azrath ha caído. La región queda libre de su dominio. Has superado las ${partida.totalRondas} rondas.`)
+                : `Tu equipo cayó en la ronda ${partida.ronda}.`}</p>
             ${boton('Volver a jugar', 'reiniciar', '', 'class="principal"')}
         </section>${historial()}`;
     }
+}
+
+function nombresDelEncuentro(tipos) {
+    const cantidades = new Map();
+    for (const tipo of tipos) cantidades.set(tipo, (cantidades.get(tipo) ?? 0) + 1);
+    return [...cantidades].map(([tipo, cantidad]) => cantidad > 1 ? `${cantidad} × ${nombre(tipo)}` : nombre(tipo)).join(', ');
 }
 
 function mostrarSeleccion() {
     const detallesAbiertos = new Set([...juego.querySelectorAll('.detalle-seleccion[open]')].map(detalle => detalle.dataset.detalle));
     const disponibles = partida.dificultadesDisponibles ?? (partida.dificultad ? ['FACIL', 'DIFICIL', 'EXPERTO'] : ['FACIL']);
     const modos = Object.keys(dificultades).filter(codigo => disponibles.includes(codigo));
+    const combates = partida.combatesDePruebas ?? Array.from({length: 20}, (_, i) =>
+        ({ ronda: i + 1, enemigos: [], refuerzos: [] }));
     juego.innerHTML = `<h1>Elige a tus héroes</h1><p class="ayuda">${seleccion.length} de 3 clases seleccionadas</p>
-        <div class="rejilla seleccion-heroes">${perfiles.map(({clase, base}) => {
+        <div class="rejilla seleccion-heroes">${perfiles.map(({clase, base, equipoInicial, regaloInicial}) => {
             const { titulo, parrafos } = biografias[clase];
             return `<article class="tarjeta ficha-seleccion">
                 <div class="retrato-seleccion"><img src="imagenes/${spritesCombate[clase]}" alt=""></div>
@@ -448,6 +590,14 @@ function mostrarSeleccion() {
                 <small>${base.pvMaximos} PV · ${base.pmMaximos} PC · Esquiva ${base.esquiva} · Crítico ${base.destreza ?? base.critico}</small>
                 <small>${Object.entries(atributosBase).filter(([clave]) => clave in base)
                     .map(([clave, etiqueta]) => `${etiqueta} ${base[clave]}`).join(' · ')}</small>
+                ${equipoInicial?.length ? `<h3>Equipo inicial</h3>
+                    <ul class="equipo-seleccion" role="list">${equipoInicial.map(objeto => `<li class="cabecera-objeto">
+                        ${iconoObjeto(objeto)}<small>${escapar(nombreObjeto(objeto))}</small>
+                    </li>`).join('')}</ul>` : ''}
+                ${regaloInicial ? `<div class="cabecera-objeto">
+                    ${iconoObjeto(regaloInicial)}
+                    <small>Aporta · ${regaloInicial.categoria === 'PERGAMINOS' ? 'Pergamino de ' : ''}${escapar(nombreObjeto(regaloInicial))}</small>
+                </div>` : ''}
                 <details class="detalle-seleccion" data-detalle="${clase}"${detallesAbiertos.has(clase) ? ' open' : ''}>
                     <summary><span>Ver historia</span><span>Ocultar historia</span></summary>
                     ${parrafos.map(parrafo => `<p>${escapar(parrafo)}</p>`).join('')}
@@ -459,7 +609,7 @@ function mostrarSeleccion() {
                 <h2>Cómo jugar</h2>
                 <details class="detalle-seleccion" data-detalle="guia"${detallesAbiertos.has('guia') ? ' open' : ''}>
                     <summary><span>Ver conceptos básicos</span><span>Ocultar conceptos básicos</span></summary>
-                    <p><strong>Equipo y turnos.</strong> Elige tres héroes y supera diez rondas, o quince en Experto o Pruebas. La velocidad (VEL) decide el orden. En cada turno puedes atacar, usar una habilidad o un objeto, o defenderte.</p>
+                    <p><strong>Equipo y turnos.</strong> Elige tres héroes y supera diez rondas en Normal o quince en Difícil, Experto y Pruebas. La velocidad (VEL) decide el orden. En cada turno puedes atacar, usar una habilidad o un objeto, o defenderte.</p>
                     <p><strong>Vida y concentración.</strong> Los Puntos de Vida (PV) son la salud de nuestro personaje. Con 0 PV, el héroe cae. Los puntos de concentración (PC) se gastan al usar habilidades. La poción roja recupera 80 PV, la verde recupera 50 PC y la azul recupera 50 PV y 30 PC. El ataque básico y Defenderse son gratuitos.</p>
                     <p><strong>Interceptar.</strong> Therakos puede gastar 4 PC para proteger el próximo golpe que reciba o ponerse en el lugar de un aliado ante un ataque individual. La postura termina al empezar su siguiente turno. Un escudo equipado eleva la reducción de Defenderse y del golpe interceptado del 40 % al 65 %.</p>
                     <p><strong>Daño físico.</strong> La fuerza (FUE) aumenta el daño y la defensa (DEF) lo reduce.</p>
@@ -474,7 +624,13 @@ function mostrarSeleccion() {
         </div>
         <div class="fila"><label>Dificultad <select id="dificultad">${modos.map(codigo =>
             `<option value="${codigo}" ${codigo === dificultadElegida ? 'selected' : ''}>${dificultades[codigo]}</option>`).join('')}</select></label>
-            ${boton('Iniciar combate', 'iniciar', '', `class="principal" ${seleccion.length === 3 ? '' : 'disabled'}`)}</div>`;
+            ${dificultadElegida === 'PRUEBAS' ? `<label class="selector-combate-pruebas">Combate inicial <select id="ronda-inicial">${combates
+                .map(({ ronda, enemigos, refuerzos }) => {
+                    const rivales = nombresDelEncuentro(enemigos);
+                    const llegada = refuerzos.length ? ` + ${nombresDelEncuentro(refuerzos)} (refuerzos)` : '';
+                    return `<option value="${ronda}" ${ronda === rondaInicial ? 'selected' : ''}>Combate ${ronda}${rivales ? ` · ${escapar(rivales + llegada)}` : ''}</option>`;
+                }).join('')}</select></label>` : ''}
+            ${boton('Ir al campamento', 'iniciar', '', `class="principal" ${seleccion.length === 3 ? '' : 'disabled'}`)}</div>`;
 }
 
 function listaHabilidadesEnemigo(habilidades) {
@@ -485,26 +641,32 @@ function listaHabilidadesEnemigo(habilidades) {
 function mostrarBestiario() {
     juego.innerHTML = `<div class="fila">${boton('Volver a la selección', 'cerrar-bestiario')}</div>
         <h1>Bestiario</h1>
-        <p>Estadísticas de Normal. Los PV y el daño de los enemigos varían según la dificultad.</p>
-        <div class="rejilla seleccion-heroes bestiario">${fichasBestiario.map(({ tipo, base, habilidades, botin }) => {
+        <p>PV por dificultad · Normal / Difícil / Experto. El guion indica que el enemigo no aparece en esa dificultad.</p>
+        <div class="rejilla seleccion-heroes bestiario">${fichasBestiario.map(({ tipo, base, pvPorDificultad, habilidades, botin }) => {
+            const vida = pvPorDificultad
+                ? ['FACIL', 'DIFICIL', 'EXPERTO'].map(modo => pvPorDificultad[modo] ?? '-').join('/') + ' PV'
+                : `${base.pvMaximos} PV base`;
             const armas = botin.armas.map(arma => nombreObjeto(arma)).join(' / ');
-            const habilidadesArma = botin.armas.map(arma => arma.habilidad).filter(Boolean);
             return `<article class="tarjeta ficha-seleccion">
-                <div class="retrato-seleccion"><img src="imagenes/${spritesCombate[tipo]}" alt=""></div>
-                <h2>${tipo === 'DRAGON' ? 'Azrath' : escapar(nombre(tipo))}</h2>
-                <small>${base.pvMaximos} PV · ${base.pmMaximos} PC · Esquiva ${base.esquiva} · Crítico ${base.critico}</small>
+                <div class="retrato-seleccion">${spritesCombate[tipo]
+                    ? `<img src="imagenes/${spritesCombate[tipo]}" alt="">`
+                    : `<span class="icono" aria-hidden="true">${iconos[tipo]}</span>`}</div>
+                <h2>${escapar(nombre(tipo))}</h2>
+                <small>${vida} · ${base.pmMaximos} PC · Esquiva ${base.esquiva} · Crítico ${base.critico}</small>
                 <small>${Object.entries(atributosBase).filter(([clave]) => clave in base)
                     .map(([clave, etiqueta]) => `${etiqueta} ${base[clave]}`).join(' · ')}</small>
-                <p>${escapar(historiasEnemigos[tipo])}</p>
+                ${(historiasEnemigos[tipo]?.split('\n\n') ?? []).map(parrafo => `<p>${escapar(parrafo)}</p>`).join('')}
                 <h3>Armas</h3>
                 <p>${escapar(armas || armasNaturales[tipo])}</p>
                 <h3>Ataques y habilidades</h3>
-                ${listaHabilidadesEnemigo(habilidades.concat(habilidadesArma))}
+                ${listaHabilidadesEnemigo(habilidades)}
                 ${tipo === 'CABALLERO_OSCURO' ? '<p>Puede usar una Poción dorada para revivir a un aliado si aún la conserva.</p>' : ''}
-                <h3>Botín al vencerlo</h3>
-                ${botin.probabilidad ? `<p>${botin.probabilidad} % de probabilidad de soltar un objeto.</p>
-                    <ul>${botin.objetos.map(objeto => `<li>${escapar(nombreObjeto(objeto))}</li>`).join('')}</ul>`
-                    : '<p>Sin botín al vencerlo.</p>'}
+                <details class="detalle-seleccion botin-bestiario">
+                    <summary>Botín al vencerlo</summary>
+                    ${botin.probabilidad ? `<p>${botin.probabilidad} % de probabilidad de soltar un objeto.</p>
+                        <ul role="list">${botin.objetos.map(objeto => `<li>${iconoObjeto(objeto)}${escapar(nombreObjeto(objeto))}</li>`).join('')}</ul>`
+                        : '<p>Sin botín al vencerlo.</p>'}
+                </details>
                 ${tipo === 'DRAGON' ? '<p>Se le puede robar el Pergamino de Dragón.</p>' : ''}
             </article>`;
         }).join('')}</div>`;
@@ -515,6 +677,27 @@ function barra(etiqueta, actual, maximo, clase = '') {
         <progress class="${clase}" aria-label="${etiqueta}" value="${actual}" max="${maximo || 1}"></progress></div>`;
 }
 
+function etiquetasEstados(estados) {
+    return Object.entries(estados).map(([estado, turnos]) =>
+        `<small>${escapar(nombre(estado))}${estado === 'MARCA_ESPECTRAL' ? '' : ` · ${turnos} ${turnos === 1 ? 'turno' : 'turnos'}`}</small>`).join('');
+}
+
+function mostrarEstados(figura, estados) {
+    const retrato = figura?.querySelector('.retrato-combate');
+    if (!retrato) return;
+    const indicador = retrato.querySelector('.indicador-turno');
+    const anterior = retrato.querySelector('.estados-combate');
+    if (indicador) retrato.append(indicador);
+    anterior?.remove();
+    const etiquetas = etiquetasEstados(estados);
+    if (!etiquetas) return;
+    const grupo = document.createElement('div');
+    grupo.className = 'estados-combate';
+    grupo.innerHTML = etiquetas;
+    if (indicador) grupo.append(indicador);
+    retrato.append(grupo);
+}
+
 function luchador(datos, enCampamento = false) {
     const turnoActual = !enCampamento && partida.orden[0] === datos.id;
     const indicarTurno = turnoActual && datos.pv > 0 && partida.heroes.some(heroe => heroe.id === datos.id);
@@ -522,17 +705,16 @@ function luchador(datos, enCampamento = false) {
     const imagen = sprite
         ? `<img class="sprite-combate" src="imagenes/${sprite}" alt="">`
         : `<span class="icono" aria-hidden="true">${iconos[datos.tipo]}</span>`;
-    const estados = Object.entries(datos.estados).map(([estado, turnos]) =>
-        `<small>${escapar(nombre(estado))}${estado === 'MARCA_ESPECTRAL' ? '' : ` · ${turnos} ${turnos === 1 ? 'turno' : 'turnos'}`}</small>`).join('');
+    const estados = etiquetasEstados(datos.estados);
     const indicador = indicarTurno ? '<span class="indicador-turno" aria-hidden="true"></span>' : '';
-    return `<article class="luchador ${datos.pv === 0 ? 'caido' : ''}" data-tipo="${datos.tipo}" data-combatiente="${datos.id}">
+    return `<article class="luchador ${enCampamento ? 'tarjeta ficha-grupo' : ''} ${datos.pv === 0 ? 'caido' : ''}" data-tipo="${datos.tipo}" data-combatiente="${datos.id}">
         <div class="figura-combate">
             <div class="retrato-combate">
                 ${imagen}
                 ${estados ? `<div class="estados-combate">${estados}${indicador}</div>` : indicador}
             </div>
         </div>
-        <div class="tarjeta ${turnoActual ? 'activo' : ''}">
+        <div class="${enCampamento ? 'datos-grupo' : `tarjeta ${turnoActual ? 'activo' : ''}`}">
             <h3><span>${nombre(datos.tipo)}</span></h3>
             ${enCampamento ? `<small>Nivel ${datos.nivel}</small>` : ''}
             ${barra('PV', datos.pv, datos.base.pvMaximos)}${barra('PC', datos.pm, datos.base.pmMaximos, 'magia')}
@@ -546,6 +728,7 @@ function luchador(datos, enCampamento = false) {
 }
 
 const iconosPorObjeto = {
+    daga_curva: 'armas/daga_curva.png',
     roja: 'pociones/pocion_roja.png',
     verde: 'pociones/pocion_verde.png',
     azul: 'pociones/pocion_azul.png',
@@ -563,9 +746,14 @@ const iconosPorObjeto = {
     requiem_dragon: 'pergaminos/dragon.png',
     vara_avanzada: 'armas/vara_avanzada.png',
     ropa: 'armaduras/ropa_ligera.png',
+    coraza_runica: 'armaduras/armadura_runica.png',
+    armadura_escarcha: 'armaduras/armadura_escarcha.png',
     capucha: 'armaduras/capucha.png',
     capucha_funeraria: 'armaduras/capucha.png',
     botas: 'armaduras/botas.png',
+    botas_basicas: 'armaduras/botas.png',
+    guantes: 'armaduras/guantes.png',
+    guantes_reforzados: 'armaduras/guantes_reforzados.png',
     casco: 'armaduras/yelmo.png',
     casco_oscuro: 'armaduras/yelmo.png',
     yelmo_espectral: 'armaduras/yelmo.png',
@@ -622,12 +810,26 @@ const etiquetasCombate = { ataque_basico: 'Ataque básico', defender: 'Defenders
         tajo_espectral: 'Tajo espectral', marcar_sentencia: 'Marca espectral', sentencia_espectral: 'Sentencia espectral',
         barrido_espectral: 'Barrido espectral',
         preparar_incendio_ceniza: 'Prepara Incendio de ceniza', incendio_ceniza: 'Incendio de ceniza',
+        tajo_draconico: 'Tajo dracónico', corte_escamas: 'Corte de escamas', virote_draconico: 'Virote dracónico',
+        virote_perforante: 'Virote perforante', virote_rompeescamas: 'Virote rompeescamas',
+        aguijonazo: 'Aguijonazo', picado: 'Picado', preparar_nube: 'Prepara Nube ponzoñosa', nube_ponzonosa: 'Nube ponzoñosa',
+        garra_helada: 'Garra helada', lanza_hielo: 'Lanza de hielo', preparar_aliento_glacial: 'Prepara Aliento glacial',
+        aliento_glacial: 'Aliento glacial', coletazo_obsidiana: 'Coletazo de obsidiana', aliento_magma: 'Aliento de magma',
+        preparar_derrumbe: 'Prepara Derrumbe',
+        derrumbe: 'Derrumbe', garra_ancestral: 'Garra ancestral', aliento_ancestral: 'Aliento ancestral',
+        preparar_ruptura: 'Prepara Ruptura del vínculo', ruptura_vinculo: 'Ruptura del vínculo',
+        mordida_colmillo: 'Mordida de colmillo', eco_draconico: 'Eco dracónico',
+        filo_matadragones: 'Filo matadragones', congelacion: 'Congelación', punzada_venenosa: 'Punzada venenosa',
         'Réquiem del Dragón': nombrePergaminoDragon, 'Poción de revitalización': nombrePocionDorada };
 function textoEvento(evento) {
     const actor = nombre(evento.tipoActor);
     const objetivo = nombre(evento.tipoObjetivo);
+    if (evento.habilidad === 'traslado_azrath') {
+        return `${actor} invierte la invocación de Azrath con el Pergamino de Dragón. Azrath pierde ${evento.danio} PV y el vínculo arrastra al grupo a su reino.`;
+    }
+    if (evento.habilidad === 'llegan_draconianos') return 'Los dos guerreros draconianos se incorporan al combate.';
     if (evento.habilidad === 'golpe_interceptado') return `${actor} se interpone para proteger a ${objetivo}.`;
-    const accion = etiquetasCombate[evento.habilidad] ?? evento.habilidad.replaceAll('_', ' ');
+    const accion = evento.nombreHabilidad ?? etiquetasCombate[evento.habilidad] ?? evento.habilidad.replaceAll('_', ' ');
     const destino = evento.actor === evento.objetivo ? '' : ` → ${objetivo}`;
     const detalles = [];
     if (evento.habilidad === 'robar') {
@@ -678,38 +880,94 @@ function siguientesTurnos(estado = partida, incluirActual = false) {
     return siguientes;
 }
 
+function agruparConsumibles(objetos) {
+    const grupos = new Map();
+    return objetos.flatMap(objeto => {
+        if (!objeto.efecto) return [{ objeto, cantidad: 1 }];
+        const existente = grupos.get(objeto.codigo);
+        if (existente) {
+            existente.cantidad++;
+            return [];
+        }
+        const grupo = { objeto, cantidad: 1 };
+        grupos.set(objeto.codigo, grupo);
+        return [grupo];
+    });
+}
+
+function nombreConCantidad(objeto, cantidad) {
+    return nombreObjeto(objeto) + (cantidad > 1 ? ` ×${cantidad}` : '');
+}
+
+function puedeRecibirPocion(heroe, efecto) {
+    if (efecto.tipo === 'REVITALIZACION') return heroe.pv === 0;
+    return heroe.pv > 0 && ((efecto.cantidad > 0 && heroe.pv < heroe.base.pvMaximos)
+        || (efecto.magia > 0 && heroe.pm < heroe.base.pmMaximos));
+}
+
+function menuAcciones(actor) {
+    const consumibles = agruparConsumibles(partida.inventario.filter(objeto => objeto.efecto));
+    const aliadosCaidos = partida.heroes.filter(heroe => heroe.pv === 0);
+    const dragonesVivos = partida.enemigos.filter(enemigo => partida.ronda !== 16 && enemigo.tipo === 'DRAGON' && enemigo.pv > 0);
+    const objetivosRobo = new Set(partida.objetivosRobo ?? []);
+    const habilidades = partida.habilidades.map(habilidad => ({ ...habilidad, texto: `${habilidad.nombre} · ${habilidad.costePm} PC`,
+        avisoBloqueo: habilidad.id === 'robar' && !objetivosRobo.size ? 'Sin objetivos con botín'
+            : partida.dificultad !== 'PRUEBAS' && habilidad.costePm > actor.pm ? 'PC insuficientes' : '' }));
+    const objetos = consumibles.map(({ objeto, cantidad }) => {
+        const { tipo, objetivo } = objeto.efecto;
+        const avisoBloqueo = partida.dificultad !== 'PRUEBAS' && actor.base.inteligencia < objeto.inteligenciaMinima ? 'INT insuficiente'
+            : tipo === 'REVITALIZACION' && !aliadosCaidos.length ? 'Sin aliados caídos'
+            : tipo === 'POCION' && !partida.heroes.some(heroe => puedeRecibirPocion(heroe, objeto.efecto)) ? 'Sin aliados que necesiten recuperarse'
+            : tipo === 'ANIQUILAR_DRAGON' && !dragonesVivos.length ? 'Requiere al dragón' : '';
+        const id = `consumible:${objeto.codigo}`;
+        return { id, objetivo, objeto, avisoBloqueo,
+            texto: nombreConCantidad(objeto, cantidad), descripcion: describir(objeto) };
+    });
+    const objetivos = accion => accion.id === 'robar' ? partida.enemigos.filter(enemigo => objetivosRobo.has(enemigo.id))
+        : accion.objeto?.efecto.tipo === 'ANIQUILAR_DRAGON' ? dragonesVivos
+        : accion.objeto?.efecto.tipo === 'POCION' ? partida.heroes.filter(heroe => puedeRecibirPocion(heroe, accion.objeto.efecto))
+        : accion.objetivo === 'ALIADO_CAIDO' ? aliadosCaidos
+        : accion.objetivo === 'ENEMIGO' ? partida.enemigos.filter(enemigo => enemigo.pv > 0)
+        : accion.objetivo === 'ALIADO' ? partida.heroes.filter(heroe => heroe.pv > 0) : [];
+    const botonAccion = accion => {
+        const abierta = accion.id === accionElegida && !accion.avisoBloqueo;
+        const descripcion = accion.descripcion + (accion.id === 'robar' ? ` Probabilidad: ${actor.probabilidadRobo} %.` : '');
+        const atributos = `data-habilidad="${escapar(accion.id)}" data-objeto="${escapar(accion.objeto?.id ?? '')}"`;
+        if (accion.objetivo === 'PROPIO') {
+            return boton(accion.texto, 'ejecutar-accion', actor.id,
+                `${atributos} title="${escapar(accion.avisoBloqueo || descripcion)}" ${accion.avisoBloqueo ? 'disabled' : ''}`);
+        }
+        const grupo = accion.objetivo === 'ENEMIGOS' ? 'Todos los enemigos'
+            : accion.objetivo === 'ALIADOS' ? 'Todo el grupo' : '';
+        const destinos = () => grupo ? boton(grupo, 'ejecutar-accion', '', atributos)
+            : objetivos(accion).map(objetivo => boton(
+                `${nombre(objetivo.tipo)} · ${objetivo.pv} PV`, 'ejecutar-accion', objetivo.id, atributos)).join('');
+        return `<div class="opcion-combate">
+            ${boton(accion.texto, 'elegir-accion', accion.id,
+                `aria-expanded="${abierta}" title="${escapar(accion.avisoBloqueo || descripcion)}" ${accion.avisoBloqueo ? 'disabled' : ''}`)}
+            ${abierta ? `<div class="objetivos-accion" role="group" aria-label="Objetivos">
+                <small>${escapar(descripcion)}</small>${destinos()}</div>` : ''}
+        </div>`;
+    };
+    const especial = actor.equipo?.ARMAS?.habilidad?.id;
+    const basicas = habilidades.filter(accion => ['ataque_basico', 'defender'].includes(accion.id));
+    const arma = habilidades.filter(accion => accion.id === especial);
+    const propias = habilidades.filter(accion => !basicas.includes(accion) && accion.id !== especial);
+    return `<div class="columna-acciones">${basicas.map(botonAccion).join('')}</div>
+        <div class="columna-acciones">${propias.map(botonAccion).join('')}</div>
+        <div class="columna-acciones">${arma.map(botonAccion).join('')}
+            <div class="opcion-combate">
+                ${boton('Objetos', 'objetos-combate', '', `aria-expanded="${objetosAbiertos}"`)}
+                ${objetosAbiertos ? `<div class="columna-acciones objetos-combate" role="group" aria-label="Objetos disponibles">
+                    ${objetos.map(botonAccion).join('') || '<small>No tienes objetos utilizables.</small>'}</div>` : ''}
+            </div>
+        </div>`;
+}
+
 function mostrarCombate() {
     observarNombresCombate.disconnect();
     const actor = partida.heroes.find(heroe => heroe.id === partida.orden[0]);
     if (!actor) return;
-    const consumibles = partida.inventario.filter(objeto => objeto.efecto);
-    const aliadosCaidos = partida.heroes.filter(heroe => heroe.pv === 0);
-    const dragonesVivos = partida.enemigos.filter(enemigo => enemigo.tipo === 'DRAGON' && enemigo.pv > 0);
-    const objetivosRobo = new Set(partida.objetivosRobo ?? []);
-    const opciones = [
-        ...partida.habilidades.map(habilidad => ({ ...habilidad, texto: `${habilidad.nombre} · ${habilidad.costePm} PC`,
-            avisoBloqueo: habilidad.id === 'robar' && !objetivosRobo.size ? 'Sin objetivos con botín' : '' })),
-        ...consumibles.map(objeto => {
-            const { tipo, objetivo } = objeto.efecto;
-            const avisoBloqueo = actor.base.inteligencia < objeto.inteligenciaMinima ? 'INT insuficiente'
-                : tipo === 'REVITALIZACION' && !aliadosCaidos.length ? 'Sin aliados caídos'
-                : tipo === 'ANIQUILAR_DRAGON' && !dragonesVivos.length ? 'Requiere al dragón' : '';
-            return { id: objeto.id, objetivo, objeto, avisoBloqueo,
-                texto: nombreObjeto(objeto), descripcion: describir(objeto) };
-        })
-    ];
-    const accion = opciones.find(opcion => opcion.id === accionElegida && !opcion.avisoBloqueo) ?? opciones[0];
-    accionElegida = accion.id;
-    const objetivos = accion.id === 'robar' ? partida.enemigos.filter(enemigo => objetivosRobo.has(enemigo.id))
-        : accion.objeto?.efecto.tipo === 'ANIQUILAR_DRAGON' ? dragonesVivos
-        : accion.objetivo === 'ALIADO_CAIDO' ? aliadosCaidos
-        : accion.objetivo === 'ENEMIGO' ? partida.enemigos.filter(enemigo => enemigo.pv > 0)
-        : accion.objetivo === 'ALIADO' ? partida.heroes.filter(heroe => heroe.pv > 0) : [];
-    const apuntarACaido = accion.objetivo === 'ALIADO_CAIDO';
-    const elegirObjetivo = objetivos.length ? `
-        <label>${apuntarACaido ? 'Aliado caído' : 'Objetivo'}<select name="objetivo" required>${objetivos
-            .map(objetivo => `<option value="${objetivo.id}">${nombre(objetivo.tipo)} · ${apuntarACaido ? 'Fuera de combate' : `${objetivo.pv} PV`}</option>`)
-            .join('')}</select></label>` : '';
     const ultimoTurno = partida.historial.at(-1)?.turno;
     const eventosUltimoTurno = ultimoTurno >= partida.primerTurnoCombate
         ? partida.historial.filter(evento => evento.turno === ultimoTurno)
@@ -721,22 +979,15 @@ function mostrarCombate() {
             <section class="rejilla" aria-label="Héroes">${partida.heroes.map(heroe => luchador(heroe)).join('')}</section>
             <section class="rejilla" aria-label="Enemigos">${partida.enemigos.map(enemigo => luchador(enemigo)).join('')}</section>
         </div>
-        <form id="accion" class="panel acciones" aria-label="Acciones disponibles" data-objeto="${accion.objeto?.id ?? ''}">
+        <section class="panel acciones" aria-label="Acciones disponibles">
             <div class="controles-combate">
-                <div class="fila"><label>Acción<select name="habilidad">
-            ${opciones.map(opcion => `<option value="${opcion.id}" ${opcion.id === accion.id ? 'selected' : ''}
-                ${opcion.avisoBloqueo ? 'disabled' : ''}>${escapar(opcion.texto)}${opcion.avisoBloqueo ? ` · ${escapar(opcion.avisoBloqueo)}` : ''}</option>`).join('')}
-                </select></label>${elegirObjetivo}<button class="principal" type="submit">Actuar</button></div>
+                <div class="menu-acciones">${menuAcciones(actor)}</div>
                 <p class="orden">
                     <span class="turno-actual" data-bando="heroe">Turno de <strong>${nombre(actor.tipo)}</strong></span>
                     <span class="turnos-siguientes">${textoSiguientesTurnos(siguientesTurnos())}</span>
                 </p>
             </div>
-            <div class="detalle-accion">
-                ${accion.objeto ? iconoObjeto(accion.objeto) : ''}
-                <small>${escapar(accion.descripcion)}${accion.id === 'robar' ? ` Probabilidad: ${actor.probabilidadRobo} %.` : ''}</small>
-            </div>
-        </form>${historial()}`;
+        </section>${historial()}`;
     juego.querySelectorAll('.escenario .luchador h3').forEach(titulo => observarNombresCombate.observe(titulo));
     for (const combatiente of partida.heroes.concat(partida.enemigos)) {
         if (combatiente.pv === 0) {
@@ -748,33 +999,55 @@ function mostrarCombate() {
     }
 }
 
+function actualizarMenuAcciones(accion, valor) {
+    const actor = partida.heroes.find(heroe => heroe.id === partida.orden[0]);
+    const menu = juego.querySelector('.menu-acciones');
+    const desplazamientoObjetos = menu.querySelector('.objetos-combate')?.scrollTop ?? 0;
+    menu.innerHTML = menuAcciones(actor);
+    const objetos = menu.querySelector('.objetos-combate');
+    if (objetos) objetos.scrollTop = desplazamientoObjetos;
+    const boton = menu.querySelector(`[data-accion="${accion}"][data-valor="${CSS.escape(valor)}"]`);
+    boton?.focus({ preventScroll: true });
+    if (objetos?.contains(boton)) {
+        boton.parentElement.scrollIntoView({ block: 'nearest' });
+    }
+}
+
 function describir(objeto) {
     const bonos = Object.entries(objeto.bonificaciones).filter(([, valor]) => valor !== 0)
         .map(([clave, valor]) => `${valor > 0 ? '+' : ''}${valor} ${atributos[clave]}`).join(' · ');
-    if (!objeto.efecto) return bonos;
+    if (!objeto.efecto) return [bonos, objeto.resistenciaFuego ? `−${objeto.resistenciaFuego} % de daño de fuego` : '',
+        objeto.inmuneEscarcha ? 'Inmunidad a Escarcha' : '']
+        .filter(Boolean).join(' · ');
     const {tipo, objetivo, cantidad, magia, proteccion} = objeto.efecto;
     const grupo = objetivo === 'ENEMIGOS' ? ' a todos los enemigos' : objetivo === 'ALIADOS' ? ' a todos los aliados vivos' : '';
-    if (tipo === 'DANIO') return `${cantidad} de daño mágico${grupo}${objeto.efecto.incendiario ? ' · Puede causar quemaduras' : ''}`;
-    if (tipo === 'ANIQUILAR_DRAGON') return 'Derrota al dragón de un solo golpe.';
+    if (tipo === 'DANIO') return `${cantidad} de daño mágico${objeto.efecto.escarcha ? ' de hielo' : ''}${grupo}${objeto.efecto.incendiario ? ' · Puede causar quemaduras' : ''}${objeto.efecto.escarcha ? ' · Aplica Escarcha durante un turno (+4 PC a las habilidades de pago)' : ''}`;
+    if (tipo === 'ANIQUILAR_DRAGON') return ['EXPERTO', 'PRUEBAS'].includes(partida.dificultad)
+        ? 'Reduce a la mitad los PV restantes de Azrath e invierte su invocación.' : 'Derrota al dragón de un solo golpe.';
     if (tipo === 'REVITALIZACION') return `Revive a un héroe caído con el ${cantidad} % de sus PV máximos.`;
     if (tipo === 'PROTECCION') return `${proteccion} % de reducción durante 2 turnos${grupo}`;
     if (tipo === 'CURA_TOTAL') return `Recupera ${cantidad} % de PV máximos`;
     return [cantidad ? `+${cantidad} PV${grupo}` : '', magia ? `+${magia} PC` : ''].filter(Boolean).join(' · ');
 }
 
-function articulo(objeto, controles, detalle = '') {
+function articulo(objeto, controles, detalle = '', cantidad = 1) {
     const calidad = objeto.calidad;
-    const requisitos = [objeto.fuerzaMinima && `FUE base ${objeto.fuerzaMinima}`,
-        objeto.inteligenciaMinima && `INT base ${objeto.inteligenciaMinima}`,
-        objeto.clasesCompatibles?.map(nombre).join(', ')].filter(Boolean).join(' · ');
-    return `<article class="tarjeta articulo"><div class="cabecera-objeto">${iconoObjeto(objeto)}<h3>${escapar(nombreObjeto(objeto))}</h3></div>
-        ${calidad ? `<small>${objeto.categoria === 'ARMAS' ? 'Calidad: ' : ''}${escapar(nombre(calidad))}${objeto.inicial ? ' · Inicial' : ''}</small>` : ''}
+    const clases = objeto.clasesCompatibles?.map(nombre).join(', ') || 'Todos';
+    const exigeAtributos = partida.dificultad !== 'PRUEBAS';
+    const requisitos = [exigeAtributos && objeto.fuerzaMinima && `FUE base ${objeto.fuerzaMinima}`,
+        exigeAtributos && objeto.inteligenciaMinima && `INT base ${objeto.inteligenciaMinima}`].filter(Boolean).join(' · ');
+    return `<article class="tarjeta articulo"><div class="cabecera-objeto">${iconoObjeto(objeto)}<h3>${escapar(nombreConCantidad(objeto, cantidad))}</h3></div>
+        ${objeto.ranura ? `<small>${escapar(clases)}</small>` : ''}
+        ${calidad ? `<small>Calidad: ${escapar(nombre(calidad))}</small>` : ''}
         ${objeto.ranura ? `<small>${ranurasEquipo[objeto.ranura]}${objeto.dosManos ? ' · Dos manos' : ''}</small>` : ''}
-        <small>${escapar(describir(objeto))}</small><small>Requisitos · ${requisitos || 'Ninguno'}</small>
+        <small>${escapar(describir(objeto))}</small>${requisitos ? `<small>Requisitos · ${requisitos}</small>` : ''}
         ${objeto.ranura === 'ESCUDO' ? '<small>Requiere un arma de una mano. Defenderse e Interceptar reducen el daño un 65 % con el escudo equipado.</small>' : ''}
         ${objeto.bonoMaximoFuriaMaldita ? `<small>Furia maldita · El daño físico aumenta hasta un ${objeto.bonoMaximoFuriaMaldita} % según los PV perdidos.</small>` : ''}
-        ${objeto.habilidad ? `<small>${escapar(objeto.habilidad.nombre)} · ${objeto.habilidad.costePm} PC</small>` : ''}
-        ${detalle}<div class="fila">${controles}</div></article>`;
+        ${objeto.habilidad ? `<details class="habilidad-arma">
+            <summary><strong>${escapar(objeto.habilidad.nombre)}</strong> · ${objeto.habilidad.costePm} PC</summary>
+            <small>${escapar(objeto.habilidad.descripcion)}</small>
+        </details>` : ''}
+        ${detalle}${controles ? `<div class="fila">${controles}</div>` : ''}</article>`;
 }
 
 function comparacion(objeto, heroe) {
@@ -787,74 +1060,92 @@ function comparacion(objeto, heroe) {
 }
 
 function mostrarCampamento() {
+    const inicial = partida.estado === 'CAMPAMENTO_INICIAL';
     const heroe = partida.heroes.find(jugador => jugador.id === heroeElegido) ?? partida.heroes[0];
     heroeElegido = heroe.id;
     const selector = `<div class="fila"><label>Héroe <select id="heroe">${partida.heroes.map(jugador =>
-        `<option value="${jugador.id}" ${jugador.id === heroe.id ? 'selected' : ''}>${nombre(jugador.tipo)}</option>`).join('')}</select></label></div>`;
-    const botonEquipar = objeto => {
-        const claseCompatible = !objeto.clasesCompatibles?.length || objeto.clasesCompatibles.includes(heroe.tipo);
+        `<option value="${jugador.id}" ${jugador.id === heroe.id ? 'selected' : ''}>${nombre(jugador.tipo)}${panel === 'nivel' && jugador.puntos ? ` · ${etiquetaPuntos(jugador.puntos)}` : ''}</option>`).join('')}</select></label></div>`;
+    const puntosPendientes = partida.heroes.reduce((total, jugador) => total + jugador.puntos, 0);
+    const equipoCompatible = objeto => {
+        if (objeto.clasesCompatibles?.length && !objeto.clasesCompatibles.includes(heroe.tipo)) return false;
         const arma = heroe.equipo.ARMAS;
-        const escudoCompatible = objeto.ranura !== 'ESCUDO' || (arma && !arma.dosManos);
-        const motivos = [];
-        if (!claseCompatible) motivos.push('El héroe no puede usar este equipo por su clase.');
-        if (!escudoCompatible) motivos.push('El escudo requiere un arma de una mano.');
-        if (heroe.base.fuerza < objeto.fuerzaMinima) {
-            motivos.push(`FUE base insuficiente (${heroe.base.fuerza}/${objeto.fuerzaMinima}).`);
-        }
-        if (heroe.base.inteligencia < objeto.inteligenciaMinima) {
-            motivos.push(`INT base insuficiente (${heroe.base.inteligencia}/${objeto.inteligenciaMinima}).`);
-        }
-        const aviso = motivos.length ? motivos.join(' ')
-            : objeto.dosManos && heroe.equipo.ESCUDO ? 'El escudo volverá al inventario.' : '';
-        return boton('Equipar', 'equipar', objeto.id, motivos.length ? 'disabled' : '')
-            + (aviso ? `<small>${escapar(aviso)}</small>` : '');
+        if (objeto.ranura === 'ESCUDO' && (!arma || arma.dosManos)) return false;
+        return partida.dificultad === 'PRUEBAS'
+            || heroe.base.fuerza >= objeto.fuerzaMinima && heroe.base.inteligencia >= objeto.inteligenciaMinima;
     };
+    const mostrarObjeto = objeto => !objeto.ranura || equipoCompatible(objeto);
+    const pestanasCategorias = (activa, enTienda = false) => `<div class="pestanas">${categorias.map(apartado =>
+        boton(nombre(apartado), 'categoria', apartado, `aria-pressed="${activa === apartado}"`)).join('')}
+        ${enTienda ? boton('Vender', 'categoria', 'VENDER', `aria-pressed="${activa === 'VENDER'}"`) : ''}</div>`;
+    const botonEquipar = objeto => boton('Equipar', 'equipar', objeto.id)
+        + (objeto.dosManos && heroe.equipo.ESCUDO ? '<small>El escudo volverá al inventario.</small>' : '');
     let contenido;
     if (panel === 'recompensas') {
         const recompensa = partida.recompensa;
+        const { desgloseOro } = recompensa;
         contenido = `<h2>Ronda ${partida.ronda} superada</h2>
-            <p>${partida.oroIlimitado ? '' : `+${recompensa.oro} MO · `}+${recompensa.experiencia} EXP por héroe superviviente</p>
-            <p class="ayuda">${recompensa.turnos} acciones · ${recompensa.supervivientes} supervivientes · ${recompensa.consumibles} consumibles usados</p>
-            <h3>Botín</h3><div class="rejilla">${partida.botin.map(objeto => articulo(objeto, boton('Recoger', 'recoger', objeto.id))).join('')
+            <p><strong>+${recompensa.oro} MO</strong> · +${recompensa.experiencia} EXP por héroe superviviente</p>
+            <details class="detalle-seleccion">
+                <summary>Desglose de MO</summary>
+                ${partida.oroIlimitado ? '<p class="ayuda">En Pruebas el oro es ilimitado y las rondas no añaden monedas.</p>'
+                    : desgloseOro ? `<ul class="ayuda">
+                    <li>Base de la ronda · ${desgloseOro.base} MO</li>
+                    <li>Supervivientes (${recompensa.supervivientes}) · +${desgloseOro.bonoSupervivientes} MO</li>
+                    <li>Acciones (${recompensa.turnos}) · −${desgloseOro.costeAcciones} MO</li>
+                    <li>Consumibles usados (${recompensa.consumibles}) · −${desgloseOro.costeConsumibles} MO</li>
+                    <li>Mínimo garantizado · ${desgloseOro.minimo} MO</li>
+                    </ul>` : ''}
+                ${partida.oroIlimitado || !desgloseOro ? `<p class="ayuda">${recompensa.turnos} acciones · ${recompensa.supervivientes} supervivientes · ${recompensa.consumibles} consumibles usados</p>` : ''}
+            </details>
+            ${heroesQueSubieron.length ? `<p role="status"><strong>${heroesQueSubieron.map(jugador =>
+                `${nombre(jugador.tipo)} sube al nivel ${jugador.nivel}`).join(' · ')}</strong></p>` : ''}
+            <h3>Botín</h3><div class="rejilla">${agruparConsumibles(partida.botin)
+                .map(({ objeto, cantidad }) => articulo(objeto, boton('Recoger', 'recoger', objeto.id), '', cantidad)).join('')
                 || '<p class="ayuda">No queda botín por recoger.</p>'}</div>`;
     } else if (panel === 'estado') {
         contenido = `<div class="rejilla estado-equipo">${partida.heroes.map(heroe => luchador(heroe, true)).join('')}</div>`;
     } else if (panel === 'inventario') {
-        contenido = `<h2>Inventario</h2>${selector}<div class="rejilla">${partida.inventario.map(objeto => {
-            let control = boton(`Vender por ${objeto.precioVenta} MO`, 'vender', objeto.id);
+        const objetos = partida.inventario.filter(objeto => objeto.categoria === categoriaInventario && mostrarObjeto(objeto));
+        contenido = `${pestanasCategorias(categoriaInventario)}<div class="rejilla">${agruparConsumibles(objetos).map(({ objeto, cantidad }) => {
+            let control = '';
             if (objeto.ranura) {
-                control = botonEquipar(objeto) + control;
+                control = botonEquipar(objeto);
             } else if (objeto.categoria === 'POCIONES') {
                 const revitaliza = objeto.efecto.tipo === 'REVITALIZACION';
-                const objetivoValido = revitaliza ? heroe.pv === 0 : heroe.pv > 0;
+                const objetivoValido = puedeRecibirPocion(heroe, objeto.efecto);
                 control = boton(revitaliza ? 'Revivir a este héroe' : 'Usar en este héroe', 'pocion', objeto.id,
-                    objetivoValido ? '' : 'disabled') + control;
+                    objetivoValido ? '' : 'disabled');
             }
-            return articulo(objeto, control, comparacion(objeto, heroe));
-        }).join('') || '<p class="ayuda">El inventario está vacío.</p>'}</div>`;
+            return articulo(objeto, control, comparacion(objeto, heroe), cantidad);
+        }).join('') || '<p class="ayuda">No hay objetos de esta categoría para este héroe.</p>'}</div>`;
     } else if (panel === 'equipo') {
-        const disponibles = partida.inventario.filter(objeto => objeto.ranura);
-        const posiciones = ['CABEZA', 'ARMAS', 'ARMADURAS', 'GUANTES', 'ESCUDO', 'BOTAS'];
-        contenido = `<h2>Equipamiento</h2>${selector}<div class="rejilla-equipamiento">${posiciones.map(ranura => `
+        const disponibles = partida.inventario.filter(objeto => objeto.ranura && equipoCompatible(objeto));
+        const posiciones = ['CABEZA', 'ARMAS', 'ARMADURAS', 'GUANTES', 'ESCUDO', 'BOTAS']
+            .filter(ranura => ranura !== 'ESCUDO' || clasesConEscudo.includes(heroe.tipo));
+        contenido = `<div class="rejilla-equipamiento">${posiciones.map(ranura => `
             <div class="ranura-equipo" data-ranura="${ranura}">
                 ${heroe.equipo[ranura] ? articulo(heroe.equipo[ranura], ranura === 'ARMAS' ? '' : boton('Desequipar', 'desequipar', ranura))
                     : `<article class="tarjeta"><h3>${ranurasEquipo[ranura]}</h3><small>${ranura !== 'ESCUDO' ? 'Ranura vacía'
-                        : !clasesConEscudo.includes(heroe.tipo) ? 'Esta clase no puede equipar escudo'
                         : heroe.equipo.ARMAS?.dosManos ? 'Ocupada por un arma de dos manos' : 'Ranura vacía'}</small></article>`}
             </div>`).join('')}</div>
             <h3 class="fila">Armas y armaduras del inventario</h3>
             <div class="rejilla">${disponibles.map(objeto => articulo(objeto, botonEquipar(objeto), comparacion(objeto, heroe))).join('')
-                || '<p class="ayuda">El inventario no contiene armas ni armaduras.</p>'}</div>`;
+                || '<p class="ayuda">No hay equipo compatible para este héroe en el inventario.</p>'}</div>`;
     } else if (panel === 'tienda') {
-        contenido = `<h2>Tienda</h2>${selector}<div class="pestanas">${categorias.map(apartado =>
-            boton(nombre(apartado), 'categoria', apartado, `aria-pressed="${categoria === apartado}"`)).join('')}</div>
-            <div class="rejilla">${partida.tienda.filter(({objeto}) => objeto.categoria === categoria).map(({objeto, precio, existencias}) => {
+        const vendiendo = categoria === 'VENDER';
+        const articulos = vendiendo
+            ? agruparConsumibles(partida.inventario).map(({ objeto, cantidad }) =>
+                articulo(objeto, boton(`Vender por ${objeto.precioVenta} MO`, 'vender', objeto.id), '', cantidad)).join('')
+            : partida.tienda.filter(({objeto}) => objeto.categoria === categoria && mostrarObjeto(objeto)).map(({objeto, precio, existencias}) => {
                 const disponible = existencias !== 0 && (partida.oroIlimitado || partida.oro >= precio);
                 const etiqueta = objeto.id ? 'Recomprar' : 'Comprar';
                 return articulo(objeto, boton(`${etiqueta} por ${precio} MO`, objeto.id ? 'recomprar' : 'comprar',
                     objeto.id ?? objeto.codigo, disponible ? '' : 'disabled'),
                     `<small>${objeto.id ? 'Segunda mano · ' : ''}${existencias === 0 ? 'Agotado' : existencias == null ? 'Existencias ilimitadas' : '1 unidad'}</small>` + comparacion(objeto, heroe));
-            }).join('')}</div>`;
+            }).join('');
+        const sinArticulos = vendiendo ? 'No tienes objetos para vender.' : 'No hay artículos de esta categoría para este héroe.';
+        contenido = `<h2>${partida.ronda > 15 ? 'Tienda dracónica' : 'Tienda'}</h2>${vendiendo ? '' : selector}${pestanasCategorias(categoria, true)}
+            <div class="rejilla">${articulos || `<p class="ayuda">${sinArticulos}</p>`}</div>`;
     } else {
         contenido = `<h2>Subida de nivel</h2>${selector}
             <p>Nivel ${heroe.nivel} · ${heroe.experiencia}/${heroe.experienciaSiguiente} EXP · ${heroe.puntos} puntos disponibles</p>
@@ -864,9 +1155,27 @@ function mostrarCampamento() {
                 .map(([atributo, valor]) => boton(`${atributo === 'PM' ? 'PC' : atributo} ${valor} · +1 punto`, 'atributo', atributo,
                     heroe.puntos ? '' : 'disabled')).join('')}</div>`;
     }
-    juego.innerHTML = `<div class="pestanas">${Object.entries(paneles).map(([clave, etiqueta]) =>
-        boton(etiqueta, 'panel', clave, `aria-pressed="${panel === clave}"`)).join('')}</div>
-        <section>${contenido}</section><div class="fila">${boton('Siguiente combate', 'avanzar', '', 'class="principal"')}</div>${historial()}`;
+    if (panel === 'inventario' || panel === 'equipo') {
+        contenido = `<h2>${paneles[panel]}</h2>
+            <div class="campamento-con-ficha">
+                <div class="columna-heroe">${selector}${luchador(heroe, true)}</div>
+                <div class="contenido-heroe">${contenido}</div>
+            </div>`;
+    }
+    juego.innerHTML = `<div class="pestanas">${Object.entries(paneles)
+        .filter(([clave]) => (clave !== 'tienda' || partida.tienda.length) && (clave !== 'recompensas' || !inicial))
+        .map(([clave, etiqueta]) =>
+        boton(clave === 'nivel' && puntosPendientes ? `${etiqueta} · ${etiquetaPuntos(puntosPendientes)}` : etiqueta,
+            'panel', clave, `aria-pressed="${panel === clave}"`)).join('')}</div>
+        <section>${contenido}</section><div class="fila">${boton(inicial ? 'Iniciar combate' : 'Siguiente combate', 'avanzar', '', 'class="principal"')}</div>${inicial ? '' : historial()}`;
+    for (const ficha of juego.querySelectorAll('.ficha-grupo.caido')) {
+        const caido = partida.heroes.find(heroe => heroe.id === ficha.dataset.combatiente);
+        void mostrarSpriteCombatiente(caido, ficha.querySelector('.figura-combate'));
+    }
+}
+
+function etiquetaPuntos(puntos) {
+    return puntos === 1 ? '1 punto pendiente' : `${puntos} puntos pendientes`;
 }
 
 document.addEventListener('click', async evento => {
@@ -874,11 +1183,30 @@ document.addEventListener('click', async evento => {
     if (!boton || ocupado) return;
     const {accion, valor} = boton.dataset;
     switch (accion) {
-        case 'crear': seleccion = []; dificultadElegida = 'FACIL'; await operar('crear'); break;
+        case 'elegir-accion':
+            accionElegida = accionElegida === valor ? null : valor;
+            actualizarMenuAcciones(accion, valor);
+            break;
+        case 'objetos-combate':
+            objetosAbiertos = !objetosAbiertos;
+            accionElegida = null;
+            actualizarMenuAcciones(accion, valor);
+            break;
+        case 'ejecutar-accion': {
+            const { habilidad, objeto } = boton.dataset;
+            accionElegida = null;
+            objetosAbiertos = false;
+            await operar(objeto ? 'consumir' : 'accion', {
+                turno: partida.turno, actor: partida.orden[0], habilidad,
+                objetivo: valor || null, objeto: objeto || null
+            });
+            break;
+        }
+        case 'crear': seleccion = []; dificultadElegida = 'FACIL'; rondaInicial = 1; await operar('crear'); break;
         case 'reiniciar':
             viendoBestiario = false;
             if (partida.ronda && !window.confirm('¿Empezar una nueva partida? Se perderá el progreso actual.')) break;
-            if (await operar('reiniciar')) { seleccion = []; dificultadElegida = 'FACIL'; mostrar(); }
+            if (await operar('reiniciar')) { seleccion = []; dificultadElegida = 'FACIL'; rondaInicial = 1; mostrar(); }
             break;
         case 'bestiario':
             ocupado = true;
@@ -906,23 +1234,39 @@ document.addEventListener('click', async evento => {
             juego.querySelector(`[data-valor="${valor}"]`)?.focus();
             break;
         case 'iniciar':
-            if (await operar('seleccion', { clases: seleccion })) await operar('iniciar', { dificultad: dificultadElegida });
+            if (await operar('seleccion', { clases: seleccion })) {
+                await operar('preparar', { dificultad: dificultadElegida, ronda: dificultadElegida === 'PRUEBAS' ? rondaInicial : 1 });
+            }
             break;
-        case 'panel': panel = valor; mostrar(); break;
-        case 'categoria': categoria = valor; mostrar(); break;
+        case 'panel':
+            panel = valor;
+            if (panel === 'nivel' && !partida.heroes.find(heroe => heroe.id === heroeElegido)?.puntos) {
+                heroeElegido = partida.heroes.find(heroe => heroe.puntos > 0)?.id ?? heroeElegido;
+            }
+            mostrar();
+            break;
+        case 'categoria':
+            if (panel === 'inventario') categoriaInventario = valor;
+            else categoria = valor;
+            mostrar();
+            juego.querySelector('button[data-accion="categoria"][aria-pressed="true"]')?.focus();
+            break;
         case 'recoger': await operar('recoger', { objeto: valor }); break;
         case 'equipar': await operar('equipar', { actor: heroeElegido, objeto: valor }); break;
         case 'desequipar': await operar('desequipar', { actor: heroeElegido, ranura: valor }); break;
-        case 'comprar': await operar('comprar', { codigo: valor }, boton); break;
-        case 'recomprar': await operar('comprar', { objeto: valor }, boton); break;
-        case 'vender': await operar('vender', { objeto: valor }, boton); break;
+        case 'comprar': await operarTransaccion(boton, 'comprar', { codigo: valor }); break;
+        case 'recomprar': await operarTransaccion(boton, 'comprar', { objeto: valor }); break;
+        case 'vender': await operarTransaccion(boton, 'vender', { objeto: valor }); break;
         case 'pocion': {
             const objetivo = partida.heroes.find(heroe => heroe.id === heroeElegido);
             const usuario = objetivo.pv > 0 ? objetivo : partida.heroes.find(heroe => heroe.pv > 0);
             await operar('consumir', { actor: usuario.id, objetivo: objetivo.id, objeto: valor }, boton);
             break;
         }
-        case 'atributo': await operar('atributos', { actor: heroeElegido, atributo: valor, cantidad: 1 }, boton); break;
+        case 'atributo':
+            boton.classList.add('accion-confirmada');
+            await operar('atributos', { actor: heroeElegido, atributo: valor, cantidad: 1 });
+            break;
         case 'avanzar':
             if (partida.botin.length && !window.confirm('¿Avanzar sin recoger el botín restante?')) break;
             await operar('avanzar', { ronda: partida.ronda });
@@ -934,10 +1278,10 @@ juego.addEventListener('change', evento => {
     if (ocupado) return;
     if (evento.target.id === 'dificultad') {
         dificultadElegida = evento.target.value;
-    } else if (evento.target.name === 'habilidad') {
-        accionElegida = evento.target.value;
-        mostrarCombate();
-        juego.querySelector('[name="habilidad"]').focus();
+        mostrarSeleccion();
+        juego.querySelector('#dificultad').focus();
+    } else if (evento.target.id === 'ronda-inicial') {
+        rondaInicial = Number(evento.target.value);
     } else if (evento.target.id === 'heroe') {
         heroeElegido = evento.target.value;
         mostrarCampamento();
@@ -945,15 +1289,18 @@ juego.addEventListener('change', evento => {
     }
 });
 
-juego.addEventListener('submit', async evento => {
-    if (evento.target.id !== 'accion') return;
+juego.addEventListener('keydown', evento => {
+    if (ocupado || evento.key !== 'Escape' || !evento.target.closest('.menu-acciones')) return;
+    if (!accionElegida && !objetosAbiertos) return;
     evento.preventDefault();
-    const datos = new FormData(evento.target);
-    const objeto = evento.target.dataset.objeto;
-    await operar(objeto ? 'consumir' : 'accion', {
-        turno: partida.turno, actor: partida.orden[0], habilidad: datos.get('habilidad'),
-        objetivo: datos.get('objetivo'), objeto: objeto || null
-    });
+    const anterior = accionElegida;
+    accionElegida = null;
+    if (anterior) {
+        actualizarMenuAcciones('elegir-accion', anterior);
+    } else {
+        objetosAbiertos = false;
+        actualizarMenuAcciones('objetos-combate', '');
+    }
 });
 
 async function iniciar() {

@@ -73,19 +73,15 @@ class EquipamientoTest {
     }
 
     @Test
-    void sombreroDeMagoSePuedeComprarYCombinarConLaTunica() {
-        var mago = CatalogoHeroes.crearHeroe(MAGO);
-        var tunica = equipar(mago, "tunica_aprendiz");
-        var oferta = new Tienda().ofertas(false).stream()
-                .filter(entrada -> entrada.objeto().codigo().equals("sombrero_mago")).findFirst().orElseThrow();
-        var sombrero = oferta.objeto().nuevaUnidad(false);
+    void magoEmpiezaConSombreroYTunica() {
+        var partida = new Partida();
+        partida.seleccionarHeroes(List.of(MAGO, SANADOR, GUERRERO));
+        var mago = partida.getEquipo().getFirst();
+        var sombrero = mago.getEquipo().get(CABEZA);
 
-        assertEquals(80, oferta.precio());
+        assertEquals("sombrero_mago", sombrero.codigo());
         assertEquals(12, sombrero.inteligenciaMinima());
-        assertEquals(CABEZA, sombrero.ranura());
-        mago.equipar(sombrero);
-        assertSame(sombrero, mago.getEquipo().get(CABEZA));
-        assertSame(tunica, mago.getEquipo().get(ARMADURAS));
+        assertEquals("tunica_aprendiz", mago.getEquipo().get(ARMADURAS).codigo());
         assertEquals(5, mago.getBonificaciones().potenciaMagica());
         assertEquals(1, mago.getBonificaciones().resistencia());
     }
@@ -125,25 +121,27 @@ class EquipamientoTest {
         var guerrero = partida.getEquipo().getFirst();
         var escudo = equipar(guerrero, "escudo");
         var espada = guerrero.getEquipo().get(ARMAS);
-        var combate = partida.iniciarCombate();
-        var goblin = combate.getEnemigos().getFirst();
-        goblin.recibirDanio(goblin.getPvActuales() - 1);
+        var combate = partida.iniciarCombate(es.rpgbattlegauntlet.enums.Dificultad.PRUEBAS, 5);
+        var ogro = combate.getEnemigos().getFirst();
+        assertTrue(partida.getOfertas().stream().noneMatch(oferta -> oferta.objeto().codigo().equals("garrote")));
         var actor = combate.getOrdenActuacion().getFirst();
-        partida.actuar(new AccionCombate(combate.getTurno(), actor.getId(), "ataque_basico", goblin.getId()));
+        partida.actuar(new AccionCombate(combate.getTurno(), actor.getId(), "ataque_basico", ogro.getId()));
+        assertTrue(partida.getBotin().isEmpty());
+        var regalos = partida.getInventario();
         partida.comprar("garrote", null);
-        var garrote = partida.getInventario().getFirst();
+        var garrote = partida.getInventario().getLast();
 
         partida.equipar(guerrero.getId(), garrote.id());
 
         assertSame(garrote, guerrero.getEquipo().get(ARMAS));
         assertFalse(guerrero.getEquipo().containsKey(ESCUDO));
-        assertEquals(List.of(espada, escudo), partida.getInventario());
+        assertEquals(List.of(espada, escudo), partida.getInventario().stream().filter(objeto -> !regalos.contains(objeto)).toList());
         assertThrows(IllegalArgumentException.class, () -> partida.equipar(guerrero.getId(), escudo.id()));
-        assertEquals(List.of(espada, escudo), partida.getInventario());
+        assertEquals(List.of(espada, escudo), partida.getInventario().stream().filter(objeto -> !regalos.contains(objeto)).toList());
         partida.equipar(guerrero.getId(), espada.id());
         partida.equipar(guerrero.getId(), escudo.id());
         assertSame(escudo, guerrero.getEquipo().get(ESCUDO));
-        assertEquals(List.of(garrote), partida.getInventario());
+        assertEquals(List.of(garrote), partida.getInventario().stream().filter(objeto -> !regalos.contains(objeto)).toList());
     }
 
     private static Heroe heroe(ClaseHeroe clase) {

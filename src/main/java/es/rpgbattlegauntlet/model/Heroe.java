@@ -1,9 +1,11 @@
 package es.rpgbattlegauntlet.model;
 
+import es.rpgbattlegauntlet.config.CatalogoHabilidades;
 import es.rpgbattlegauntlet.config.Equilibrio;
 import es.rpgbattlegauntlet.enums.Atributo;
-import es.rpgbattlegauntlet.enums.RanuraEquipo;
 import es.rpgbattlegauntlet.enums.ClaseHeroe;
+import es.rpgbattlegauntlet.enums.EstadoTemporal;
+import es.rpgbattlegauntlet.enums.RanuraEquipo;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -30,6 +32,19 @@ public final class Heroe extends Combatiente {
 
     public Map<RanuraEquipo, Objeto> getEquipo() {
         return Map.copyOf(equipo);
+    }
+
+    @Override
+    public int getResistenciaFuego() {
+        Objeto armadura = equipo.get(RanuraEquipo.ARMADURAS);
+        return armadura == null ? 0 : armadura.getResistenciaFuego();
+    }
+
+    @Override
+    void aplicarEstado(EstadoTemporal estado, int turnos) {
+        Objeto armadura = equipo.get(RanuraEquipo.ARMADURAS);
+        if (estado == EstadoTemporal.ESCARCHA && armadura != null && armadura.isInmuneEscarcha()) return;
+        super.aplicarEstado(estado, turnos);
     }
 
     public int getNivel() {
@@ -66,8 +81,12 @@ public final class Heroe extends Combatiente {
     }
 
     List<Objeto> equipar(Objeto objeto) {
+        return equipar(objeto, false);
+    }
+
+    List<Objeto> equipar(Objeto objeto, boolean ignorarAtributos) {
         RanuraEquipo ranura = objeto.ranura();
-        if (ranura == null || !objeto.cumpleRequisitos(this)) {
+        if (ranura == null || !objeto.cumpleRequisitos(this, ignorarAtributos)) {
             throw new IllegalArgumentException("El héroe no cumple los requisitos del equipo");
         }
         if (ranura == RanuraEquipo.ESCUDO) {
@@ -105,6 +124,20 @@ public final class Heroe extends Combatiente {
     Habilidad habilidadArma() {
         Objeto arma = equipo.get(RanuraEquipo.ARMAS);
         return arma == null ? null : arma.habilidad();
+    }
+
+    Habilidad ataqueBasico() {
+        Objeto arma = equipo.get(RanuraEquipo.ARMAS);
+        var familia = arma == null ? null : arma.familiaArma();
+        String nombre = familia == null ? "Golpe" : switch (familia) {
+            case VARA -> "Golpe de vara";
+            case DAGA -> "Puñalada";
+            case ESPADA -> arma.dosManos() ? "Mandoble" : "Espadazo";
+            case ARCO, BALLESTA -> "Disparo";
+            case GARROTE -> "Garrotazo";
+            case HACHA -> "Hachazo";
+        };
+        return CatalogoHabilidades.ATAQUE_BASICO.conNombre(nombre);
     }
 
     void ganarExperiencia(int cantidad) {

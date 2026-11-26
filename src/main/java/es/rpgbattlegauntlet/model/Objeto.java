@@ -25,6 +25,14 @@ public record Objeto(UUID id, String codigo, String nombre, Categoria categoria,
         return "maldita".equals(codigo) ? Equilibrio.BONO_MAXIMO_FURIA_MALDITA : 0;
     }
 
+    public int getResistenciaFuego() {
+        return "armadura_obsidiana".equals(codigo) ? 70 : 0;
+    }
+
+    public boolean isInmuneEscarcha() {
+        return "armadura_escarcha".equals(codigo);
+    }
+
     public List<ClaseHeroe> getClasesCompatibles() {
         if (ranura == RanuraEquipo.ESCUDO) {
             return List.of(ClaseHeroe.GUERRERO, ClaseHeroe.PICARO);
@@ -33,8 +41,13 @@ public record Objeto(UUID id, String codigo, String nombre, Categoria categoria,
     }
 
     public boolean cumpleRequisitos(Heroe heroe) {
+        return cumpleRequisitos(heroe, false);
+    }
+
+    boolean cumpleRequisitos(Heroe heroe, boolean ignorarAtributos) {
         var base = heroe.getEstadisticasBase();
-        return base.fuerza() >= fuerzaMinima && base.inteligencia() >= inteligenciaMinima
-                && (getClasesCompatibles().isEmpty() || getClasesCompatibles().contains(heroe.getClase()));
+        var clases = getClasesCompatibles();
+        return (ignorarAtributos || base.fuerza() >= fuerzaMinima && base.inteligencia() >= inteligenciaMinima)
+                && (clases.isEmpty() || clases.contains(heroe.getClase()));
     }
 }

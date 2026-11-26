@@ -8,6 +8,7 @@ import es.rpgbattlegauntlet.enums.TipoEnemigo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -15,6 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static es.rpgbattlegauntlet.enums.ClaseHeroe.*;
 import static es.rpgbattlegauntlet.enums.TipoEnemigo.*;
@@ -43,9 +45,9 @@ class EncuentrosTest {
     }
 
     @Test
-    void expertoYPruebasAmplianLaCampanaYElDragonSiempreEsElUltimo() {
+    void dificilExpertoYPruebasAmplianLaCampanaYElDragonEsElUltimoEncuentroPublico() {
         for (Dificultad dificultad : Dificultad.values()) {
-            int esperado = dificultad == Dificultad.EXPERTO || dificultad == Dificultad.PRUEBAS ? 15 : 10;
+            int esperado = dificultad == Dificultad.FACIL ? 10 : 15;
             assertEquals(esperado, CatalogoEncuentros.totalRondas(dificultad));
             assertEquals(List.of(DRAGON), CatalogoEncuentros.crearEnemigos(esperado, dificultad).stream()
                     .map(Enemigo::getTipo).toList());
@@ -55,7 +57,7 @@ class EncuentrosTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = Dificultad.class, names = {"EXPERTO", "PRUEBAS"})
+    @EnumSource(value = Dificultad.class, names = {"DIFICIL", "EXPERTO", "PRUEBAS"})
     void campanaAmpliadaTerminaConElDragonEnLaRonda15(Dificultad dificultad) {
         var partida = partidaSinCriticosNiEsquivas();
         partida.seleccionarHeroes(List.of(PICARO, ARQUERO, GUERRERO));
@@ -110,6 +112,184 @@ class EncuentrosTest {
         var goblin = CatalogoEncuentros.crearEnemigos(1, Dificultad.DIFICIL).getFirst();
         assertEquals(81, goblin.getPvActuales());
         assertEquals(1.5, goblin.getMultiplicadorDanio());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"EXPERTO,true", "EXPERTO,false", "PRUEBAS,true", "PRUEBAS,false"})
+    void pergaminoCompradoORobadoAbreLaRutaSecreta(Dificultad dificultad, boolean comprar) {
+        var forzarRobo = new AtomicBoolean();
+        var partida = new Partida(new Random(0) {
+            @Override
+            public int nextInt(int limite) {
+                return forzarRobo.getAndSet(false) ? 0 : limite - 1;
+            }
+        });
+        partida.seleccionarHeroes(List.of(PICARO, MAGO, GUERRERO));
+        partida.iniciarCombate(dificultad);
+        var mago = partida.getEquipo().get(1);
+        for (int ronda = 1; ronda <= 14; ronda++) {
+            ganarEncuentroDePrueba(partida);
+            assertEquals(15, partida.getTotalRondas());
+            var oferta = partida.getOfertas().stream().filter(o -> o.objeto().codigo().equals("requiem_dragon")).findFirst();
+            assertEquals(ronda == 14, oferta.isPresent());
+            if (ronda == 14) {
+                partida.invertir(mago.getId(), es.rpgbattlegauntlet.enums.Atributo.INT, 4);
+                if (comprar) {
+                    assertEquals(1000, oferta.orElseThrow().precio());
+                    int oro = partida.getOro();
+                    partida.comprar("requiem_dragon", null);
+                    assertEquals(dificultad == Dificultad.PRUEBAS ? oro : oro - 1000, partida.getOro());
+                }
+            }
+            partida.getEquipo().forEach(heroe -> heroe.recibirCuracion(heroe.getEstadisticasBase().pvMaximos()));
+            partida.avanzarRonda(ronda);
+        }
+        var combate = partida.getCombate();
+        var azrath = combate.getEnemigos().getFirst();
+        if (!comprar) {
+            var picaro = partida.getEquipo().getFirst();
+            assertSame(picaro, combate.getOrdenActuacion().getFirst());
+            forzarRobo.set(true);
+            partida.actuar(new AccionCombate(combate.getTurno(), picaro.getId(), "robar", azrath.getId()));
+        }
+        while (combate.getOrdenActuacion().getFirst() != mago) {
+            var actor = combate.getOrdenActuacion().getFirst();
+            partida.actuar(new AccionCombate(combate.getTurno(), actor.getId(), "defender", null));
+        }
+        var pergamino = partida.getInventario().stream().filter(o -> o.codigo().equals("requiem_dragon")).findFirst().orElseThrow();
+        if (dificultad == Dificultad.EXPERTO) azrath.recibirDanio(azrath.getPvActuales() - 301);
+        int pvAlCruzar = Math.max(1, azrath.getPvActuales() / 2);
+        int accionesPrevias = ((Enemigo) azrath).getAccionesRealizadas();
+        var pvHeroes = partida.getEquipo().stream().map(Heroe::getPvActuales).toList();
+        var pcHeroes = partida.getEquipo().stream().map(Heroe::getPmActuales).toList();
+        partida.usarConsumible(combate.getTurno(), mago.getId(), pergamino.id(), azrath.getId());
+        assertEquals(20, partida.getTotalRondas());
+        assertEquals(16, partida.getRonda());
+        assertEquals(EstadoPartida.COMBATE, partida.getEstado());
+        var reino = partida.getCombate();
+        assertEquals(List.of(azrath), reino.getEnemigos());
+        assertEquals(pvAlCruzar, azrath.getPvActuales());
+        assertEquals(pvHeroes, partida.getEquipo().stream().map(Heroe::getPvActuales).toList());
+        assertEquals(pcHeroes, partida.getEquipo().stream().map(Heroe::getPmActuales).toList());
+
+        if (comprar) {
+            while (reino.getEnemigos().size() == 1) {
+                assertTrue(((Enemigo) azrath).getAccionesRealizadas() - accionesPrevias < 2);
+                var actor = reino.getOrdenActuacion().getFirst();
+                partida.actuar(new AccionCombate(reino.getTurno(), actor.getId(), "defender", null));
+            }
+            assertEquals(2, ((Enemigo) azrath).getAccionesRealizadas() - accionesPrevias);
+        } else {
+            azrath.recibirDanio(azrath.getPvActuales() - 1);
+            var actor = reino.getOrdenActuacion().getFirst();
+            partida.actuar(new AccionCombate(reino.getTurno(), actor.getId(), "ataque_basico", azrath.getId()));
+            assertFalse(azrath.estaVivo());
+            assertEquals(EstadoPartida.COMBATE, partida.getEstado());
+        }
+        assertEquals(List.of(DRAGON, DRACONIANO_CIMITARRA, DRACONIANO_BALLESTA),
+                reino.getEnemigos().stream().map(Enemigo.class::cast).map(Enemigo::getTipo).toList());
+        assertEquals(1, reino.getHistorial().stream().filter(e -> e.habilidad().equals("llegan_draconianos")).count());
+        assertFalse(partida.getOfertas().stream().anyMatch(o -> o.objeto().codigo().equals("ballesta")));
+        ganarEncuentroDePrueba(partida);
+        assertTrue(partida.getOfertas().stream().anyMatch(o -> o.objeto().codigo().equals("cazadragones")));
+        assertTrue(partida.getOfertas().stream().anyMatch(o -> o.objeto().codigo().equals("ventisca")));
+        assertTrue(partida.getOfertas().stream().anyMatch(o -> o.objeto().codigo().equals("ballesta")
+                && o.objeto().calidad() == es.rpgbattlegauntlet.enums.Calidad.SUPERIOR));
+        assertTrue(partida.getOfertas().stream().anyMatch(o -> o.objeto().codigo().equals("cimitarra_draconica")));
+        var encuentros = List.of(List.of(GUIVERNO),
+                List.of(DRAGON_ESCARCHA), List.of(DRAGON_OBSIDIANA), List.of(DIOS_DRAGON));
+        for (int ronda = 17; ronda <= 20; ronda++) {
+            partida.getEquipo().forEach(heroe -> heroe.recibirCuracion(heroe.getEstadisticasBase().pvMaximos()));
+            var encuentro = partida.avanzarRonda(ronda - 1);
+            assertEquals(encuentros.get(ronda - 17), encuentro.getEnemigos().stream()
+                    .map(Enemigo.class::cast).map(Enemigo::getTipo).toList());
+            if (dificultad == Dificultad.PRUEBAS) {
+                assertTrue(encuentro.getEnemigos().stream().allMatch(enemigo -> enemigo.getPvActuales() == 1));
+            }
+            ganarEncuentroDePrueba(partida);
+            if (ronda == 19 && dificultad == Dificultad.PRUEBAS) {
+                assertEquals(396, partida.getRecompensa().experiencia());
+                for (var heroe : partida.getEquipo()) {
+                    assertEquals(15, heroe.getNivel());
+                    assertEquals(0, heroe.getExperiencia());
+                }
+            }
+        }
+        assertEquals(EstadoPartida.VICTORIA, partida.getEstado());
+    }
+
+    @Test
+    void pruebasPermiteEquiparYUsarPergaminosSinAtributosMinimos() {
+        var partida = partidaSinCriticosNiEsquivas();
+        partida.seleccionarHeroes(List.of(PICARO, MAGO, GUERRERO));
+        partida.iniciarCombate(Dificultad.PRUEBAS, 14);
+        ganarEncuentroDePrueba(partida);
+        var mago = partida.getEquipo().get(1);
+        var guerrero = partida.getEquipo().getLast();
+        var picaro = partida.getEquipo().getFirst();
+        partida.comprar("vara_avanzada", null);
+        var vara = partida.getInventario().stream().filter(o -> o.codigo().equals("vara_avanzada")).findFirst().orElseThrow();
+        assertThrows(IllegalArgumentException.class, () -> partida.equipar(picaro.getId(), vara.id()));
+        assertFalse(vara.cumpleRequisitos(mago));
+        partida.equipar(mago.getId(), vara.id());
+        assertTrue(mago.getEquipo().containsValue(vara));
+        partida.comprar("espada_pesada", null);
+        var espada = partida.getInventario().stream().filter(o -> o.codigo().equals("espada_pesada")).findFirst().orElseThrow();
+        assertFalse(espada.cumpleRequisitos(guerrero));
+        assertThrows(IllegalArgumentException.class, () -> partida.equipar(mago.getId(), espada.id()));
+        partida.equipar(guerrero.getId(), espada.id());
+        assertTrue(guerrero.getEquipo().containsValue(espada));
+
+        partida.comprar("requiem_dragon", null);
+        var pergamino = partida.getInventario().stream().filter(o -> o.codigo().equals("requiem_dragon")).findFirst().orElseThrow();
+        var combate = partida.avanzarRonda(14);
+        var actor = (Heroe) combate.getOrdenActuacion().getFirst();
+        assertFalse(pergamino.cumpleRequisitos(actor));
+        partida.usarConsumible(combate.getTurno(), actor.getId(), pergamino.id(), combate.getEnemigos().getFirst().getId());
+        assertEquals(16, partida.getRonda());
+    }
+
+    @Test
+    void pruebasMuestraElCosteDeLasHabilidadesPeroSoloLosEnemigosGastanPc() {
+        var mago = es.rpgbattlegauntlet.config.CatalogoHeroes.crearHeroe(MAGO);
+        var chaman = new Enemigo(CHAMAN, new EstadisticasBase(300, 80, 5, 5, 14, 12, 8, 5, 5));
+        var combate = new Combate(List.of(mago), List.of(chaman), new Random(3), 1, true);
+        mago.consumirMagia(mago.getPmActuales());
+        mago.aplicarEstado(es.rpgbattlegauntlet.enums.EstadoTemporal.ESCARCHA, 1);
+
+        var fuego = combate.getHabilidadesDisponibles().stream().filter(h -> h.id().equals("bola_fuego")).findFirst().orElseThrow();
+        assertEquals(13, fuego.costePm());
+        combate.ejecutar(new AccionCombate(combate.getTurno(), mago.getId(), fuego.id(), chaman.getId()));
+        assertEquals(0, mago.getPmActuales());
+        assertEquals(70, chaman.getPmActuales());
+    }
+
+    @Test
+    void modoPruebasEvitaDanioFisicoMagicoYPeriodicoEnLosHeroes() {
+        var partida = partidaSinCriticosNiEsquivas();
+        partida.seleccionarHeroes(List.of(PICARO, ARQUERO, GUERRERO));
+        var inicial = partida.iniciarCombate(Dificultad.PRUEBAS);
+        for (int i = 0; i < 2; i++) {
+            var actor = inicial.getOrdenActuacion().getFirst();
+            partida.actuar(new AccionCombate(inicial.getTurno(), actor.getId(), "defender", null));
+        }
+        var golpe = inicial.getHistorial().stream().filter(evento -> evento.habilidad().equals("cuchillada")).findFirst().orElseThrow();
+        assertEquals(0, golpe.danio());
+        assertTrue(partida.getEquipo().stream().allMatch(h -> h.getPvActuales() == h.getEstadisticasBase().pvMaximos()));
+
+        var heroe = partida.getEquipo().getLast();
+        var chaman = es.rpgbattlegauntlet.config.CatalogoEnemigos.crear(CHAMAN, Dificultad.PRUEBAS);
+        var combate = new Combate(List.of(heroe), List.of(chaman), new Random(3), 1, true);
+        assertEquals("fuego_chaman", combate.getHistorial().getFirst().habilidad());
+        assertEquals(0, combate.getHistorial().getFirst().danio());
+        heroe.aplicarEstado(es.rpgbattlegauntlet.enums.EstadoTemporal.ENVENENADO, 1);
+        heroe.aplicarEstado(es.rpgbattlegauntlet.enums.EstadoTemporal.QUEMADO, 1);
+        combate.ejecutar(new AccionCombate(combate.getTurno(), heroe.getId(), "defender", null));
+        for (String estado : List.of("veneno", "quemadura")) {
+            var evento = combate.getHistorial().stream().filter(e -> e.habilidad().equals(estado)).findFirst().orElseThrow();
+            assertEquals(0, evento.danio());
+        }
+        assertEquals(heroe.getEstadisticasBase().pvMaximos(), heroe.getPvActuales());
     }
 
     @Test

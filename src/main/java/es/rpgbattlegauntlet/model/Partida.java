@@ -2,6 +2,7 @@ package es.rpgbattlegauntlet.model;
 
 import es.rpgbattlegauntlet.algorithm.GeneradorBotin;
 import es.rpgbattlegauntlet.config.CatalogoEncuentros;
+import es.rpgbattlegauntlet.config.CatalogoEnemigos;
 import es.rpgbattlegauntlet.config.CatalogoHeroes;
 import es.rpgbattlegauntlet.config.CatalogoObjetos;
 import es.rpgbattlegauntlet.config.Equilibrio;
@@ -12,6 +13,7 @@ import es.rpgbattlegauntlet.enums.ClaseHeroe;
 import es.rpgbattlegauntlet.enums.Dificultad;
 import es.rpgbattlegauntlet.enums.EstadoPartida;
 import es.rpgbattlegauntlet.enums.TipoConsumible;
+import es.rpgbattlegauntlet.enums.TipoEnemigo;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -38,6 +40,7 @@ public final class Partida {
     private List<Heroe> equipo = List.of();
     private Combate combate;
     private Dificultad dificultad = Dificultad.FACIL;
+    private boolean reinoDraconico;
 
     public Partida() {
         this(RandomGenerator.getDefault());
@@ -53,7 +56,7 @@ public final class Partida {
 
     public synchronized EstadoPartida getEstado() {
         if (combate == null) {
-            return EstadoPartida.SELECCION_PERSONAJES;
+            return ronda == 0 ? EstadoPartida.SELECCION_PERSONAJES : EstadoPartida.CAMPAMENTO_INICIAL;
         }
         return switch (combate.getResultado()) {
             case EN_CURSO -> EstadoPartida.COMBATE;
@@ -68,7 +71,7 @@ public final class Partida {
     }
 
     public synchronized int getTotalRondas() {
-        return CatalogoEncuentros.totalRondas(dificultad);
+        return reinoDraconico ? CatalogoEncuentros.totalRondasReinoDraconico() : CatalogoEncuentros.totalRondas(dificultad);
     }
 
     public synchronized Combate getCombate() {
@@ -84,15 +87,44 @@ public final class Partida {
     }
 
     public synchronized Combate iniciarCombate(Dificultad modo) {
+        return iniciarCombate(modo, 1);
+    }
+
+    public synchronized Combate iniciarCombate(Dificultad modo, int rondaInicial) {
+        prepararCampamento(modo, rondaInicial);
+        return iniciarDesdeCampamento();
+    }
+
+    public synchronized void prepararCampamento(Dificultad modo, int rondaInicial) {
         if (getEstado() != EstadoPartida.SELECCION_PERSONAJES || equipo.size() != TAMANO_EQUIPO) {
             throw new IllegalStateException("Solo puedes iniciar el combate con un equipo completo en selección");
         }
-        Combate inicial = abrirRonda(1, 1, Objects.requireNonNull(modo));
+        Objects.requireNonNull(modo);
+        if (rondaInicial < 1 || rondaInicial > CatalogoEncuentros.totalRondasReinoDraconico()
+                || rondaInicial != 1 && modo != Dificultad.PRUEBAS) {
+            throw new IllegalArgumentException("Solo puedes elegir un combate inicial del 1 al 20 en modo Pruebas");
+        }
         dificultad = modo;
-        return inicial;
+        reinoDraconico = rondaInicial > CatalogoEncuentros.RONDA_AZRATH;
+        ronda = rondaInicial;
+        oro = 100;
+        for (Heroe heroe : equipo) {
+            Objeto regalo = CatalogoObjetos.regaloInicial(heroe.getClase());
+            inventario.put(regalo.id(), regalo);
+        }
+    }
+
+    private Combate iniciarDesdeCampamento() {
+        if (ronda == CatalogoEncuentros.RONDA_AZRATH + 1) {
+            return abrirCombateDeAzrathEnElReino(CatalogoEnemigos.crear(TipoEnemigo.DRAGON, dificultad), 1);
+        }
+        return abrirRonda(ronda, 1, dificultad);
     }
 
     public synchronized Combate avanzarRonda(int rondaCompletada) {
+        if (getEstado() == EstadoPartida.CAMPAMENTO_INICIAL && rondaCompletada == ronda) {
+            return iniciarDesdeCampamento();
+        }
         if (getEstado() != EstadoPartida.ENTRE_COMBATES || rondaCompletada != ronda) {
             throw new IllegalStateException("Solo puedes avanzar desde la ronda actual tras ganarla");
         }
@@ -103,7 +135,9 @@ public final class Partida {
     }
 
     private Combate abrirRonda(int numero, int primerTurno, Dificultad modo) {
-        var siguienteCombate = new Combate(equipo, CatalogoEncuentros.crearEnemigos(numero, modo), azar, primerTurno);
+        var enemigos = reinoDraconico ? CatalogoEncuentros.crearEnemigosReinoDraconico(numero, modo)
+                : CatalogoEncuentros.crearEnemigos(numero, modo);
+        var siguienteCombate = new Combate(equipo, enemigos, azar, primerTurno, modo == Dificultad.PRUEBAS);
         combate = siguienteCombate;
         ronda = numero;
         return combate;
@@ -134,7 +168,8 @@ public final class Partida {
     }
 
     public synchronized List<Oferta> getOfertas() {
-        return tienda.ofertas(tieneOroIlimitado());
+        return tienda.ofertas(tieneOroIlimitado(), reinoDraconico,
+                dificultad.permiteRutaDraconica() && ronda == CatalogoEncuentros.RONDA_AZRATH - 1);
     }
 
     public synchronized Recompensa getRecompensa() {
@@ -158,15 +193,15 @@ public final class Partida {
     }
 
     public synchronized void equipar(UUID idHeroe, UUID idObjeto) {
-        exigirEstado(EstadoPartida.ENTRE_COMBATES);
+        exigirCampamento();
         Objeto objeto = objetoEnInventario(idObjeto);
-        List<Objeto> retirados = heroe(idHeroe).equipar(objeto);
+        List<Objeto> retirados = heroe(idHeroe).equipar(objeto, dificultad == Dificultad.PRUEBAS);
         inventario.remove(idObjeto);
         retirados.forEach(pieza -> inventario.put(pieza.id(), pieza));
     }
 
     public synchronized void desequipar(UUID idHeroe, RanuraEquipo ranura) {
-        exigirEstado(EstadoPartida.ENTRE_COMBATES);
+        exigirCampamento();
         if (ranura == null) {
             throw new IllegalArgumentException("Ranura de equipo inválida");
         }
@@ -175,9 +210,9 @@ public final class Partida {
     }
 
     public synchronized void comprar(String codigo, UUID unidad) {
-        exigirEstado(EstadoPartida.ENTRE_COMBATES);
+        exigirCampamento();
         boolean oroIlimitado = tieneOroIlimitado();
-        Objeto objeto = tienda.comprar(codigo, unidad, oro, oroIlimitado);
+        Objeto objeto = tienda.comprar(codigo, unidad, oro, oroIlimitado, getOfertas());
         if (!oroIlimitado) {
             oro -= unidad == null ? objeto.precioCatalogo() : objeto.precioRecompra();
         }
@@ -185,7 +220,7 @@ public final class Partida {
     }
 
     public synchronized void vender(UUID idObjeto) {
-        exigirEstado(EstadoPartida.ENTRE_COMBATES);
+        exigirCampamento();
         Objeto objeto = objetoEnInventario(idObjeto);
         inventario.remove(idObjeto);
         if (!tieneOroIlimitado()) {
@@ -196,12 +231,15 @@ public final class Partida {
 
     public synchronized void usarConsumible(int turno, UUID actor, UUID idObjeto, UUID objetivo) {
         EstadoPartida estado = getEstado();
-        if (estado != EstadoPartida.COMBATE && estado != EstadoPartida.ENTRE_COMBATES) {
+        if (estado != EstadoPartida.COMBATE && estado != EstadoPartida.ENTRE_COMBATES && estado != EstadoPartida.CAMPAMENTO_INICIAL) {
             throw new IllegalStateException("No se pueden usar consumibles en este estado");
         }
         Objeto objeto = objetoEnInventario(idObjeto);
         if (estado == EstadoPartida.COMBATE) {
-            combate.usarConsumible(turno, actor, objeto, objetivo);
+            boolean traslado = dificultad.permiteRutaDraconica() && ronda == CatalogoEncuentros.RONDA_AZRATH
+                    && objeto.efecto().tipo() == TipoConsumible.ANIQUILAR_DRAGON;
+            var azrath = combate.usarConsumible(turno, actor, objeto, objetivo, traslado);
+            if (azrath != null) entrarEnElReinoDraconico(azrath);
         } else {
             if (objeto.categoria() != Categoria.POCIONES) {
                 throw new IllegalArgumentException("Entre combates solo se pueden usar pociones");
@@ -217,12 +255,28 @@ public final class Partida {
                 if (!destinatario.estaVivo()) {
                     throw new IllegalArgumentException("La poción requiere un destinatario vivo");
                 }
+                objeto.efecto().validarRecuperacion(destinatario);
                 destinatario.recibirCuracion(objeto.efecto().cantidad());
                 destinatario.recuperarMagia(objeto.efecto().magia());
             }
         }
         inventario.remove(idObjeto);
         liquidarVictoria();
+    }
+
+    private void entrarEnElReinoDraconico(Enemigo azrath) {
+        historialAnterior.addAll(combate.getHistorial());
+        equipo.forEach(Combatiente::limpiarEstados);
+        azrath.limpiarEstados();
+        reinoDraconico = true;
+        abrirCombateDeAzrathEnElReino(azrath, combate.getTurno() + 1);
+    }
+
+    private Combate abrirCombateDeAzrathEnElReino(Enemigo azrath, int primerTurno) {
+        ronda = CatalogoEncuentros.RONDA_AZRATH + 1;
+        var guardias = CatalogoEncuentros.crearEnemigosReinoDraconico(ronda, dificultad);
+        combate = new Combate(equipo, List.of(azrath), azar, primerTurno, dificultad == Dificultad.PRUEBAS, guardias);
+        return combate;
     }
 
     public synchronized void invertir(UUID idHeroe, Atributo atributo, int cantidad) {
@@ -243,8 +297,10 @@ public final class Partida {
         oro += monedas;
         supervivientes.forEach(heroe -> heroe.ganarExperiencia(experiencia));
         for (Combatiente enemigo : combate.getEnemigos()) {
+            var tipo = ((Enemigo) enemigo).getTipo();
+            tienda.desbloquearArmas(tipo);
             if (!combate.fueRobado(enemigo.getId())) {
-                GeneradorBotin.tirar(((Enemigo) enemigo).getTipo(), azar).ifPresent(objeto -> botin.put(objeto.id(), objeto));
+                GeneradorBotin.tirar(tipo, azar).ifPresent(objeto -> botin.put(objeto.id(), objeto));
             }
         }
     }
@@ -268,12 +324,16 @@ public final class Partida {
         }
     }
 
+    private void exigirCampamento() {
+        if (getEstado() != EstadoPartida.CAMPAMENTO_INICIAL) exigirEstado(EstadoPartida.ENTRE_COMBATES);
+    }
+
     public synchronized List<Heroe> getEquipo() {
         return equipo;
     }
 
     public synchronized void seleccionarHeroes(List<ClaseHeroe> clases) {
-        if (combate != null) {
+        if (getEstado() != EstadoPartida.SELECCION_PERSONAJES) {
             throw new IllegalStateException("La selección ya ha terminado");
         }
         if (clases == null || clases.size() != TAMANO_EQUIPO) {

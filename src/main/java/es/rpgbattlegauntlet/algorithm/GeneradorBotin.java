@@ -21,21 +21,30 @@ public final class GeneradorBotin {
     }
     private record Tabla(int probabilidad, List<Entrada> entradas) {}
 
-    private static final Map<TipoEnemigo, Tabla> TABLAS = Map.of(
-            GOBLIN, new Tabla(35, List.of(new Entrada("daga_curva", 45),
-                    new Entrada("capucha", 30), new Entrada("ligera", 25))),
-            GOBLIN_ARQUERO, new Tabla(40, List.of(new Entrada("arco_goblin", 75), new Entrada("daga_curva", 25, false))),
-            ESQUELETO, new Tabla(40, List.of(new Entrada("espada_esqueleto", 40), new Entrada("escudo", 35), new Entrada("antigua", 25))),
-            CHAMAN, new Tabla(50, List.of(new Entrada("vara_chaman", 30),
-                    new Entrada("tunica_chaman", 30), new Entrada("proyectil", 40))),
-            OGRO, new Tabla(65, List.of(new Entrada("garrote", 50), new Entrada("pesada", 30), new Entrada("botas", 20))),
-            CABALLERO_OSCURO, new Tabla(75, List.of(new Entrada("maldita", 40), new Entrada("oscura", 35), new Entrada("casco_oscuro", 25))),
-            NIGROMANTE, new Tabla(60, List.of(new Entrada("vara_osario", 35, false),
-                    new Entrada("capucha_funeraria", 25), new Entrada("daga_ritual", 10, false), new Entrada("revitalizacion", 30))),
-            GOLEM_RUNICO, new Tabla(70, List.of(new Entrada("guantes_runicos", 40),
-                    new Entrada("coraza_runica", 35), new Entrada("proteccion", 25))),
-            VERDUGO_ESPECTRAL, new Tabla(65, List.of(new Entrada("hacha_espectral", 40, false),
-                    new Entrada("yelmo_espectral", 35), new Entrada("cura_mayor", 25)))
+    private static final Tabla BOTIN_DRACONIANO = new Tabla(65, List.of(
+            new Entrada("cimitarra_draconica", 50, false), new Entrada("ballesta", 50, false)));
+    private static final Map<TipoEnemigo, Tabla> TABLAS = Map.ofEntries(
+            Map.entry(GOBLIN, new Tabla(35, List.of(new Entrada("daga_curva", 45),
+                    new Entrada("capucha", 30), new Entrada("ligera", 25)))),
+            Map.entry(GOBLIN_ARQUERO, new Tabla(40, List.of(new Entrada("arco_goblin", 75), new Entrada("daga_curva", 25, false)))),
+            Map.entry(ESQUELETO, new Tabla(40, List.of(new Entrada("espada_esqueleto", 40), new Entrada("escudo", 35), new Entrada("antigua", 25)))),
+            Map.entry(CHAMAN, new Tabla(50, List.of(new Entrada("vara_chaman", 30),
+                    new Entrada("tunica_chaman", 30), new Entrada("proyectil", 40)))),
+            Map.entry(OGRO, new Tabla(65, List.of(new Entrada("garrote", 50), new Entrada("pesada", 30), new Entrada("botas", 20)))),
+            Map.entry(CABALLERO_OSCURO, new Tabla(75, List.of(new Entrada("maldita", 40), new Entrada("oscura", 35), new Entrada("casco_oscuro", 25)))),
+            Map.entry(NIGROMANTE, new Tabla(60, List.of(new Entrada("vara_osario", 35, false),
+                    new Entrada("capucha_funeraria", 25), new Entrada("daga_ritual", 10, false), new Entrada("revitalizacion", 30)))),
+            Map.entry(GOLEM_RUNICO, new Tabla(70, List.of(new Entrada("coraza_runica", 75),
+                    new Entrada("proteccion", 25)))),
+            Map.entry(VERDUGO_ESPECTRAL, new Tabla(65, List.of(new Entrada("hacha_espectral", 40, false),
+                    new Entrada("yelmo_espectral", 35), new Entrada("cura_mayor", 25)))),
+            Map.entry(DRACONIANO_CIMITARRA, BOTIN_DRACONIANO), Map.entry(DRACONIANO_BALLESTA, BOTIN_DRACONIANO),
+            Map.entry(GUIVERNO, new Tabla(65, List.of(new Entrada("aguijon_riscos", 100, false)))),
+            Map.entry(DRAGON_ESCARCHA, new Tabla(65, List.of(
+                    new Entrada("ventisca", 35, false), new Entrada("cetro_invierno", 35, false),
+                    new Entrada("armadura_escarcha", 30, false)))),
+            Map.entry(DRAGON_OBSIDIANA, new Tabla(75, List.of(
+                    new Entrada("espada_obsidiana", 50, false), new Entrada("armadura_obsidiana", 50, false))))
     );
 
     private GeneradorBotin() {
@@ -56,6 +65,7 @@ public final class GeneradorBotin {
     private static Objeto objetoDeReferencia(String codigo) {
         if (CatalogoObjetos.codigosPergaminos().contains(codigo)) return CatalogoObjetos.pergamino(codigo);
         if (codigo.equals("revitalizacion")) return CatalogoObjetos.pocionRevitalizacion();
+        if (codigo.equals("ballesta")) return CatalogoObjetos.equipo(codigo, Calidad.SUPERIOR, false);
         return CatalogoObjetos.equipo(codigo, Calidad.NORMAL, false);
     }
 
@@ -75,7 +85,11 @@ public final class GeneradorBotin {
     }
 
     public static boolean permiteRobo(TipoEnemigo tipo) {
-        return tipo == DRAGON || TABLAS.containsKey(tipo);
+        return switch (tipo) {
+            case DRAGON -> true;
+            case GUIVERNO -> false;
+            default -> TABLAS.containsKey(tipo);
+        };
     }
 
     public static Objeto elegirBotinRobado(TipoEnemigo tipo, RandomGenerator azar) {
@@ -95,7 +109,8 @@ public final class GeneradorBotin {
 
     private static Objeto crear(String codigo, RandomGenerator azar) {
         return switch (codigo) {
-            case "proyectil", "proteccion", "cura_mayor" -> CatalogoObjetos.pergamino(codigo);
+            case "proyectil", "proteccion", "cura_mayor", "ventisca" -> CatalogoObjetos.pergamino(codigo);
+            case "ballesta" -> CatalogoObjetos.equipo(codigo, Calidad.SUPERIOR, false);
             case "revitalizacion" -> CatalogoObjetos.pocionRevitalizacion();
             default -> CatalogoObjetos.equipo(codigo, Calidad.values()[tramo(azar.nextInt(100))], false);
         };

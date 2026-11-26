@@ -59,7 +59,10 @@ public class GestorPartidas {
                     return crear();
                 }
                 case "seleccion" -> partida.seleccionarHeroes(peticion.clases());
-                case "iniciar" -> partida.iniciarCombate(Objects.requireNonNullElse(peticion.dificultad(), Dificultad.FACIL));
+                case "preparar" -> partida.prepararCampamento(Objects.requireNonNullElse(peticion.dificultad(), Dificultad.FACIL),
+                        peticion.ronda() == 0 ? 1 : peticion.ronda());
+                case "iniciar" -> partida.iniciarCombate(Objects.requireNonNullElse(peticion.dificultad(), Dificultad.FACIL),
+                        peticion.ronda() == 0 ? 1 : peticion.ronda());
                 case "avanzar" -> partida.avanzarRonda(peticion.ronda());
                 case "accion" -> partida.actuar(new AccionCombate(peticion.turno(), peticion.actor(),
                         peticion.habilidad(), peticion.objetivo()));

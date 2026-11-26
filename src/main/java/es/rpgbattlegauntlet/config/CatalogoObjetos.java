@@ -34,7 +34,7 @@ public final class CatalogoObjetos {
             int venta = (precio + 1) / 2;
             return new Objeto(null, codigo, nombre, PERGAMINOS, null, false, Bonificaciones.NINGUNA,
                     0, inteligencia, precio, venta, 2 * venta, null, null,
-                    new EfectoConsumible(tipo, objetivo, cantidad, 0, proteccion, incendiario), null, false);
+                    new EfectoConsumible(tipo, objetivo, cantidad, 0, proteccion, incendiario, codigo.equals("ventisca")), null, false);
         }
     }
 
@@ -68,6 +68,19 @@ public final class CatalogoObjetos {
             9, ENEMIGOS, TipoEfecto.DANIO_MAGICO, 10, 0, 0, 0, EstadoTemporal.RALENTIZACION, 1);
     private static final Habilidad DESCARGA_ASTRAL = habilidad("descarga_astral", "Descarga astral", 8, true, 22, 0, 0, 0);
     private static final Habilidad GARROTE = habilidad("impacto", "Impacto contundente", 5, false, 14, 0, 0, 15);
+    private static final Habilidad ROMPEESCAMAS = habilidad("virote_rompeescamas", "Virote rompeescamas", 8, false, 20, 10, 0, 55);
+    private static final Habilidad CORTE_ESCAMAS = CatalogoEnemigos.CORTE_ESCAMAS;
+    private static final Habilidad MORDIDA_COLMILLO = habilidad("mordida_colmillo", "Mordida de colmillo", 6, false, 14, 15, 30, 0);
+    private static final Habilidad ECO_DRACONICO = habilidad("eco_draconico", "Eco dracónico", 8, true, 27, 0, 0, 0);
+    private static final Habilidad FILO_MATADRAGONES = new Habilidad("filo_matadragones", "Filo matadragones",
+            "Inflige daño físico con +18 de potencia. Causa un 50 % más de daño contra dragones.",
+            7, ENEMIGO, TipoEfecto.DANIO_FISICO, 18, 0, 0, 0, null, 0);
+    private static final Habilidad CONGELACION = new Habilidad("congelacion", "Congelación",
+            "Inflige daño mágico de hielo con +26 de potencia y aplica Escarcha durante un turno. Causa un 75 % más de daño contra dragones.",
+            10, ENEMIGO, TipoEfecto.DANIO_MAGICO, 26, 0, 0, 0, EstadoTemporal.ESCARCHA, 1);
+    private static final Habilidad PUNZADA_VENENOSA = new Habilidad("punzada_venenosa", "Punzada venenosa",
+            "Inflige daño físico con +12 de potencia. Puede envenenar durante dos turnos con un 50 % de probabilidad, o un 25 % con Defenderse o Bendición.",
+            5, ENEMIGO, TipoEfecto.DANIO_FISICO, 12, 0, 0, 0, EstadoTemporal.ENVENENADO, 2, 1, 50);
 
     private static final Habilidad DESCARGA_FUNEBRE = habilidad(
             "descarga_funebre", "Descarga fúnebre", 7, true, 12, 0, 0, 0);
@@ -109,8 +122,38 @@ public final class CatalogoObjetos {
         return CATALOGO;
     }
 
+    private static final List<String> EQUIPO_DRACONICO = List.of("cazadragones", "daga_colmillo", "vara_medula",
+            "coraza_escamas", "jubon_guiverno", "tunica_escarcha");
+
+    public static List<Objeto> tiendaDraconica() {
+        return java.util.stream.Stream.concat(
+                EQUIPO_DRACONICO.stream().map(codigo -> EQUIPOS.get(codigo).plantilla(Calidad.SUPERIOR)),
+                CATALOGO.stream().filter(objeto -> objeto.efecto() != null)).toList();
+    }
+
+    public static boolean esEquipoDraconico(Objeto objeto) {
+        return EQUIPO_DRACONICO.contains(objeto.codigo()) || objeto.codigo().equals("cimitarra_draconica")
+                || objeto.codigo().equals("ballesta") && objeto.calidad() == Calidad.SUPERIOR;
+    }
+
     public static Objeto pocionRevitalizacion() {
         return REVITALIZACION.nuevaUnidad(false);
+    }
+
+    public static Objeto regaloInicial(ClaseHeroe clase) {
+        return switch (clase) {
+            case SANADOR -> pergamino("cura_grupal");
+            case MAGO -> pergamino("proyectil");
+            case GUERRERO, PICARO, ARQUERO -> {
+                String codigo = switch (clase) {
+                    case GUERRERO -> "roja";
+                    case PICARO -> "verde";
+                    default -> "azul";
+                };
+                yield POCIONES_DISPONIBLES.stream().filter(pocion -> pocion.codigo().equals(codigo))
+                        .findFirst().orElseThrow().nuevaUnidad(false);
+            }
+        };
     }
 
     public static List<String> codigosPergaminos() {
@@ -123,13 +166,21 @@ public final class CatalogoObjetos {
     }
 
     public static Objeto requiemDelDragon() {
+        return pergaminoDragon(false).nuevaUnidad(false);
+    }
+
+    public static Objeto pergaminoDragon(boolean aLaVenta) {
         return new Objeto(null, "requiem_dragon", "Pergamino de Dragón", PERGAMINOS, null, false,
-                Bonificaciones.NINGUNA, 0, 22, 0, 0, 0, null, null,
-                new EfectoConsumible(TipoConsumible.ANIQUILAR_DRAGON, ENEMIGO, 0, 0, 0), null, false).nuevaUnidad(false);
+                Bonificaciones.NINGUNA, 0, 22, aLaVenta ? 1000 : 0, 0, 0, null, null,
+                new EfectoConsumible(TipoConsumible.ANIQUILAR_DRAGON, ENEMIGO, 0, 0, 0), null, false);
     }
 
     public static Objeto equipo(String codigo, Calidad calidad, boolean inicial) {
-        return EQUIPOS.get(codigo).plantilla(calidad).nuevaUnidad(inicial);
+        return plantillaEquipo(codigo, calidad).nuevaUnidad(inicial);
+    }
+
+    public static Objeto plantillaEquipo(String codigo, Calidad calidad) {
+        return EQUIPOS.get(codigo).plantilla(calidad);
     }
 
     public static Optional<Habilidad> habilidadArma(String codigo) {
@@ -137,13 +188,20 @@ public final class CatalogoObjetos {
     }
 
     public static List<Objeto> inicial(ClaseHeroe clase) {
-        var codigos = switch (clase) {
-            case GUERRERO -> List.of("espada_basica", "pesada_basica");
-            case MAGO, SANADOR -> List.of("vara_aprendiz", "tunica_aprendiz");
-            case ARQUERO -> List.of("arco_corto", "ligera_basica");
-            case PICARO -> List.of("daga", "ropa");
+        return codigosIniciales(clase).stream().map(codigo -> equipo(codigo, Calidad.NORMAL, true)).toList();
+    }
+
+    public static boolean esEquipoInicial(String codigo) {
+        return java.util.Arrays.stream(ClaseHeroe.values()).anyMatch(clase -> codigosIniciales(clase).contains(codigo));
+    }
+
+    private static List<String> codigosIniciales(ClaseHeroe clase) {
+        return switch (clase) {
+            case GUERRERO -> List.of("espada_basica", "pesada_basica", "guantes", "botas_basicas");
+            case MAGO, SANADOR -> List.of("vara_aprendiz", "tunica_aprendiz", "sombrero_mago", "botas_basicas");
+            case ARQUERO -> List.of("arco_corto", "ligera_basica", "capucha", "botas_basicas");
+            case PICARO -> List.of("daga", "ropa", "capucha", "botas_basicas");
         };
-        return codigos.stream().map(codigo -> equipo(codigo, Calidad.NORMAL, true)).toList();
     }
 
     private static Map<String, Equipo> equipos() {
@@ -159,7 +217,31 @@ public final class CatalogoObjetos {
             arma("vara_aprendiz", "Vara de aprendiz agrietada", "Vara de aprendiz", "Vara de aprendiz reforzada", 0, 3, 0, 0, 12, 60, FamiliaArma.VARA, PULSO, true),
             arma("garrote", "Garrote astillado", "Garrote", "Garrote ferrado", 7, 0, 0, 15, 0, 100, FamiliaArma.GARROTE, GARROTE, true),
             arma("arco_largo", "Arco largo torcido", "Arco largo", "Arco largo templado", 8, 0, 0, 15, 0, 130, FamiliaArma.ARCO, FLECHA_DE_ALCANCE, true),
-            arma("ballesta", "Ballesta desgastada", "Ballesta", "Ballesta reforzada", 10, 0, 0, 16, 0, 175, FamiliaArma.BALLESTA, BALLESTA, true),
+            arma("ballesta", "Ballesta desgastada", "Ballesta", "Ballesta dracónica", 10, 0, 0, 16, 0, 175, FamiliaArma.BALLESTA, BALLESTA, true),
+            arma("cazadragones", "Ballesta Cazadragones gastada", "Ballesta Cazadragones", "Ballesta Cazadragones",
+                    17, 0, 0, 20, 0, 560, FamiliaArma.BALLESTA, ROMPEESCAMAS, false),
+            arma("cimitarra_draconica", "Cimitarra dracónica mellada", "Cimitarra dracónica", "Cimitarra dracónica bruñida",
+                    14, 0, 0, 18, 0, 360, FamiliaArma.ESPADA, CORTE_ESCAMAS, false),
+            arma("espada_obsidiana", "Espada de obsidiana mellada", "Espada de obsidiana", "Espada de obsidiana bruñida",
+                    17, 0, 0, 20, 0, 540, FamiliaArma.ESPADA, FILO_MATADRAGONES, false),
+            armadura("armadura_obsidiana", "Armadura de obsidiana agrietada", "Armadura de obsidiana", "Armadura de obsidiana templada",
+                    20, 4, -4, 0, 0, 20, 0, 560, false),
+            arma("cetro_invierno", "Cetro del Invierno agrietado", "Cetro del Invierno", "Cetro del Invierno engastado",
+                    0, 19, 0, 0, 22, 520, FamiliaArma.VARA, CONGELACION, false),
+            armadura("armadura_escarcha", "Armadura de escarcha agrietada", "Armadura de escarcha", "Armadura de escarcha templada",
+                    13, 8, -2, 0, 0, 16, 0, 490, false),
+            arma("aguijon_riscos", "Aguijón de los Riscos astillado", "Aguijón de los Riscos", "Aguijón de los Riscos afilado",
+                    13, 0, 6, 16, 0, 400, FamiliaArma.DAGA, PUNZADA_VENENOSA, false),
+            arma("daga_colmillo", "Daga de colmillo desgastada", "Daga de colmillo", "Daga de colmillo",
+                    12, 0, 8, 16, 0, 430, FamiliaArma.DAGA, MORDIDA_COLMILLO, false),
+            arma("vara_medula", "Vara de médula dracónica agrietada", "Vara de médula dracónica", "Vara de médula dracónica",
+                    0, 17, 0, 0, 24, 495, FamiliaArma.VARA, ECO_DRACONICO, false),
+            armadura("coraza_escamas", "Coraza de escamas agrietada", "Coraza de escamas", "Coraza de escamas",
+                    19, 4, -4, 0, 0, 20, 0, 470, false),
+            armadura("jubon_guiverno", "Jubón de piel de guiverno raído", "Jubón de piel de guiverno", "Jubón de piel de guiverno",
+                    10, 4, 1, 5, 0, 12, 0, 400, false),
+            armadura("tunica_escarcha", "Túnica de escarcha raída", "Túnica de escarcha", "Túnica de escarcha",
+                    7, 10, 0, 0, 11, 0, 21, 445, false),
             arma("espada_acero", "Espada de acero mellada", "Espada de acero", "Espada de acero bruñida", 9, 0, 0, 16, 0, 150, FamiliaArma.ESPADA, ESTOCADA_PRECISA, true),
             arma("vara_magica", "Vara mágica agrietada", "Vara mágica", "Vara mágica reforzada", 0, 8, 0, 0, 14, 150, FamiliaArma.VARA, DESTELLO_ARCANO, true),
             arma("vara_chaman", "Vara de chamán agrietada", "Vara de chamán", "Vara de chamán ritual", 0, 9, 0, 0, 16, 170, FamiliaArma.VARA, ECO_DE_LA_TORMENTA, false),
@@ -167,7 +249,7 @@ public final class CatalogoObjetos {
             arma("vara_avanzada", "Vara avanzada agrietada", "Vara avanzada", "Vara avanzada engastada", 0, 13, 0, 0, 22, 240, FamiliaArma.VARA, DESCARGA_ASTRAL, true),
             armadura("ropa", "Ropa ligera remendada", "Ropa ligera", "Ropa ligera bordada", 2, 0, 0, 2, 0, 0, 0, 30, true),
             armadura("guantes", "Guantes de cuero remendados", "Guantes de cuero", "Guantes de cuero curtido", 1, 1, 0, 0, 0, 0, 0, 45, true),
-            armadura("guantes_reforzados", "Guantes de malla abollados", "Guantes de malla", "Guantes de malla bruñidos", 2, 0, 0, 0, 0, 14, 0, 75, true),
+            armadura("guantes_reforzados", "Guantes reforzados abollados", "Guantes reforzados", "Guantes reforzados bruñidos", 2, 0, 0, 0, 0, 14, 0, 75, true),
             armadura("capucha", "Capucha desgastada", "Capucha", "Capucha nueva", 1, 0, 0, 2, 0, 0, 0, 45, true),
             armadura("sombrero_mago", "Sombrero de mago raído", "Sombrero de mago", "Sombrero de mago bordado",
                     0, 1, 0, 0, 2, 0, 12, 80, true),
@@ -177,11 +259,13 @@ public final class CatalogoObjetos {
             armadura("tunica_chaman", "Túnica de chamán raída", "Túnica de chamán", "Túnica de chamán ritual", 4, 2, 0, 0, 7, 0, 16, 145, false),
             armadura("media", "Armadura media abollada", "Armadura media", "Armadura media ensamblada", 7, 0, -1, 0, 0, 12, 0, 120, true),
             armadura("botas", "Botas reforzadas gastadas", "Botas reforzadas", "Botas reforzadas ligeras", 1, 0, 2, 0, 0, 10, 0, 130, true),
+            armadura("botas_basicas", "Botas gastadas", "Botas", "Botas cuidadas", 1, 0, 0, 0, 0, 0, 0, 20, false),
             armadura("pesada", "Armadura pesada abollada", "Armadura pesada", "Armadura pesada bruñida", 12, 0, -3, 0, 0, 16, 0, 180, true),
             armadura("casco", "Casco reforzado abollado", "Casco reforzado", "Casco reforzado templado", 3, 1, 0, 0, 0, 16, 0, 190, true),
-            armadura("pesada_basica", "Armadura pesada básica abollada", "Armadura pesada básica", "Armadura pesada básica bruñida", 8, 0, -3, 0, 0, 15, 0, 0, false),
+            armadura("pesada_basica", "Armadura pesada básica abollada", "Armadura pesada básica", "Armadura pesada básica bruñida", 8, 0, -3, 0, 0, 15, 0, 100, false),
             armadura("ligera_basica", "Armadura ligera básica rasgada", "Armadura ligera básica", "Armadura ligera básica remachada", 4, 0, 0, 0, 0, 8, 0, 0, false),
-            arma("espada_esqueleto", "Espada oxidada", "Espada", "Espada afilada", 6, 0, 0, 12, 0, 80, FamiliaArma.ESPADA, CORTE_ULTRATUMBA, false),
+            arma("espada_esqueleto", "Espada antigua oxidada", "Espada antigua", "Espada antigua afilada",
+                    6, 0, 0, 12, 0, 80, FamiliaArma.ESPADA, CORTE_ULTRATUMBA, false),
             armadura("escudo", "Escudo abollado", "Escudo", "Escudo reforzado", 2, 0, 0, 0, 0, 10, 0, 70, false),
             armadura("antigua", "Armadura antigua agrietada", "Armadura antigua", "Armadura antigua restaurada", 7, 2, -1, 0, 0, 12, 0, 100, false),
             arma("maldita", "Espada maldita mellada", "Espada maldita", "Espada maldita ritual", 14, 0, 0, 20, 0, 250, FamiliaArma.ESPADA, FILO_MALDICION, false),
@@ -191,8 +275,6 @@ public final class CatalogoObjetos {
                     0, 10, 0, 0, 18, 200, FamiliaArma.VARA, DESCARGA_FUNEBRE, false),
             armadura("capucha_funeraria", "Capucha funeraria raída", "Capucha funeraria", "Capucha funeraria bordada",
                     1, 2, 0, 0, 0, 0, 0, 75, false),
-            armadura("guantes_runicos", "Guantes rúnicos agrietados", "Guantes rúnicos", "Guantes rúnicos grabados",
-                    1, 2, 0, 0, 0, 0, 0, 100, false),
             armadura("coraza_runica", "Coraza rúnica agrietada", "Coraza rúnica", "Coraza rúnica restaurada",
                     13, 0, -4, 0, 0, 20, 0, 220, false),
             arma("hacha_espectral", "Hacha espectral mellada", "Hacha espectral", "Hacha espectral afilada",
@@ -223,8 +305,8 @@ public final class CatalogoObjetos {
                 new Bonificaciones(0, defensa, 0, resistencia, velocidad, 0, esquiva, potencia),
                 fuerza, inteligencia, precio, null, null, enTienda,
                 switch (codigo) {
-                    case "guantes", "guantes_reforzados", "guantes_runicos" -> RanuraEquipo.GUANTES;
-                    case "botas" -> RanuraEquipo.BOTAS;
+                    case "guantes", "guantes_reforzados" -> RanuraEquipo.GUANTES;
+                    case "botas", "botas_basicas" -> RanuraEquipo.BOTAS;
                     case "capucha", "casco", "casco_oscuro", "capucha_funeraria", "yelmo_espectral", "sombrero_mago" -> RanuraEquipo.CABEZA;
                     case "escudo" -> RanuraEquipo.ESCUDO;
                     default -> RanuraEquipo.ARMADURAS;

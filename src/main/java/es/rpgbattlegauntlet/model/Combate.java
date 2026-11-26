@@ -17,6 +17,7 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -36,6 +37,10 @@ public final class Combate {
     private final List<Combatiente> enemigos;
     private final List<Combatiente> participantes;
     private final RandomGenerator azar;
+    private final boolean modoPruebas;
+    private final List<Enemigo> refuerzos;
+    private final Enemigo azrathTrasladado;
+    private final int accionesPreviasDeAzrath;
     private final Deque<Combatiente> pendientes = new ArrayDeque<>();
     private final List<EventoCombate> historial = new ArrayList<>();
     private final Set<UUID> objetivosRobados = new HashSet<>();
@@ -45,16 +50,25 @@ public final class Combate {
     private int consumiblesUsados;
 
     public Combate(List<Heroe> heroes, List<? extends Combatiente> enemigos, RandomGenerator azar) {
-        this(heroes, enemigos, azar, 1);
+        this(heroes, enemigos, azar, 1, false);
     }
 
-    Combate(List<Heroe> heroes, List<? extends Combatiente> enemigos, RandomGenerator azar, int primerTurno) {
+    Combate(List<Heroe> heroes, List<? extends Combatiente> enemigos, RandomGenerator azar, int primerTurno, boolean modoPruebas) {
+        this(heroes, enemigos, azar, primerTurno, modoPruebas, List.of());
+    }
+
+    Combate(List<Heroe> heroes, List<? extends Combatiente> enemigos, RandomGenerator azar, int primerTurno,
+            boolean modoPruebas, List<Enemigo> refuerzos) {
         this.turno = primerTurno;
         this.primerTurno = primerTurno;
         this.heroes = List.copyOf(heroes);
-        this.enemigos = List.copyOf(enemigos);
+        this.modoPruebas = modoPruebas;
+        this.enemigos = new ArrayList<>(enemigos);
+        this.refuerzos = new ArrayList<>(refuerzos);
+        azrathTrasladado = refuerzos.isEmpty() ? null : (Enemigo) enemigos.getFirst();
+        accionesPreviasDeAzrath = azrathTrasladado == null ? 0 : azrathTrasladado.getAccionesRealizadas();
         this.azar = Objects.requireNonNull(azar, "La fuente de azar es obligatoria");
-        participantes = Stream.<Combatiente>concat(this.heroes.stream(), this.enemigos.stream()).toList();
+        participantes = new ArrayList<>(Stream.<Combatiente>concat(this.heroes.stream(), this.enemigos.stream()).toList());
         if (this.heroes.stream().noneMatch(Combatiente::estaVivo)
                 || this.enemigos.stream().noneMatch(Combatiente::estaVivo)) {
             throw new IllegalArgumentException("Cada bando necesita al menos un combatiente vivo");
@@ -66,8 +80,8 @@ public final class Combate {
         ejecutarTurnosEnemigos();
     }
 
-    public List<Combatiente> getEnemigos() {
-        return enemigos;
+    public synchronized List<Combatiente> getEnemigos() {
+        return List.copyOf(enemigos);
     }
 
     public synchronized int getTurno() {
@@ -99,11 +113,20 @@ public final class Combate {
     }
 
     public synchronized List<Habilidad> getHabilidadesDisponibles() {
+        return habilidadesDelTurno(true);
+    }
+
+    public synchronized List<Habilidad> getHabilidadesDelTurno() {
+        return habilidadesDelTurno(false);
+    }
+
+    private List<Habilidad> habilidadesDelTurno(boolean soloPagables) {
         Combatiente actor = pendientes.peek();
         if (actor == null) {
             return List.of();
         }
-        return habilidades(actor).stream().filter(habilidad -> habilidad.costePm() <= actor.getPmActuales()).toList();
+        return habilidades(actor).stream().filter(habilidad -> !soloPagables || costeReal(actor, habilidad) <= actor.getPmActuales())
+                .map(habilidad -> habilidad.conCoste(actor.costeHabilidad(habilidad))).toList();
     }
 
     public synchronized boolean fueRobado(UUID objetivo) {
@@ -111,7 +134,7 @@ public final class Combate {
     }
 
     public synchronized boolean puedeSerRobado(Combatiente objetivo) {
-        return objetivo instanceof Enemigo enemigo && enemigo.estaVivo()
+        return objetivo instanceof Enemigo enemigo && enemigo != azrathTrasladado && enemigo.estaVivo()
                 && GeneradorBotin.permiteRobo(enemigo.getTipo()) && !fueRobado(enemigo.getId());
     }
 
@@ -122,7 +145,7 @@ public final class Combate {
                 .filter(candidata -> candidata.id().equals(accion.habilidad()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("El combatiente no conoce esa habilidad"));
-        if (habilidad.costePm() > actor.getPmActuales()) {
+        if (costeReal(actor, habilidad) > actor.getPmActuales()) {
             throw new IllegalArgumentException("El combatiente no tiene PC suficientes");
         }
         List<Combatiente> objetivos = objetivos(actor, habilidad.objetivo(), accion.objetivo());
@@ -139,25 +162,41 @@ public final class Combate {
     }
 
     synchronized void usarConsumible(int numeroTurno, UUID actorId, Objeto objeto, UUID objetivoId) {
+        usarConsumible(numeroTurno, actorId, objeto, objetivoId, false);
+    }
+
+    synchronized Enemigo usarConsumible(int numeroTurno, UUID actorId, Objeto objeto, UUID objetivoId, boolean trasladarAzrath) {
         if (!(validarTurno(numeroTurno, actorId) instanceof Heroe actor) || objeto.efecto() == null) {
             throw new IllegalArgumentException("La acción necesita un héroe y un consumible");
         }
-        if (!objeto.cumpleRequisitos(actor)) {
+        if (!objeto.cumpleRequisitos(actor, modoPruebas)) {
             throw new IllegalArgumentException("Inteligencia base insuficiente");
         }
 
         var efecto = objeto.efecto();
         var objetivos = objetivos(actor, efecto.objetivo(), objetivoId);
+        objetivos.forEach(efecto::validarRecuperacion);
         if (efecto.tipo() == ANIQUILAR_DRAGON && (!(objetivos.getFirst() instanceof Enemigo enemigo)
-                || enemigo.getTipo() != TipoEnemigo.DRAGON)) {
+                || enemigo.getTipo() != TipoEnemigo.DRAGON || enemigo == azrathTrasladado)) {
             throw new IllegalArgumentException("El Pergamino de Dragón solo puede usarse contra el dragón");
+        }
+        if (trasladarAzrath) {
+            var azrath = (Enemigo) objetivos.getFirst();
+            int danio = infligirDanio(azrath, azrath.getPvActuales() - Math.max(1, azrath.getPvActuales() / 2));
+            historial.add(new EventoCombate(turno, actor.getId(), tipo(actor), "traslado_azrath", azrath.getId(),
+                    tipo(azrath), danio, 0, 0, false, false, null));
+            return azrath;
         }
         ejecutarConsumible(actor, objeto, objetivos);
         ejecutarTurnosEnemigos();
+        return null;
     }
 
     private void ejecutarConsumible(Combatiente actor, Objeto objeto, List<Combatiente> objetivos) {
+        int primerEvento = historial.size();
+        var antes = new EstadoVisual(actor);
         var daniosPendientes = actor.terminarTurno();
+        var ajuste = antes.cambio();
         for (Combatiente objetivo : objetivos) {
             if (!actor.estaVivo()) {
                 break;
@@ -165,10 +204,12 @@ public final class Combate {
             registrarConReaccion(actor, objetivo, resolverConsumible(actor, objetivo, objeto));
         }
         if (actor instanceof Heroe) consumiblesUsados++;
+        registrarAjustes(primerEvento, List.of(ajuste), true);
         avanzarTurno(daniosPendientes);
     }
 
     private EventoCombate resolverConsumible(Combatiente actor, Combatiente objetivo, Objeto objeto) {
+        var estadosAntes = objetivo.getEstados();
         var efecto = objeto.efecto();
         int danio = 0;
         int curacion = 0;
@@ -179,9 +220,9 @@ public final class Combate {
                 magiaRecuperada = objetivo.recuperarMagia(efecto.magia());
             }
             case DANIO -> {
-                danio = Math.min(objetivo.getPvActuales(), CalculoCombate.danioPergamino(objetivo, efecto.cantidad()));
-                objetivo.recibirDanio(danio);
+                danio = infligirDanio(objetivo, CalculoCombate.danioPergamino(objetivo, efecto.cantidad(), efecto.incendiario()));
                 if (efecto.incendiario()) aplicarEstado(objetivo, QUEMADO, 2, 50, false);
+                if (efecto.escarcha() && objetivo.estaVivo()) objetivo.aplicarEstado(ESCARCHA, 1);
             }
             case CURACION -> curacion = objetivo.recibirCuracion(efecto.cantidad());
             case CURA_TOTAL -> curacion = objetivo.recibirCuracion(
@@ -189,12 +230,12 @@ public final class Combate {
             case PROTECCION -> objetivo.aplicarEstado(EstadoTemporal.PROTECCION_50, 2);
             case REVITALIZACION -> curacion = objetivo.revivir(efecto.cantidad());
             case ANIQUILAR_DRAGON -> {
-                danio = objetivo.getPvActuales();
-                objetivo.recibirDanio(danio);
+                danio = infligirDanio(objetivo, objetivo.getPvActuales());
             }
         }
         return new EventoCombate(turno, actor.getId(), tipo(actor), objeto.nombre(), objetivo.getId(),
-                tipo(objetivo), danio, curacion, magiaRecuperada, false, false, null);
+                tipo(objetivo), danio, curacion, magiaRecuperada, false, false, null, 0,
+                EventoCombate.CambioEstados.entre(estadosAntes, objetivo.getEstados()));
     }
 
     private String tipo(Combatiente combatiente) {
@@ -231,17 +272,25 @@ public final class Combate {
         }
     }
 
+    private int costeReal(Combatiente actor, Habilidad habilidad) {
+        return modoPruebas && actor instanceof Heroe ? 0 : actor.costeHabilidad(habilidad);
+    }
+
     private void ejecutarHabilidad(Combatiente actor, Habilidad habilidad, List<Combatiente> objetivos) {
-        actor.consumirMagia(habilidad.costePm());
+        int primerEvento = historial.size();
+        var antes = new EstadoVisual(actor);
+        actor.consumirMagia(costeReal(actor, habilidad));
         if (actor instanceof Enemigo enemigo
-                && (habilidad.estado() == CARGA_FURIA_ANIMAL || habilidad.estado() == CARGA_INCENDIO_CENIZA)) {
+                && (habilidad.estado() == CARGA_FURIA_ANIMAL || habilidad.estado() == CARGA_INCENDIO_CENIZA
+                || habilidad.estado() == CARGA_RUPTURA_VINCULO)) {
             enemigo.iniciarAtaqueUnico();
         }
-        if (habilidad == CatalogoEnemigos.SENTENCIA && actor instanceof Enemigo verdugo) {
+        if (actor instanceof Enemigo verdugo && verdugo.getObjetivoMarcado() != null) {
             verdugo.marcarObjetivo(null);
         }
         // Los estados anteriores expiran al actuar. Un estado nuevo empieza después de ese consumo.
         var daniosPendientes = actor.terminarTurno();
+        var ajuste = antes.cambio();
         for (Combatiente objetivo : objetivos) {
             for (int golpe = 0; golpe < habilidad.golpes() && actor.estaVivo()
                     && (objetivo.estaVivo() || habilidad.efecto() == TipoEfecto.REVIVIR); golpe++) {
@@ -249,19 +298,52 @@ public final class Combate {
                 registrarConReaccion(actor, receptor, resolver(actor, receptor, habilidad));
             }
         }
+        registrarAjustes(primerEvento, List.of(ajuste), true);
+        var antesDelCierre = new EstadoVisual(actor);
+        if (habilidad == CatalogoEnemigos.DERRUMBE) actor.aplicarEstado(CORAZA_AGRIETADA, 1);
+        if (habilidad == CatalogoEnemigos.RUPTURA) actor.aplicarEstado(VINCULO_ROTO, 1);
+        if (historial.size() > primerEvento) {
+            registrarAjustes(historial.size() - 1, List.of(antesDelCierre.cambio()), false);
+        }
         avanzarTurno(daniosPendientes);
+    }
+
+    private record EstadoVisual(Combatiente combatiente, int pc, Map<EstadoTemporal, Integer> estados) {
+        EstadoVisual(Combatiente combatiente) {
+            this(combatiente, combatiente.getPmActuales(), combatiente.getEstados());
+        }
+
+        EventoCombate.Ajuste cambio() {
+            return new EventoCombate.Ajuste(combatiente.getId(), combatiente.getPmActuales() - pc,
+                    EventoCombate.CambioEstados.entre(estados, combatiente.getEstados()));
+        }
+    }
+
+    private void registrarAjustes(int indice, List<EventoCombate.Ajuste> ajustes, boolean previos) {
+        if (indice < 0 || indice >= historial.size()) return;
+        var cambios = ajustes.stream().filter(ajuste -> ajuste.cambioPc() != 0 || ajuste.estados() != null).toList();
+        if (!cambios.isEmpty()) {
+            var evento = historial.get(indice);
+            var combinados = new ArrayList<>(previos ? evento.ajustesPrevios() : evento.ajustesPosteriores());
+            combinados.addAll(cambios);
+            historial.set(indice, evento.conAjustes(List.copyOf(combinados), previos));
+        }
     }
 
     private void registrarConReaccion(Combatiente actor, Combatiente objetivo, EventoCombate evento) {
         historial.add(evento);
+        var antes = new EstadoVisual(objetivo);
         if (evento.critico() && objetivo.estaVivo() && objetivo.retirarEstado(CARGA_FURIA_ANIMAL)) {
             historial.add(new EventoCombate(turno, objetivo.getId(), tipo(objetivo), "furia_interrumpida", objetivo.getId(),
                     tipo(objetivo), 0, 0, 0, false, false, null));
+            registrarAjustes(historial.size() - 1, List.of(antes.cambio()), true);
+            antes = new EstadoVisual(objetivo);
         }
         if (evento.danio() > 0 && objetivo.estaVivo()
                 && objetivo.retirarEstado(EstadoTemporal.CONTRAATAQUE_LISTO)) {
             var contraataque = CatalogoEnemigos.CONTRAATAQUE;
             historial.add(resolver(objetivo, interceptarSiProcede(objetivo, actor, contraataque), contraataque));
+            registrarAjustes(historial.size() - 1, List.of(antes.cambio()), true);
         }
     }
 
@@ -284,7 +366,8 @@ public final class Combate {
     }
 
     private List<Habilidad> habilidades(Combatiente actor) {
-        var opciones = new ArrayList<>(List.of(CatalogoHabilidades.ATAQUE_BASICO, CatalogoHabilidades.DEFENDER));
+        Habilidad basico = actor instanceof Heroe heroe ? heroe.ataqueBasico() : CatalogoHabilidades.ATAQUE_BASICO;
+        var opciones = new ArrayList<>(List.of(basico, CatalogoHabilidades.DEFENDER));
         if (actor instanceof Heroe heroe) {
             opciones.addAll(CatalogoHabilidades.deClase(heroe.getClase()));
             Habilidad arma = heroe.habilidadArma();
@@ -325,6 +408,7 @@ public final class Combate {
     }
 
     private EventoCombate resolver(Combatiente actor, Combatiente objetivo, Habilidad habilidad) {
+        var estadosAntes = objetivo.getEstados();
         int danio = 0;
         int curacion = 0;
         boolean esquivado = false;
@@ -340,13 +424,11 @@ public final class Combate {
                     var base = actor.getEstadisticasBase();
                     int criticoBase = actor instanceof Heroe ? base.destreza() : base.critico();
                     critico = azar.nextInt(100) < criticoBase + actor.getBonificaciones().critico() + habilidad.criticoAdicional();
-                    danio = Math.min(objetivo.getPvActuales(), CalculoCombate.danio(actor, objetivo, habilidad, critico, reduccionMinima));
-                    objetivo.recibirDanio(danio);
+                    danio = infligirDanio(objetivo, CalculoCombate.danio(actor, objetivo, habilidad, critico, reduccionMinima));
                 }
             }
             case DANIO_MAGICO -> {
-                danio = Math.min(objetivo.getPvActuales(), CalculoCombate.danio(actor, objetivo, habilidad, false, reduccionMinima));
-                objetivo.recibirDanio(danio);
+                danio = infligirDanio(objetivo, CalculoCombate.danio(actor, objetivo, habilidad, false, reduccionMinima));
             }
             case CURACION -> curacion = objetivo.recibirCuracion(CalculoCombate.curacion(actor, habilidad));
             case REVIVIR -> {
@@ -367,13 +449,21 @@ public final class Combate {
         if (!esquivado && habilidad.estado() != null) {
             aplicarEstado(objetivo, habilidad.estado(), habilidad.duracion(), habilidad.probabilidadEstado(), interceptando);
         }
-        if (interceptando && danio > 0) objetivo.retirarEstado(INTERCEPTANDO);
+        if (interceptando && !esquivado) objetivo.retirarEstado(INTERCEPTANDO);
         int curacionActor = 0;
         if (danio > 0 && habilidad.porcentajeRoboVida() > 0) {
             curacionActor = actor.recibirCuracion(danio * habilidad.porcentajeRoboVida() / 100);
         }
         return new EventoCombate(turno, actor.getId(), tipo(actor), habilidad.id(), objetivo.getId(),
-                tipo(objetivo), danio, curacion, 0, esquivado, critico, objetoRobado, curacionActor);
+                tipo(objetivo), danio, curacion, 0, esquivado, critico, objetoRobado, curacionActor,
+                EventoCombate.CambioEstados.entre(estadosAntes, objetivo.getEstados()),
+                habilidad.id().equals(CatalogoHabilidades.ATAQUE_BASICO.id()) ? habilidad.nombre() : null);
+    }
+
+    private int infligirDanio(Combatiente objetivo, int potencia) {
+        int danio = modoPruebas && heroes.contains(objetivo) ? 0 : Math.min(objetivo.getPvActuales(), potencia);
+        objetivo.recibirDanio(danio);
+        return danio;
     }
 
     private void aplicarEstado(Combatiente objetivo, EstadoTemporal estado, int duracion, int probabilidad, boolean interceptando) {
@@ -388,14 +478,19 @@ public final class Combate {
         if (!daniosPendientes.isEmpty() && actor.estaVivo() && heroes.stream().anyMatch(Combatiente::estaVivo)
                 && enemigos.stream().anyMatch(Combatiente::estaVivo)) {
             for (EstadoTemporal estado : daniosPendientes) {
-                int danio = Math.min(actor.getPvActuales(), estado.danioPeriodico());
-                actor.recibirDanio(danio);
+                int potencia = estado == QUEMADO ? CalculoCombate.danioQuemadura(actor) : estado.danioPeriodico();
+                int danio = infligirDanio(actor, potencia);
                 historial.add(new EventoCombate(turno, actor.getId(), tipo(actor), estado.eventoDanio(), actor.getId(),
                         tipo(actor), danio, 0, 0, false, false, null));
                 if (!actor.estaVivo()) break;
             }
         }
+        incorporarRefuerzos(actor);
+        var antesDeLasMarcas = heroes.stream().map(EstadoVisual::new).toList();
         actualizarMarcasEspectrales();
+        if (!historial.isEmpty() && historial.getLast().turno() == turno) {
+            registrarAjustes(historial.size() - 1, antesDeLasMarcas.stream().map(EstadoVisual::cambio).toList(), false);
+        }
         if (enemigos.stream().noneMatch(Combatiente::estaVivo)) {
             resultado = GANADO;
         } else if (heroes.stream().noneMatch(Combatiente::estaVivo)) {
@@ -412,6 +507,20 @@ public final class Combate {
         if (pendientes.isEmpty()) {
             ordenarCiclo();
         }
+    }
+
+    private void incorporarRefuerzos(Combatiente actor) {
+        if (refuerzos.isEmpty() || heroes.stream().noneMatch(Combatiente::estaVivo)) return;
+        boolean segundoTurnoDeAzrath = actor == azrathTrasladado
+                && azrathTrasladado.getAccionesRealizadas() - accionesPreviasDeAzrath == 1;
+        if (azrathTrasladado.estaVivo() && !segundoTurnoDeAzrath) return;
+        enemigos.addAll(refuerzos);
+        participantes.addAll(refuerzos);
+        refuerzos.stream().sorted(Comparator.comparingInt(Combatiente::getVelocidadEfectiva).reversed())
+                .forEachOrdered(pendientes::addLast);
+        refuerzos.clear();
+        historial.add(new EventoCombate(turno, actor.getId(), tipo(actor), "llegan_draconianos", actor.getId(),
+                tipo(actor), 0, 0, 0, false, false, null));
     }
 
     private void actualizarMarcasEspectrales() {

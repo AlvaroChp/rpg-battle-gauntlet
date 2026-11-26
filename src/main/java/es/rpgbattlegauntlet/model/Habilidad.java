@@ -21,6 +21,23 @@ public record Habilidad(
         int probabilidadEstado,
         int porcentajeRoboVida
 ) {
+    public double multiplicadorContraDragones() {
+        return switch (id) {
+            case "filo_matadragones" -> 1.5;
+            case "congelacion" -> 1.75;
+            default -> 1;
+        };
+    }
+
+    public Habilidad conCoste(int coste) {
+        return coste == costePm ? this : new Habilidad(id, nombre, descripcion, coste, objetivo, efecto, potencia,
+                precisionAdicional, criticoAdicional, penetracion, estado, duracion, golpes, probabilidadEstado, porcentajeRoboVida);
+    }
+
+    public Habilidad conNombre(String nombreVisible) {
+        return new Habilidad(id, nombreVisible, descripcion, costePm, objetivo, efecto, potencia,
+                precisionAdicional, criticoAdicional, penetracion, estado, duracion, golpes, probabilidadEstado, porcentajeRoboVida);
+    }
     public Habilidad(String id, String nombre, String descripcion, int costePm, TipoObjetivo objetivo,
                      TipoEfecto efecto, int potencia, int precisionAdicional, int criticoAdicional,
                      int penetracion, EstadoTemporal estado, int duracion) {

@@ -66,6 +66,7 @@ class EnemigosExpertoTest {
         defender(combate, segundo);
         assertEquals("preparar_onda_runica", combate.getHistorial().getLast().habilidad());
         assertTrue(golem.tieneEstado(CARGA_ONDA_RUNICA));
+        assertEquals(40, golem.getPmActuales());
 
         defender(combate, primero);
         defender(combate, segundo);
@@ -73,6 +74,21 @@ class EnemigosExpertoTest {
 
         assertEquals(List.of(primero.getId(), segundo.getId()), onda.stream().map(EventoCombate::objetivo).toList());
         assertFalse(golem.tieneEstado(CARGA_ONDA_RUNICA));
+        assertEquals(28, golem.getPmActuales());
+
+        defender(combate, primero);
+        defender(combate, segundo);
+        assertEquals("puno_de_piedra", combate.getHistorial().getLast().habilidad());
+        assertEquals(24, golem.getPmActuales());
+
+        golem.consumirMagia(20);
+        defender(combate, primero);
+        defender(combate, segundo);
+        assertEquals("puno_de_piedra", combate.getHistorial().getLast().habilidad());
+        defender(combate, primero);
+        defender(combate, segundo);
+        assertEquals("ataque_basico", combate.getHistorial().getLast().habilidad());
+        assertEquals(0, golem.getPmActuales());
     }
 
     @Test
@@ -82,6 +98,7 @@ class EnemigosExpertoTest {
         var segundo = heroeRapido();
         var combate = new Combate(List.of(primero, segundo), List.of(verdugo), azar());
 
+        assertEquals(40, verdugo.getPmActuales());
         defender(combate, primero);
         defender(combate, segundo);
         defender(combate, primero);
@@ -89,6 +106,7 @@ class EnemigosExpertoTest {
         assertEquals(segundo.getId(), verdugo.getObjetivoMarcado());
         assertTrue(segundo.tieneEstado(MARCA_ESPECTRAL));
         assertFalse(primero.tieneEstado(MARCA_ESPECTRAL));
+        assertEquals(32, verdugo.getPmActuales());
 
         defender(combate, primero);
         assertTrue(segundo.tieneEstado(MARCA_ESPECTRAL));
@@ -100,24 +118,32 @@ class EnemigosExpertoTest {
         assertEquals(30, sentencia.danio());
         assertFalse(segundo.tieneEstado(MARCA_ESPECTRAL));
         assertNull(verdugo.getObjetivoMarcado());
+        assertEquals(21, verdugo.getPmActuales());
 
         defender(combate, primero);
         defender(combate, segundo);
         var barrido = combate.getHistorial().stream().filter(evento -> evento.habilidad().equals("barrido_espectral")).toList();
         assertEquals(List.of(primero.getId(), segundo.getId()), barrido.stream().map(EventoCombate::objetivo).toList());
         assertTrue(barrido.stream().allMatch(evento -> evento.danio() == 14));
+        assertEquals(12, verdugo.getPmActuales());
 
         defender(combate, primero);
         defender(combate, segundo);
         assertEquals("tajo_espectral", combate.getHistorial().getLast().habilidad());
+
+        verdugo.consumirMagia(verdugo.getPmActuales());
+        defender(combate, primero);
+        defender(combate, segundo);
+        assertEquals("ataque_basico", combate.getHistorial().getLast().habilidad());
+        assertEquals(0, verdugo.getPmActuales());
     }
 
     @ParameterizedTest
     @CsvSource({
             "NIGROMANTE,60,34,vara_osario", "NIGROMANTE,60,35,capucha_funeraria",
             "NIGROMANTE,60,59,capucha_funeraria", "NIGROMANTE,60,60,daga_ritual",
-            "NIGROMANTE,60,69,daga_ritual", "NIGROMANTE,60,70,revitalizacion", "GOLEM_RUNICO,70,39,guantes_runicos",
-            "GOLEM_RUNICO,70,40,coraza_runica", "GOLEM_RUNICO,70,75,proteccion",
+            "NIGROMANTE,60,69,daga_ritual", "NIGROMANTE,60,70,revitalizacion", "GOLEM_RUNICO,70,0,coraza_runica",
+            "GOLEM_RUNICO,70,74,coraza_runica", "GOLEM_RUNICO,70,75,proteccion",
             "VERDUGO_ESPECTRAL,65,39,hacha_espectral", "VERDUGO_ESPECTRAL,65,40,yelmo_espectral",
             "VERDUGO_ESPECTRAL,65,75,cura_mayor"
     })
@@ -162,7 +188,6 @@ class EnemigosExpertoTest {
     @Test
     void proteccionesNuevasOcupanLaRanuraAcordada() {
         assertEquals(CABEZA, CatalogoObjetos.equipo("capucha_funeraria", NORMAL, false).ranura());
-        assertEquals(GUANTES, CatalogoObjetos.equipo("guantes_runicos", NORMAL, false).ranura());
         assertEquals(ARMADURAS, CatalogoObjetos.equipo("coraza_runica", NORMAL, false).ranura());
         assertEquals(CABEZA, CatalogoObjetos.equipo("yelmo_espectral", NORMAL, false).ranura());
     }

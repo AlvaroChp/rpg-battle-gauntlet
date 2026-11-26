@@ -5,11 +5,25 @@ import es.rpgbattlegauntlet.enums.TipoEnemigo;
 import es.rpgbattlegauntlet.model.Enemigo;
 
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static es.rpgbattlegauntlet.enums.TipoEnemigo.*;
 
 public final class CatalogoEncuentros {
+    public static final int RONDA_AZRATH = 15;
+    private static final List<List<TipoEnemigo>> REINO_DRACONICO = List.of(
+            List.of(DRACONIANO_CIMITARRA, DRACONIANO_BALLESTA), List.of(GUIVERNO), List.of(DRAGON_ESCARCHA),
+            List.of(DRAGON_OBSIDIANA), List.of(DIOS_DRAGON));
+
+    public static int totalRondasReinoDraconico() {
+        return RONDA_AZRATH + REINO_DRACONICO.size();
+    }
+
+    public static List<Enemigo> crearEnemigosReinoDraconico(int ronda, Dificultad dificultad) {
+        return REINO_DRACONICO.get(ronda - RONDA_AZRATH - 1).stream()
+                .map(tipo -> CatalogoEnemigos.crear(tipo, dificultad)).toList();
+    }
 
     private static final List<List<TipoEnemigo>> RONDAS_COMUNES = List.of(
             List.of(GOBLIN),
@@ -38,6 +52,19 @@ public final class CatalogoEncuentros {
     private CatalogoEncuentros() {
     }
 
+    public record CombateDePruebas(int ronda, List<TipoEnemigo> enemigos, List<TipoEnemigo> refuerzos) {}
+
+    public static List<CombateDePruebas> combatesDePruebas() {
+        return IntStream.rangeClosed(1, totalRondasReinoDraconico()).mapToObj(ronda -> {
+            if (ronda <= RONDA_AZRATH) {
+                return new CombateDePruebas(ronda, RONDAS_AMPLIADAS.get(ronda - 1), List.of());
+            }
+            var enemigos = REINO_DRACONICO.get(ronda - RONDA_AZRATH - 1);
+            return ronda == RONDA_AZRATH + 1 ? new CombateDePruebas(ronda, JEFE_FINAL, enemigos)
+                    : new CombateDePruebas(ronda, enemigos, List.of());
+        }).toList();
+    }
+
     public static int totalRondas() {
         return totalRondas(Dificultad.FACIL);
     }
@@ -48,9 +75,14 @@ public final class CatalogoEncuentros {
 
     private static List<List<TipoEnemigo>> rondas(Dificultad dificultad) {
         return switch (dificultad) {
-            case EXPERTO, PRUEBAS -> RONDAS_AMPLIADAS;
-            case FACIL, DIFICIL -> RONDAS_HABITUALES;
+            case DIFICIL, EXPERTO, PRUEBAS -> RONDAS_AMPLIADAS;
+            case FACIL -> RONDAS_HABITUALES;
         };
+    }
+
+    public static boolean apareceEn(TipoEnemigo tipo, Dificultad dificultad) {
+        return rondas(dificultad).stream().anyMatch(encuentro -> encuentro.contains(tipo))
+                || dificultad.permiteRutaDraconica() && REINO_DRACONICO.stream().anyMatch(encuentro -> encuentro.contains(tipo));
     }
 
     public static List<Enemigo> crearEnemigos(int ronda) {
