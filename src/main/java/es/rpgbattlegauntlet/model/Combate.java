@@ -1,17 +1,5 @@
 package es.rpgbattlegauntlet.model;
 
-import es.rpgbattlegauntlet.algorithm.CalculoCombate;
-import es.rpgbattlegauntlet.algorithm.GeneradorBotin;
-import es.rpgbattlegauntlet.algorithm.InteligenciaEnemiga;
-import es.rpgbattlegauntlet.config.CatalogoEnemigos;
-import es.rpgbattlegauntlet.enums.EstadoTemporal;
-import es.rpgbattlegauntlet.enums.ClaseHeroe;
-import es.rpgbattlegauntlet.config.CatalogoHabilidades;
-import es.rpgbattlegauntlet.enums.ResultadoCombate;
-import es.rpgbattlegauntlet.enums.TipoEfecto;
-import es.rpgbattlegauntlet.enums.TipoObjetivo;
-import es.rpgbattlegauntlet.enums.TipoEnemigo;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -25,12 +13,35 @@ import java.util.UUID;
 import java.util.random.RandomGenerator;
 import java.util.stream.Stream;
 
-import static es.rpgbattlegauntlet.enums.ResultadoCombate.*;
-import static es.rpgbattlegauntlet.enums.EstadoTemporal.*;
+import es.rpgbattlegauntlet.algorithm.CalculoCombate;
+import es.rpgbattlegauntlet.algorithm.GeneradorBotin;
+import es.rpgbattlegauntlet.algorithm.InteligenciaEnemiga;
+import es.rpgbattlegauntlet.config.CatalogoEnemigos;
+import es.rpgbattlegauntlet.config.CatalogoHabilidades;
+import es.rpgbattlegauntlet.enums.ClaseHeroe;
+import es.rpgbattlegauntlet.enums.EstadoTemporal;
+import static es.rpgbattlegauntlet.enums.EstadoTemporal.BENDICION;
+import static es.rpgbattlegauntlet.enums.EstadoTemporal.CARGA_FURIA_ANIMAL;
+import static es.rpgbattlegauntlet.enums.EstadoTemporal.CARGA_INCENDIO_CENIZA;
+import static es.rpgbattlegauntlet.enums.EstadoTemporal.CARGA_RUPTURA_VINCULO;
+import static es.rpgbattlegauntlet.enums.EstadoTemporal.CORAZA_AGRIETADA;
+import static es.rpgbattlegauntlet.enums.EstadoTemporal.DEFENSA;
+import static es.rpgbattlegauntlet.enums.EstadoTemporal.ESCARCHA;
+import static es.rpgbattlegauntlet.enums.EstadoTemporal.INTERCEPTANDO;
+import static es.rpgbattlegauntlet.enums.EstadoTemporal.MARCA_ESPECTRAL;
+import static es.rpgbattlegauntlet.enums.EstadoTemporal.QUEMADO;
+import static es.rpgbattlegauntlet.enums.EstadoTemporal.VINCULO_ROTO;
+import es.rpgbattlegauntlet.enums.ResultadoCombate;
+import static es.rpgbattlegauntlet.enums.ResultadoCombate.EN_CURSO;
+import static es.rpgbattlegauntlet.enums.ResultadoCombate.GANADO;
+import static es.rpgbattlegauntlet.enums.ResultadoCombate.PERDIDO;
+import static es.rpgbattlegauntlet.enums.TipoConsumible.ANIQUILAR_DRAGON;
+import es.rpgbattlegauntlet.enums.TipoEfecto;
 import static es.rpgbattlegauntlet.enums.TipoEfecto.DANIO_FISICO;
 import static es.rpgbattlegauntlet.enums.TipoEfecto.DANIO_MAGICO;
-import static es.rpgbattlegauntlet.enums.TipoConsumible.ANIQUILAR_DRAGON;
 import static es.rpgbattlegauntlet.enums.TipoEfecto.ROBO;
+import es.rpgbattlegauntlet.enums.TipoEnemigo;
+import es.rpgbattlegauntlet.enums.TipoObjetivo;
 
 public final class Combate {
 
@@ -261,7 +272,7 @@ public final class Combate {
             case OGRO -> inicio ? "Amo dice que yo no deja pasar a nadie"
                     : "yo falla mision, ¡Azrath no perdona a mi!";
             case VERDUGO_ESPECTRAL -> inicio ? "Segar almas es mi cometido mientras siga atado a este mundo."
-                    : "Al fin estoy libre de mis cadena, os deseo suerte héroes, la necesitaréis.";
+                    : "Al fin estoy libre de mis cadenas, os deseo suerte héroes, la necesitaréis.";
             case GOLEM_RUNICO -> {
                 boolean vaelthar = heroes.stream().anyMatch(heroe -> heroe.getClase() == ClaseHeroe.MAGO);
                 yield inicio ? vaelthar ? "Vaelthar, parece que el tiempo no te ha tratado bien."
