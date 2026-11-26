@@ -35,9 +35,11 @@ class ApiPartidasTest {
         assertEquals("Golpe de piedra", habilidadesGolem.get(0).path("nombre").asText());
         assertEquals(List.of("ataque_basico", "preparar_onda_runica", "onda_runica", "puno_de_piedra"),
                 habilidadesGolem.valueStream().map(habilidad -> habilidad.path("id").asText()).toList());
-        assertEquals("ventisca", fichas.get(13).path("botin").path("objetos").get(0).path("codigo").asText());
+        assertEquals(List.of("ventisca", "cetro_invierno", "armadura_escarcha"), fichas.get(13).path("botin").path("objetos")
+                .valueStream().map(objeto -> objeto.path("codigo").asText()).toList());
         for (int indice : List.of(10, 11)) {
-            assertEquals(List.of("cimitarra_draconica", "ballesta"), fichas.get(indice).path("botin").path("objetos")
+            assertTrue(fichas.get(indice).path("botin").path("garantizado").asBoolean());
+            assertEquals(List.of(indice == 10 ? "cimitarra_draconica" : "ballesta"), fichas.get(indice).path("botin").path("objetos")
                     .valueStream().map(objeto -> objeto.path("codigo").asText()).toList());
         }
         assertEquals(173, fichas.get(10).path("pvPorDificultad").path("EXPERTO").asInt());

@@ -235,9 +235,13 @@ public final class Partida {
             throw new IllegalStateException("No se pueden usar consumibles en este estado");
         }
         Objeto objeto = objetoEnInventario(idObjeto);
+        var efecto = objeto.efecto();
+        if (efecto == null) {
+            throw new IllegalArgumentException("El objeto seleccionado no es un consumible");
+        }
         if (estado == EstadoPartida.COMBATE) {
             boolean traslado = dificultad.permiteRutaDraconica() && ronda == CatalogoEncuentros.RONDA_AZRATH
-                    && objeto.efecto().tipo() == TipoConsumible.ANIQUILAR_DRAGON;
+                    && efecto.tipo() == TipoConsumible.ANIQUILAR_DRAGON;
             var azrath = combate.usarConsumible(turno, actor, objeto, objetivo, traslado);
             if (azrath != null) entrarEnElReinoDraconico(azrath);
         } else {
@@ -249,15 +253,15 @@ public final class Partida {
             if (!usuario.estaVivo()) {
                 throw new IllegalArgumentException("Un héroe vivo debe administrar la poción");
             }
-            if (objeto.efecto().tipo() == TipoConsumible.REVITALIZACION) {
-                destinatario.revivir(objeto.efecto().cantidad());
+            if (efecto.tipo() == TipoConsumible.REVITALIZACION) {
+                destinatario.revivir(efecto.cantidad());
             } else {
                 if (!destinatario.estaVivo()) {
                     throw new IllegalArgumentException("La poción requiere un destinatario vivo");
                 }
-                objeto.efecto().validarRecuperacion(destinatario);
-                destinatario.recibirCuracion(objeto.efecto().cantidad());
-                destinatario.recuperarMagia(objeto.efecto().magia());
+                efecto.validarRecuperacion(destinatario);
+                destinatario.recibirCuracion(efecto.cantidad());
+                destinatario.recuperarMagia(efecto.magia());
             }
         }
         inventario.remove(idObjeto);
@@ -299,9 +303,8 @@ public final class Partida {
         for (Combatiente enemigo : combate.getEnemigos()) {
             var tipo = ((Enemigo) enemigo).getTipo();
             tienda.desbloquearArmas(tipo);
-            if (!combate.fueRobado(enemigo.getId())) {
-                GeneradorBotin.tirar(tipo, azar).ifPresent(objeto -> botin.put(objeto.id(), objeto));
-            }
+            GeneradorBotin.alVencer(tipo, combate.fueRobado(enemigo.getId()), azar)
+                    .forEach(objeto -> botin.put(objeto.id(), objeto));
         }
     }
 

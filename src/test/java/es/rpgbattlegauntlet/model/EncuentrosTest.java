@@ -134,6 +134,7 @@ class EncuentrosTest {
             assertEquals(ronda == 14, oferta.isPresent());
             if (ronda == 14) {
                 partida.invertir(mago.getId(), es.rpgbattlegauntlet.enums.Atributo.INT, 4);
+                partida.desequipar(partida.getEquipo().getFirst().getId(), es.rpgbattlegauntlet.enums.RanuraEquipo.CABEZA);
                 if (comprar) {
                     assertEquals(1000, oferta.orElseThrow().precio());
                     int oro = partida.getOro();
@@ -146,6 +147,15 @@ class EncuentrosTest {
         }
         var combate = partida.getCombate();
         var azrath = combate.getEnemigos().getFirst();
+        var capucha = partida.getInventario().stream().filter(objeto -> objeto.codigo().equals("capucha")).findFirst().orElseThrow();
+        int turno = combate.getTurno();
+        var actorActual = combate.getOrdenActuacion().getFirst();
+        var error = assertThrows(IllegalArgumentException.class,
+                () -> partida.usarConsumible(turno, actorActual.getId(), capucha.id(), azrath.getId()));
+        assertEquals("El objeto seleccionado no es un consumible", error.getMessage());
+        assertEquals(turno, combate.getTurno());
+        assertEquals(15, partida.getRonda());
+        assertTrue(partida.getInventario().contains(capucha));
         if (!comprar) {
             var picaro = partida.getEquipo().getFirst();
             assertSame(picaro, combate.getOrdenActuacion().getFirst());
@@ -163,6 +173,9 @@ class EncuentrosTest {
         var pvHeroes = partida.getEquipo().stream().map(Heroe::getPvActuales).toList();
         var pcHeroes = partida.getEquipo().stream().map(Heroe::getPmActuales).toList();
         partida.usarConsumible(combate.getTurno(), mago.getId(), pergamino.id(), azrath.getId());
+        var historialAnterior = combate.getHistorial();
+        assertEquals("dialogo_pergamino", historialAnterior.get(historialAnterior.size() - 2).habilidad());
+        assertEquals("traslado_azrath", historialAnterior.getLast().habilidad());
         assertEquals(20, partida.getTotalRondas());
         assertEquals(16, partida.getRonda());
         assertEquals(EstadoPartida.COMBATE, partida.getEstado());
@@ -191,6 +204,7 @@ class EncuentrosTest {
         assertEquals(1, reino.getHistorial().stream().filter(e -> e.habilidad().equals("llegan_draconianos")).count());
         assertFalse(partida.getOfertas().stream().anyMatch(o -> o.objeto().codigo().equals("ballesta")));
         ganarEncuentroDePrueba(partida);
+        assertEquals(List.of("cimitarra_draconica", "ballesta"), partida.getBotin().stream().map(Objeto::codigo).toList());
         assertTrue(partida.getOfertas().stream().anyMatch(o -> o.objeto().codigo().equals("cazadragones")));
         assertTrue(partida.getOfertas().stream().anyMatch(o -> o.objeto().codigo().equals("ventisca")));
         assertTrue(partida.getOfertas().stream().anyMatch(o -> o.objeto().codigo().equals("ballesta")
@@ -207,6 +221,13 @@ class EncuentrosTest {
                 assertTrue(encuentro.getEnemigos().stream().allMatch(enemigo -> enemigo.getPvActuales() == 1));
             }
             ganarEncuentroDePrueba(partida);
+            var botin = switch (ronda) {
+                case 17 -> List.of("aguijon_riscos");
+                case 18 -> List.of("ventisca", "cetro_invierno", "armadura_escarcha");
+                case 19 -> List.of("espada_obsidiana", "armadura_obsidiana");
+                default -> List.of();
+            };
+            assertEquals(botin, partida.getBotin().stream().map(Objeto::codigo).toList());
             if (ronda == 19 && dificultad == Dificultad.PRUEBAS) {
                 assertEquals(396, partida.getRecompensa().experiencia());
                 for (var heroe : partida.getEquipo()) {

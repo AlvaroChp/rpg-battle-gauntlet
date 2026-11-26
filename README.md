@@ -105,8 +105,8 @@ Estas estadísticas base son el punto de partida para probar los nuevos encuentr
 | Enemigo | PV | PC | FUE | DEF | INT | RES | VEL | Crítico | Esquiva |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Nigromante | 125 | 58 | 6 | 8 | 19 | 15 | 8 | 5 % | 5 % |
-| Gólem rúnico | 280 | 0 | 20 | 27 | 0 | 6 | 4 | 5 % | 0 % |
-| Verdugo espectral | 185 | 0 | 20 | 13 | 0 | 12 | 9 | 8 % | 8 % |
+| Gólem rúnico | 280 | 45 | 20 | 27 | 0 | 6 | 4 | 5 % | 0 % |
+| Verdugo espectral | 185 | 40 | 20 | 13 | 0 | 12 | 9 | 8 % | 8 % |
 
 - **Nigromante.** Lanza Descarga fúnebre por 10 PC. Si cae un aliado, prioriza Reanimar por 18 PC y le devuelve el 25 % de los PV máximos. Puede hacerlo una vez por combate si conserva magia suficiente.
 - **Gólem rúnico.** Anuncia Onda rúnica, golpea al grupo en su siguiente acción y después usa Puño de piedra antes de volver a cargar. Tiene una DEF alta y una RES baja.
@@ -144,32 +144,31 @@ Cada ronda crea enemigos nuevos con sus estadísticas de catálogo. Los héroes 
 
 ## Fase 6 · Inventario y equipamiento
 
-`CatalogoObjetos` describe el catálogo fijo y los objetos iniciales. Cada unidad adquirida o equipada tiene su propio UUID. Durante la pausa entre combates, se puede intercambiar equipo entre los héroes a través del inventario común. El objeto sustituido vuelve al inventario. Las armas equipadas solo se pueden sustituir por otra arma compatible. Las armaduras se pueden desequipar. Las armas y armaduras iniciales se pueden vender desde el inventario. El inventario no tiene límite de espacio.
+`CatalogoObjetos` describe el catálogo fijo y los objetos iniciales. Cada unidad adquirida o equipada tiene su propio UUID. En el campamento inicial y entre combates se puede intercambiar equipo entre los héroes a través del inventario común. El objeto sustituido vuelve al inventario. Las armas equipadas solo se pueden sustituir por otra arma compatible. Las armaduras se pueden desequipar. El inventario no tiene límite de espacio.
 
 Cada héroe tiene seis ranuras para **arma, torso, guantes, botas, cabeza y escudo**. Las armaduras, túnicas y ropas van en torso. Las capuchas y yelmos van en cabeza. Las cinco ranuras de protección comparten el apartado **Armaduras** de la tienda. Sus bonificaciones se suman y las demás ranuras permanecen al cambiar una pieza. La FUE y la INT **base** determinan si se cumplen los requisitos de atributos de una pieza. Guerrero y pícaro pueden usar espadas, dagas y garrotes. Mago y sanadora pueden usar varas. La arquera puede usar arcos y ballestas. Las túnicas añaden potencia mágica al daño y a la curación. Las armaduras pesadas aplican su penalización a la velocidad efectiva. La armadura pesada de la tienda y del botín requiere 16 FUE base en todas sus calidades. La armadura pesada básica del guerrero requiere 15 FUE base. Las habilidades de clase siguen disponibles al cambiar de arma.
 
 El escudo es exclusivo de guerrero y pícaro y exige tener equipada un arma de una mano. Arcos, ballestas, varas, garrotes, espadas pesadas y espadas malditas son de dos manos en todas sus calidades. Si se equipa una de ellas, el escudo y el arma anterior regresan al inventario. Los escudos siguen otorgando un 65 % de reducción con Defenderse o Interceptar.
 
-Como ahora las piezas se acumulan, se redujeron los bonos pasivos de las piezas reutilizadas en cabeza, botas y escudo. El torso conserva sus estadísticas. Las dos clases de guantes se venden en Armaduras.
-
 | Pieza | Bonificaciones normales | Precio o procedencia |
 | --- | --- | --- |
-| Capucha | +1 DEF y +2 puntos porcentuales de esquiva | 45 MO |
+| Capucha | +1 DEF y +2 puntos porcentuales de esquiva | Equipo inicial o botín |
+| Botas | +1 DEF | Equipo inicial de todos los héroes |
 | Botas reforzadas | +1 DEF y +2 VEL | 130 MO o botín |
 | Casco reforzado | +3 DEF y +1 RES | 190 MO |
 | Casco oscuro | +3 DEF y +2 RES | Botín |
 | Escudo | +2 DEF y mejora de Defenderse e Interceptar | Botín |
-| Sombrero de mago | +1 RES y +2 de potencia mágica | 80 MO, 12 INT base |
-| Guantes de cuero | +1 DEF y +1 RES | 45 MO, sin requisito |
-| Guantes de malla | +2 DEF | 75 MO, 14 FUE base |
+| Sombrero de mago | +1 RES y +2 de potencia mágica | Equipo inicial, requiere 12 INT base |
+| Guantes de cuero | +1 DEF y +1 RES | Equipo inicial del Guerrero |
+| Guantes reforzados | +2 DEF | 75 MO, 14 FUE base |
 
-| Clase | Arma inicial | Armadura inicial |
-| --- | --- | --- |
-| Guerrero | Espada básica | Armadura pesada básica |
-| Mago | Vara de aprendiz | Túnica de aprendiz |
-| Arquero | Arco corto | Armadura ligera básica |
-| Sanador | Vara de aprendiz | Túnica de aprendiz |
-| Pícaro | Daga | Ropa ligera |
+| Clase | Arma inicial | Torso inicial | Accesorios iniciales | Aporte al grupo |
+| --- | --- | --- | --- | --- |
+| Guerrero | Espada básica | Armadura pesada básica | Guantes de cuero y botas | Poción roja |
+| Mago | Vara de aprendiz | Túnica de aprendiz | Sombrero de mago y botas | Proyectil mágico |
+| Arquera | Arco corto | Armadura ligera básica | Capucha y botas | Poción azul |
+| Sanadora | Vara de aprendiz | Túnica de aprendiz | Sombrero de mago y botas | Cura grupal |
+| Pícaro | Daga | Ropa ligera | Capucha y botas | Poción verde |
 
 Cada tipo de arma concede su propio ataque. Sus tres calidades comparten el ataque y modifican las bonificaciones del arma.
 
@@ -200,7 +199,7 @@ La Espada maldita concede **Furia maldita** al caballero oscuro y al guerrero o 
 
 ## Fase 7 · Botín y calidades
 
-Cada enemigo vencido tiene una tirada independiente para soltar como máximo un objeto. Si la supera, una segunda tirada elige el objeto según los pesos condicionados de la tabla. El botín se recoge por unidad en Recompensas. Si se avanza con unidades pendientes, se deja atrás ese botín.
+Para los enemigos de la siguiente tabla se hace una tirada independiente. Si la superan, sueltan un objeto elegido según el reparto indicado. El botín se recoge por unidad en Recompensas. Si se avanza con unidades pendientes, se deja atrás ese botín.
 
 | Enemigo | Probabilidad de soltar | Reparto si suelta |
 | --- | ---: | --- |
@@ -211,9 +210,21 @@ Cada enemigo vencido tiene una tirada independiente para soltar como máximo un 
 | Ogro | 65 % | Garrote 50 %, armadura pesada 30 %, botas reforzadas 20 % |
 | Caballero oscuro | 75 % | Espada maldita 40 %, armadura oscura 35 %, casco oscuro 25 % |
 | Nigromante | 60 % | Vara de osario 35 %, capucha funeraria 25 %, daga ritual 10 %, poción dorada 30 % |
-| Gólem rúnico | 70 % | Guantes rúnicos 40 %, coraza rúnica 35 %, Protección divina 25 % |
+| Gólem rúnico | 70 % | Coraza rúnica 75 %, Protección divina 25 % |
 | Verdugo espectral | 65 % | Hacha espectral 40 %, yelmo espectral 35 %, Cura mayor 25 % |
 | Dragón | 0 % | — |
+
+Estos enemigos del reino dracónico entregan todos los objetos de su fila al vencerlos, incluso si Lykos ya les robó algo. Cada pieza de equipo tira su calidad por separado. La Ballesta dracónica siempre es Superior.
+
+| Enemigo | Botín garantizado |
+| --- | --- |
+| Draconiano con cimitarra | Cimitarra dracónica |
+| Draconiano con ballesta | Ballesta dracónica |
+| Guiverno | Aguijón de los Riscos |
+| Vorgath | Ventisca, Cetro del Invierno y Armadura de escarcha |
+| Vitrion | Espada de obsidiana y Armadura de obsidiana |
+
+Si Robar tiene éxito, cualquiera de los dos draconianos puede perder la cimitarra o la ballesta (50 % cada una). Vorgath puede perder Ventisca (35 %), el cetro (35 %) o la armadura (30 %). Vitrion puede perder la espada o la armadura (50 % cada una).
 
 | Calidad | Probabilidad | Multiplicador | Venta sobre el valor base | Recompra sobre el valor base |
 | --- | ---: | ---: | ---: | ---: |
@@ -231,22 +242,23 @@ Las bonificaciones se redondean al entero más próximo por magnitud y conservan
 | Espada maldita | +14 FUE | 20 FUE |
 | Casco oscuro | +3 DEF, +2 RES | 16 FUE |
 
-Las seis piezas nuevas se consiguen como botín o mediante Robar. Se pueden vender y recomprar como el resto del equipo. Los consumibles de estos enemigos usan las versiones de la tienda.
+Las siguientes piezas se consiguen como botín o mediante Robar. Los consumibles de estos enemigos usan las versiones de la tienda.
 
 | Pieza | Bonos en calidad normal | Requisito base | Valor base |
 | --- | --- | --- | ---: |
 | Vara de osario | +10 INT, dos manos, Descarga fúnebre por 7 PC | 18 INT | 200 MO |
 | Capucha funeraria | +1 DEF y +2 RES | — | 75 MO |
-| Guantes rúnicos | +1 DEF y +2 RES | — | 100 MO |
 | Coraza rúnica | +13 DEF y −4 VEL | 20 FUE | 220 MO |
 | Hacha espectral | +11 FUE, dos manos, Sentencia espectral por 6 PC con 25 % de penetración | 18 FUE | 210 MO |
 | Yelmo espectral | +2 DEF y +2 puntos porcentuales de esquiva | 14 FUE | 105 MO |
 
 ## Fase 8 · Tienda y economía
 
-La tienda se abre entre combates. Tiene cuatro apartados, **Armas**, **Armaduras**, **Pociones** y **Pergaminos**. Las armas, armaduras y pociones del catálogo habitual son ilimitadas. Fuera del modo Pruebas, cada hechizo tiene una unidad de catálogo por partida. Una vez comprada, aparece como agotada aunque luego se venda o consuma el objeto. Los artículos vendidos aparecen en el mismo apartado como segunda mano. Recomprar retira exactamente esa unidad y conserva su UUID, variante, estadísticas y precio de recompra.
+La tienda abre en el campamento inicial y entre combates. Tiene cuatro apartados de compra y una pestaña **Vender** que muestra todo el inventario. El equipo inicial se puede vender y queda fuera del catálogo y de la recompra. Las armas de los jefes se desbloquean al ganar su encuentro. La tienda dracónica tiene su propio catálogo. En Experto, el Pergamino de Dragón cuesta 1.000 MO y se ofrece antes de Azrath.
 
-La partida empieza con 0 MO. Una poción se vende por la mitad del precio habitual redondeada al alza y se recompra al precio habitual. Las reglas de venta y recompra de equipo están en `Calidad`. Cada pergamino común se vende por la mitad de su precio de catálogo redondeada al alza y se recompra por el doble de su precio de venta.
+Las armas, armaduras y pociones del catálogo habitual tienen existencias ilimitadas. Fuera de Pruebas, cada pergamino de catálogo se puede comprar una vez por partida. Los artículos de segunda mano se recompran por unidad y conservan su UUID, variante, estadísticas y precio de recompra.
+
+La partida empieza con 100 MO y un aporte de cada héroe seleccionado. Una poción se vende por la mitad del precio habitual redondeada al alza y se recompra al precio habitual. Las reglas de venta y recompra de equipo están en `Calidad`. Cada pergamino común se vende por la mitad de su precio de catálogo redondeada al alza y se recompra por el doble de su precio de venta.
 
 ## Fase 9 · Pociones y pergaminos
 
@@ -301,9 +313,10 @@ Envía la `version` de la última vista con cada operación. El servidor valida 
 | Operación | Campos JSON además de `version` |
 | --- | --- |
 | `seleccion` | `clases`, lista de tres códigos distintos |
+| `preparar` | Abre el campamento inicial. Recibe `dificultad` y, en Pruebas, la `ronda` inicial. |
 | `iniciar` | `dificultad` opcional (`PRUEBAS`, `FACIL`, `DIFICIL` o `EXPERTO`). El valor por defecto es `FACIL`, que se muestra como Normal. |
 | `accion` | `turno`, `actor`, `habilidad` y `objetivo` cuando sea individual |
-| `avanzar` | `ronda`, con la ronda recién ganada |
+| `avanzar` | `ronda`, la inicial en el primer campamento o la recién ganada entre combates |
 | `recoger` | `objeto`, UUID del botín |
 | `equipar` | `actor`, `objeto` |
 | `desequipar` | `actor`, `ranura` (`ARMADURAS`, `GUANTES`, `BOTAS`, `CABEZA` o `ESCUDO`). El campo anterior `categoria: ARMADURAS` sigue apuntando al torso. |

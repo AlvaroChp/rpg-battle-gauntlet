@@ -5,6 +5,7 @@ import es.rpgbattlegauntlet.algorithm.GeneradorBotin;
 import es.rpgbattlegauntlet.algorithm.InteligenciaEnemiga;
 import es.rpgbattlegauntlet.config.CatalogoEnemigos;
 import es.rpgbattlegauntlet.enums.EstadoTemporal;
+import es.rpgbattlegauntlet.enums.ClaseHeroe;
 import es.rpgbattlegauntlet.config.CatalogoHabilidades;
 import es.rpgbattlegauntlet.enums.ResultadoCombate;
 import es.rpgbattlegauntlet.enums.TipoEfecto;
@@ -77,6 +78,11 @@ public final class Combate {
             throw new IllegalArgumentException("Un combatiente solo puede participar una vez");
         }
         ordenarCiclo();
+        for (var enemigo : this.enemigos) {
+            if (enemigo.estaVivo() && (enemigo != azrathTrasladado || primerTurno == 1)) {
+                registrarDialogoJefe(enemigo, true);
+            }
+        }
         ejecutarTurnosEnemigos();
     }
 
@@ -180,6 +186,9 @@ public final class Combate {
                 || enemigo.getTipo() != TipoEnemigo.DRAGON || enemigo == azrathTrasladado)) {
             throw new IllegalArgumentException("El Pergamino de Dragón solo puede usarse contra el dragón");
         }
+        if (efecto.tipo() == ANIQUILAR_DRAGON) {
+            registrarDialogo(objetivos.getFirst(), "dialogo_pergamino", "¡¿Qué has hecho?! ¡¡NOOOOOO!!");
+        }
         if (trasladarAzrath) {
             var azrath = (Enemigo) objetivos.getFirst();
             int danio = infligirDanio(azrath, azrath.getPvActuales() - Math.max(1, azrath.getPvActuales() / 2));
@@ -244,6 +253,32 @@ public final class Combate {
             case Enemigo enemigo -> enemigo.getTipo().name();
             default -> "Combatiente";
         };
+    }
+
+    private void registrarDialogoJefe(Combatiente combatiente, boolean inicio) {
+        if (!(combatiente instanceof Enemigo enemigo)) return;
+        String frase = switch (enemigo.getTipo()) {
+            case OGRO -> inicio ? "Amo dice que yo no deja pasar a nadie"
+                    : "yo falla mision, ¡Azrath no perdona a mi!";
+            case VERDUGO_ESPECTRAL -> inicio ? "Segar almas es mi cometido mientras siga atado a este mundo."
+                    : "Al fin estoy libre de mis cadena, os deseo suerte héroes, la necesitaréis.";
+            case GOLEM_RUNICO -> {
+                boolean vaelthar = heroes.stream().anyMatch(heroe -> heroe.getClase() == ClaseHeroe.MAGO);
+                yield inicio ? vaelthar ? "Vaelthar, parece que el tiempo no te ha tratado bien."
+                        : "No podéis continuar, no puedo permitiroslo."
+                        : vaelthar ? "Buena suerte Vaelthar, lamento lo que le ocurrió a los tuyos"
+                        : "Mis runas se debilitan, la magia que me mueve ya no funciona";
+            }
+            case DRAGON -> inicio ? "No sabéis ante quién estáis, ¿verdad? ¡os calcinaré hasta que no queden más que cenizas!"
+                    : "¡No! Es imposible... ¡Soy el más poderoso de todo Aetherion! ¡Soy el más pode... ARGH!";
+            default -> null;
+        };
+        if (frase != null) registrarDialogo(enemigo, inicio ? "dialogo_inicio" : "dialogo_muerte", frase);
+    }
+
+    private void registrarDialogo(Combatiente actor, String evento, String frase) {
+        historial.add(new EventoCombate(turno, actor.getId(), tipo(actor), evento, actor.getId(),
+                tipo(actor), 0, 0, 0, false, false, null, 0, null, frase));
     }
 
     private Combatiente validarTurno(int numero, UUID id) {
@@ -332,6 +367,10 @@ public final class Combate {
 
     private void registrarConReaccion(Combatiente actor, Combatiente objetivo, EventoCombate evento) {
         historial.add(evento);
+        if (evento.objetoRobado() != null && "requiem_dragon".equals(evento.objetoRobado().codigo())) {
+            registrarDialogo(objetivo, "dialogo_robo", "¡Devuélveme eso, gusano! ¡No tienes ni idea de lo que es!");
+        }
+        if (evento.danio() > 0 && !objetivo.estaVivo()) registrarDialogoJefe(objetivo, false);
         var antes = new EstadoVisual(objetivo);
         if (evento.critico() && objetivo.estaVivo() && objetivo.retirarEstado(CARGA_FURIA_ANIMAL)) {
             historial.add(new EventoCombate(turno, objetivo.getId(), tipo(objetivo), "furia_interrumpida", objetivo.getId(),
@@ -482,7 +521,10 @@ public final class Combate {
                 int danio = infligirDanio(actor, potencia);
                 historial.add(new EventoCombate(turno, actor.getId(), tipo(actor), estado.eventoDanio(), actor.getId(),
                         tipo(actor), danio, 0, 0, false, false, null));
-                if (!actor.estaVivo()) break;
+                if (!actor.estaVivo()) {
+                    registrarDialogoJefe(actor, false);
+                    break;
+                }
             }
         }
         incorporarRefuerzos(actor);

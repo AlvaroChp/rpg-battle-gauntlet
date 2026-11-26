@@ -361,7 +361,11 @@ class ProgresionTest {
         assertEquals(650, dragon.getPvActuales());
         combate.usarConsumible(combate.getTurno(), mago.getId(), requiem, dragon.getId());
         assertEquals(0, dragon.getPvActuales());
-        assertEquals(650, combate.getHistorial().getLast().danio());
+        var historial = combate.getHistorial();
+        assertEquals(List.of("dialogo_inicio", "robar", "dialogo_robo", "dialogo_pergamino",
+                        "Pergamino de Dragón", "dialogo_muerte"),
+                historial.stream().map(EventoCombate::habilidad).toList());
+        assertEquals(650, historial.get(historial.size() - 2).danio());
     }
 
     @Test
@@ -478,20 +482,15 @@ class ProgresionTest {
     @Test
     void botinDraconicoUsaLaBallestaSuperiorYVentiscaAplicaEscarcha() {
         for (var tipo : List.of(DRACONIANO_CIMITARRA, DRACONIANO_BALLESTA)) {
-            assertEquals("cimitarra_draconica", GeneradorBotin.tirar(tipo, azar(64, 49, 35)).orElseThrow().codigo());
             var robado = GeneradorBotin.elegirBotinRobado(tipo, azar(50));
             assertEquals("Ballesta dracónica", robado.nombre());
             assertEquals(SUPERIOR, robado.calidad());
         }
-        var ventisca = GeneradorBotin.tirar(DRAGON_ESCARCHA, azar(64, 0)).orElseThrow();
-        assertEquals("ventisca", ventisca.codigo());
-        assertEquals("cetro_invierno", GeneradorBotin.tirar(DRAGON_ESCARCHA, azar(64, 50, 35)).orElseThrow().codigo());
-        assertEquals("armadura_escarcha", GeneradorBotin.tirar(DRAGON_ESCARCHA, azar(64, 70, 35)).orElseThrow().codigo());
+        var botinVorgath = GeneradorBotin.alVencer(DRAGON_ESCARCHA, true, azar(34, 85));
+        assertEquals(List.of("ventisca", "cetro_invierno", "armadura_escarcha"), botinVorgath.stream().map(Objeto::codigo).toList());
+        var ventisca = botinVorgath.getFirst();
         assertTrue(GeneradorBotin.permiteRobo(DRAGON_ESCARCHA));
         assertEquals("armadura_escarcha", GeneradorBotin.elegirBotinRobado(DRAGON_ESCARCHA, azar(70, 35)).codigo());
-        assertEquals("aguijon_riscos", GeneradorBotin.tirar(GUIVERNO, azar(64, 0, 35)).orElseThrow().codigo());
-        assertEquals("espada_obsidiana", GeneradorBotin.tirar(DRAGON_OBSIDIANA, azar(74, 49, 35)).orElseThrow().codigo());
-        assertEquals("armadura_obsidiana", GeneradorBotin.tirar(DRAGON_OBSIDIANA, azar(74, 50, 35)).orElseThrow().codigo());
         assertTrue(GeneradorBotin.permiteRobo(DRAGON_OBSIDIANA));
         assertEquals("espada_obsidiana", GeneradorBotin.elegirBotinRobado(DRAGON_OBSIDIANA, azar(49, 35)).codigo());
         assertEquals("armadura_obsidiana", GeneradorBotin.elegirBotinRobado(DRAGON_OBSIDIANA, azar(50, 35)).codigo());

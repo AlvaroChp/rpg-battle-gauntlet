@@ -68,7 +68,8 @@ class EnemigoTest {
 
         var combate = new Combate(List.of(guerrero), List.of(enemigo), azarObjetivo(99, variante));
 
-        assertEquals(habilidad, combate.getHistorial().getFirst().habilidad());
+        var primeraAccion = combate.getHistorial().stream().filter(e -> !e.habilidad().equals("dialogo_inicio")).findFirst().orElseThrow();
+        assertEquals(habilidad, primeraAccion.habilidad());
         assertEquals(enemigo.getEstadisticasBase().pmMaximos() - coste, enemigo.getPmActuales());
     }
 
@@ -116,7 +117,7 @@ class EnemigoTest {
 
         var combate = new Combate(List.of(guerrero), List.of(chaman, ogro, esqueleto), azar());
 
-        var evento = combate.getHistorial().getFirst();
+        var evento = combate.getHistorial().stream().filter(e -> e.habilidad().equals("curacion_oscura")).findFirst().orElseThrow();
         assertEquals("curacion_oscura", evento.habilidad());
         assertEquals(esqueleto.getId(), evento.objetivo());
         assertEquals(44, evento.curacion());

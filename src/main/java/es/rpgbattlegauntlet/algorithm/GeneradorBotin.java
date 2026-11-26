@@ -21,8 +21,15 @@ public final class GeneradorBotin {
     }
     private record Tabla(int probabilidad, List<Entrada> entradas) {}
 
-    private static final Tabla BOTIN_DRACONIANO = new Tabla(65, List.of(
-            new Entrada("cimitarra_draconica", 50, false), new Entrada("ballesta", 50, false)));
+    private static final List<Entrada> ROBO_DRACONIANO = List.of(
+            new Entrada("cimitarra_draconica", 50, false), new Entrada("ballesta", 50, false));
+    private static final Map<TipoEnemigo, List<Entrada>> ROBO_DRACONICO = Map.of(
+            DRACONIANO_CIMITARRA, ROBO_DRACONIANO,
+            DRACONIANO_BALLESTA, ROBO_DRACONIANO,
+            DRAGON_ESCARCHA, List.of(new Entrada("ventisca", 35, false),
+                    new Entrada("cetro_invierno", 35, false), new Entrada("armadura_escarcha", 30, false)),
+            DRAGON_OBSIDIANA, List.of(new Entrada("espada_obsidiana", 50, false),
+                    new Entrada("armadura_obsidiana", 50, false)));
     private static final Map<TipoEnemigo, Tabla> TABLAS = Map.ofEntries(
             Map.entry(GOBLIN, new Tabla(35, List.of(new Entrada("daga_curva", 45),
                     new Entrada("capucha", 30), new Entrada("ligera", 25)))),
@@ -37,29 +44,43 @@ public final class GeneradorBotin {
             Map.entry(GOLEM_RUNICO, new Tabla(70, List.of(new Entrada("coraza_runica", 75),
                     new Entrada("proteccion", 25)))),
             Map.entry(VERDUGO_ESPECTRAL, new Tabla(65, List.of(new Entrada("hacha_espectral", 40, false),
-                    new Entrada("yelmo_espectral", 35), new Entrada("cura_mayor", 25)))),
-            Map.entry(DRACONIANO_CIMITARRA, BOTIN_DRACONIANO), Map.entry(DRACONIANO_BALLESTA, BOTIN_DRACONIANO),
-            Map.entry(GUIVERNO, new Tabla(65, List.of(new Entrada("aguijon_riscos", 100, false)))),
-            Map.entry(DRAGON_ESCARCHA, new Tabla(65, List.of(
-                    new Entrada("ventisca", 35, false), new Entrada("cetro_invierno", 35, false),
-                    new Entrada("armadura_escarcha", 30, false)))),
-            Map.entry(DRAGON_OBSIDIANA, new Tabla(75, List.of(
-                    new Entrada("espada_obsidiana", 50, false), new Entrada("armadura_obsidiana", 50, false))))
+                    new Entrada("yelmo_espectral", 35), new Entrada("cura_mayor", 25))))
     );
 
     private GeneradorBotin() {
     }
 
-    public record BotinPosible(int probabilidad, List<Objeto> objetos, List<Objeto> armas) {}
+    public record BotinPosible(int probabilidad, List<Objeto> objetos, List<Objeto> armas, boolean garantizado) {}
+
+    private static List<String> codigosGarantizados(TipoEnemigo tipo) {
+        return switch (tipo) {
+            case DRACONIANO_CIMITARRA -> List.of("cimitarra_draconica");
+            case DRACONIANO_BALLESTA -> List.of("ballesta");
+            case GUIVERNO -> List.of("aguijon_riscos");
+            case DRAGON_ESCARCHA, DRAGON_OBSIDIANA ->
+                    ROBO_DRACONICO.get(tipo).stream().map(Entrada::codigo).toList();
+            default -> List.of();
+        };
+    }
+
+    public static List<Objeto> alVencer(TipoEnemigo tipo, boolean fueRobado, RandomGenerator azar) {
+        var garantizados = codigosGarantizados(tipo);
+        if (!garantizados.isEmpty()) return garantizados.stream().map(codigo -> crear(codigo, azar)).toList();
+        return fueRobado ? List.of() : tirar(tipo, azar).stream().toList();
+    }
 
     public static BotinPosible consultar(TipoEnemigo tipo) {
+        var garantizados = codigosGarantizados(tipo);
+        if (!garantizados.isEmpty()) {
+            return new BotinPosible(100, garantizados.stream().map(GeneradorBotin::objetoDeReferencia).toList(), List.of(), true);
+        }
         Tabla tabla = TABLAS.get(tipo);
-        if (tabla == null) return new BotinPosible(0, List.of(), List.of());
+        if (tabla == null) return new BotinPosible(0, List.of(), List.of(), false);
         var objetos = tabla.entradas().stream().map(Entrada::codigo).map(GeneradorBotin::objetoDeReferencia).toList();
         var armas = tabla.entradas().stream().filter(Entrada::enemigoUsaArma).map(Entrada::codigo)
                 .filter(codigo -> CatalogoObjetos.habilidadArma(codigo).isPresent())
                 .map(GeneradorBotin::objetoDeReferencia).toList();
-        return new BotinPosible(tabla.probabilidad(), objetos, armas);
+        return new BotinPosible(tabla.probabilidad(), objetos, armas, false);
     }
 
     private static Objeto objetoDeReferencia(String codigo) {
@@ -81,24 +102,22 @@ public final class GeneradorBotin {
         if (tabla == null || azar.nextInt(100) >= tabla.probabilidad()) {
             return Optional.empty();
         }
-        return Optional.of(elegirObjeto(tabla, azar));
+        return Optional.of(elegirObjeto(tabla.entradas(), azar));
     }
 
     public static boolean permiteRobo(TipoEnemigo tipo) {
-        return switch (tipo) {
-            case DRAGON -> true;
-            case GUIVERNO -> false;
-            default -> TABLAS.containsKey(tipo);
-        };
+        return tipo == DRAGON || TABLAS.containsKey(tipo) || ROBO_DRACONICO.containsKey(tipo);
     }
 
     public static Objeto elegirBotinRobado(TipoEnemigo tipo, RandomGenerator azar) {
-        return tipo == DRAGON ? CatalogoObjetos.requiemDelDragon() : elegirObjeto(TABLAS.get(tipo), azar);
+        if (tipo == DRAGON) return CatalogoObjetos.requiemDelDragon();
+        var entradas = ROBO_DRACONICO.get(tipo);
+        return elegirObjeto(entradas != null ? entradas : TABLAS.get(tipo).entradas(), azar);
     }
 
-    private static Objeto elegirObjeto(Tabla tabla, RandomGenerator azar) {
+    private static Objeto elegirObjeto(List<Entrada> entradas, RandomGenerator azar) {
         int tirada = azar.nextInt(100);
-        for (Entrada entrada : tabla.entradas()) {
+        for (Entrada entrada : entradas) {
             if (tirada < entrada.peso()) {
                 return crear(entrada.codigo(), azar);
             }

@@ -309,11 +309,35 @@ function agruparAcciones(eventos) {
     return acciones;
 }
 
-function textoAccion(accion, anterior) {
+function textoAccion(accion, anterior, mostrarResultado = true) {
     if (!accion) return '';
     const intercepto = anterior?.[0].habilidad === 'golpe_interceptado'
         && anterior[0].turno === accion[0].turno;
-    return (intercepto ? anterior.concat(accion) : accion).map(textoEvento).join(' ');
+    return (intercepto ? anterior.concat(accion) : accion).map(evento => textoEvento(evento, mostrarResultado)).join(' ');
+}
+
+function marcarTurnoEnEscenario(figura) {
+    const tarjeta = figura?.closest('.luchador')?.querySelector('.tarjeta');
+    const anterior = juego.querySelector('.escenario .tarjeta.activo');
+    if (anterior !== tarjeta) {
+        anterior?.classList.remove('activo');
+        tarjeta?.classList.add('activo');
+    }
+    const retrato = figura?.querySelector('.retrato-combate');
+    const destino = retrato?.querySelector('.estados-combate') ?? retrato;
+    const indicador = juego.querySelector('.escenario .indicador-turno');
+    if (!destino) {
+        indicador?.remove();
+    } else if (indicador?.parentElement !== destino) {
+        destino.append(indicador ?? crearIndicadorTurno());
+    }
+}
+
+function crearIndicadorTurno() {
+    const indicador = document.createElement('span');
+    indicador.className = 'indicador-turno';
+    indicador.setAttribute('aria-hidden', 'true');
+    return indicador;
 }
 
 async function reproducirAcciones(eventos, nueva) {
@@ -324,14 +348,15 @@ async function reproducirAcciones(eventos, nueva) {
     const heroes = new Set(nueva.heroes.map(heroe => heroe.id));
     const turnos = new Map();
     for (const evento of eventos) {
-        if (!turnos.has(evento.turno) && evento.habilidad !== 'golpe_interceptado') {
-            turnos.set(evento.turno, { nombre: nombre(evento.tipoActor), esHeroe: heroes.has(evento.actor) });
+        if (!turnos.has(evento.turno) && evento.habilidad !== 'golpe_interceptado' && !esDialogo(evento)) {
+            turnos.set(evento.turno, { id: evento.actor, nombre: nombre(evento.tipoActor), esHeroe: heroes.has(evento.actor) });
         }
     }
     const actores = [...turnos.values()];
     const previstos = nueva.estado === 'COMBATE' ? siguientesTurnos(nueva, true) : [];
     const figuras = new Map([...juego.querySelectorAll('[data-combatiente]')].map(luchador =>
         [luchador.dataset.combatiente, luchador.querySelector('.figura-combate')]));
+    const muertesConDialogo = new Set(eventos.filter(evento => evento.habilidad === 'dialogo_muerte').map(evento => evento.actor));
     const combatientes = new Map(partida.heroes.concat(partida.enemigos)
         .map(combatiente => [combatiente.id, { ...combatiente }]));
     const lleganRefuerzos = eventos.some(evento => evento.habilidad === 'llegan_draconianos');
@@ -393,17 +418,33 @@ async function reproducirAcciones(eventos, nueva) {
         await Promise.all([...cambios].map(combatiente => mostrarSpriteCombatiente(combatiente, figuras.get(combatiente.id))));
     }
     let anterior;
+    let actorDelTurno;
     for (const accion of agruparAcciones(eventos)) {
+        const eventoPrincipal = accion[0];
+        if (esDialogo(eventoPrincipal)) {
+            if (eventoPrincipal.habilidad === 'dialogo_inicio') marcarTurnoEnEscenario();
+            aviso.textContent = textoEvento(eventoPrincipal);
+            aviso.scrollTop = 0;
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            for (const ajuste of eventoPrincipal.ajustesPosteriores ?? []) aplicarAjuste(ajuste, 1);
+            if (eventoPrincipal.habilidad === 'dialogo_muerte') {
+                await mostrarSpriteCombatiente(combatientes.get(eventoPrincipal.actor), figuras.get(eventoPrincipal.actor));
+            }
+            continue;
+        }
         const lleganGuardias = accion[0].habilidad === 'llegan_draconianos';
         if (anterior?.[0].turno !== accion[0].turno) {
             const actor = actores.shift();
             if (actor) {
+                actorDelTurno = actor.id;
                 turnoActual.querySelector('strong').textContent = actor.nombre;
                 turnoActual.dataset.bando = actor.esHeroe ? 'heroe' : 'enemigo';
+                marcarTurnoEnEscenario(figuras.get(actor.id));
                 siguientes.innerHTML = textoSiguientesTurnos(actores.concat(previstos).slice(0, 4));
             }
         }
-        aviso.textContent = textoAccion(accion, anterior);
+        const textoResultado = textoAccion(accion, anterior);
+        aviso.textContent = textoAccion(accion, anterior, false);
         aviso.scrollTop = 0;
         anterior = accion;
         if (lleganGuardias) {
@@ -422,7 +463,10 @@ async function reproducirAcciones(eventos, nueva) {
             continue;
         }
         for (const ajuste of accion[0].ajustesPrevios ?? []) aplicarAjuste(ajuste, 1);
-        await animarFiguras([figuras.get(accion[0].actor)], 'accion-en-curso');
+        if (!['veneno', 'quemadura'].includes(accion[0].habilidad)) {
+            await animarFiguras([figuras.get(accion[0].actor)], 'accion-en-curso');
+        }
+        aviso.textContent = textoResultado;
 
         const resultados = new Map();
         const sumarResultado = (id, danio, curacion, esquivado = false, pc = 0) => {
@@ -446,7 +490,6 @@ async function reproducirAcciones(eventos, nueva) {
                 for (const ajuste of evento.ajustesPrevios ?? []) aplicarAjuste(ajuste, 1);
             }
             aplicarEfectos(evento, 1, cambios);
-            for (const ajuste of evento.ajustesPosteriores ?? []) aplicarAjuste(ajuste, 1);
         }
         const golpeados = [];
         const curados = [];
@@ -482,9 +525,17 @@ async function reproducirAcciones(eventos, nueva) {
             animarFiguras(esquivaron, 'esquiva-realizada')
         ]);
         indicadores.forEach(indicador => indicador.remove());
-        await Promise.all([...cambios].map(combatiente => mostrarSpriteCombatiente(combatiente, figuras.get(combatiente.id))));
+        for (const evento of accion) {
+            for (const ajuste of evento.ajustesPosteriores ?? []) aplicarAjuste(ajuste, 1);
+        }
+        await Promise.all([...cambios].filter(combatiente => combatiente.pv > 0 || !muertesConDialogo.has(combatiente.id))
+            .map(combatiente => mostrarSpriteCombatiente(combatiente, figuras.get(combatiente.id))));
+        if (combatientes.get(actorDelTurno)?.pv === 0) marcarTurnoEnEscenario();
+        if (!resultados.size && accion[0].habilidad !== 'golpe_interceptado') {
+            await new Promise(resolve => setTimeout(resolve, 250));
+        }
     }
-    if (partida.estado === 'COMBATE' && ['ENTRE_COMBATES', 'VICTORIA'].includes(nueva.estado)) {
+    if (partida.estado === 'COMBATE' && ['ENTRE_COMBATES', 'VICTORIA', 'DERROTA'].includes(nueva.estado)) {
         await new Promise(resolve => setTimeout(resolve, 950));
     }
 }
@@ -663,7 +714,7 @@ function mostrarBestiario() {
                 ${tipo === 'CABALLERO_OSCURO' ? '<p>Puede usar una Poción dorada para revivir a un aliado si aún la conserva.</p>' : ''}
                 <details class="detalle-seleccion botin-bestiario">
                     <summary>Botín al vencerlo</summary>
-                    ${botin.probabilidad ? `<p>${botin.probabilidad} % de probabilidad de soltar un objeto.</p>
+                    ${botin.probabilidad ? `<p>${botin.garantizado ? 'Botín garantizado al vencerlo.' : `${botin.probabilidad} % de probabilidad de soltar un objeto.`}</p>
                         <ul role="list">${botin.objetos.map(objeto => `<li>${iconoObjeto(objeto)}${escapar(nombreObjeto(objeto))}</li>`).join('')}</ul>`
                         : '<p>Sin botín al vencerlo.</p>'}
                 </details>
@@ -700,7 +751,7 @@ function mostrarEstados(figura, estados) {
 
 function luchador(datos, enCampamento = false) {
     const turnoActual = !enCampamento && partida.orden[0] === datos.id;
-    const indicarTurno = turnoActual && datos.pv > 0 && partida.heroes.some(heroe => heroe.id === datos.id);
+    const indicarTurno = turnoActual && datos.pv > 0;
     const sprite = spritesCombate[datos.tipo];
     const imagen = sprite
         ? `<img class="sprite-combate" src="imagenes/${sprite}" alt="">`
@@ -728,6 +779,7 @@ function luchador(datos, enCampamento = false) {
 }
 
 const iconosPorObjeto = {
+    cetro_invierno: 'armas/cetro_invierno.png',
     daga_curva: 'armas/daga_curva.png',
     roja: 'pociones/pocion_roja.png',
     verde: 'pociones/pocion_verde.png',
@@ -821,16 +873,26 @@ const etiquetasCombate = { ataque_basico: 'Ataque básico', defender: 'Defenders
         mordida_colmillo: 'Mordida de colmillo', eco_draconico: 'Eco dracónico',
         filo_matadragones: 'Filo matadragones', congelacion: 'Congelación', punzada_venenosa: 'Punzada venenosa',
         'Réquiem del Dragón': nombrePergaminoDragon, 'Poción de revitalización': nombrePocionDorada };
-function textoEvento(evento) {
+function esDialogo(evento) {
+    return evento.habilidad.startsWith('dialogo_');
+}
+
+function textoEvento(evento, mostrarResultado = true) {
     const actor = nombre(evento.tipoActor);
     const objetivo = nombre(evento.tipoObjetivo);
+    if (esDialogo(evento)) {
+        const hablante = evento.tipoActor === 'GOLEM_RUNICO' ? 'Golem' : actor;
+        return `${hablante}: ${evento.nombreHabilidad}`;
+    }
     if (evento.habilidad === 'traslado_azrath') {
+        if (!mostrarResultado) return `${actor} · ${nombrePergaminoDragon} → Azrath.`;
         return `${actor} invierte la invocación de Azrath con el Pergamino de Dragón. Azrath pierde ${evento.danio} PV y el vínculo arrastra al grupo a su reino.`;
     }
     if (evento.habilidad === 'llegan_draconianos') return 'Los dos guerreros draconianos se incorporan al combate.';
     if (evento.habilidad === 'golpe_interceptado') return `${actor} se interpone para proteger a ${objetivo}.`;
     const accion = evento.nombreHabilidad ?? etiquetasCombate[evento.habilidad] ?? evento.habilidad.replaceAll('_', ' ');
     const destino = evento.actor === evento.objetivo ? '' : ` → ${objetivo}`;
+    if (!mostrarResultado) return `${actor} · ${accion}${destino}.`;
     const detalles = [];
     if (evento.habilidad === 'robar') {
         detalles.push(evento.objetoRobado ? `roba ${nombreObjeto(evento.objetoRobado)}` : 'intento fallido');
@@ -968,9 +1030,9 @@ function mostrarCombate() {
     observarNombresCombate.disconnect();
     const actor = partida.heroes.find(heroe => heroe.id === partida.orden[0]);
     if (!actor) return;
-    const ultimoTurno = partida.historial.at(-1)?.turno;
+    const ultimoTurno = partida.historial.findLast(evento => !esDialogo(evento))?.turno;
     const eventosUltimoTurno = ultimoTurno >= partida.primerTurnoCombate
-        ? partida.historial.filter(evento => evento.turno === ultimoTurno)
+        ? partida.historial.filter(evento => evento.turno === ultimoTurno && !esDialogo(evento))
         : [];
     const acciones = agruparAcciones(eventosUltimoTurno);
     const escenario = Math.ceil(partida.ronda / 5);
