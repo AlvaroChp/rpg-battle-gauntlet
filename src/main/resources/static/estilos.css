@@ -532,8 +532,8 @@ button.accion-confirmada, button.accion-confirmada:hover:not(:disabled) {
     border: 1px solid var(--borde);
 }
 .icono-objeto[data-calidad="INFERIOR"] { --fondo-calidad: #3b414c; }
-.icono-objeto[data-calidad="NORMAL"] { --fondo-calidad: #284a68; }
-.icono-objeto[data-calidad="SUPERIOR"] { --fondo-calidad: #c99736; }
+.icono-objeto[data-calidad="NORMAL"] { --fondo-calidad: #25874e; }
+.icono-objeto[data-calidad="SUPERIOR"] { --fondo-calidad: #975ad7; }
 .rejilla-equipamiento {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
