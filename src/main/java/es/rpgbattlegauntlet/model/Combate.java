@@ -269,15 +269,20 @@ public final class Combate {
     private void registrarDialogoJefe(Combatiente combatiente, boolean inicio) {
         if (!(combatiente instanceof Enemigo enemigo)) return;
         String frase = switch (enemigo.getTipo()) {
-            case OGRO -> inicio ? "Amo dice que yo no deja pasar a nadie"
-                    : "yo falla mision, ¡Azrath no perdona a mi!";
+            case OGRO -> {
+                boolean hayArqueraEnElGrupo = heroes.stream().anyMatch(heroe -> heroe.getClase() == ClaseHeroe.ARQUERO);
+                yield inicio ? hayArqueraEnElGrupo ? "Arquera huele a bosque... Yo vive allí antes. ¿Por qué tú aquí?"
+                    : "Amo dice que yo no deja pasar a nadie"
+                    : hayArqueraEnElGrupo ? "Yo quiere volver a bosque... Arquera, si tú vuelve allí, recuerda a mí."
+                    : "Yo falla misión, ¡Azrath no perdona a mí!";
+}
             case VERDUGO_ESPECTRAL -> inicio ? "Segar almas es mi cometido mientras siga atado a este mundo."
                     : "Al fin estoy libre de mis cadenas, os deseo suerte héroes, la necesitaréis.";
             case GOLEM_RUNICO -> {
-                boolean vaelthar = heroes.stream().anyMatch(heroe -> heroe.getClase() == ClaseHeroe.MAGO);
-                yield inicio ? vaelthar ? "Vaelthar, parece que el tiempo no te ha tratado bien."
-                        : "No podéis continuar, no puedo permitiroslo."
-                        : vaelthar ? "Buena suerte Vaelthar, lamento lo que le ocurrió a los tuyos"
+                boolean hayMagoEnElGrupo = heroes.stream().anyMatch(heroe -> heroe.getClase() == ClaseHeroe.MAGO);
+                yield inicio ? hayMagoEnElGrupo ? "¡Vaelthar! ¿eres tú?, la magia de Azrath me tiene atado, ¡tenéis que destruirme antes de que acabe con vosotros!"
+                        : "Héroes, la magia de Azrath me tiene atado, tenéis que destruirme antes de que pueda acabar con vosotros"
+                        : hayMagoEnElGrupo ? "La magia de Azrath ya no funciona conmigo. Buena suerte Vaelthar, lamento lo que le ocurrió a los tuyos"
                         : "Mis runas se debilitan, la magia que me mueve ya no funciona";
             }
             case DRAGON -> inicio ? "No sabéis ante quién estáis, ¿verdad? ¡os calcinaré hasta que no queden más que cenizas!"

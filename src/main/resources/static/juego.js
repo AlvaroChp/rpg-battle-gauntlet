@@ -40,23 +40,24 @@ const spritesCombate = {
     DRAGON_OBSIDIANA: 'enemigos/dragon_obsidiana.png', DIOS_DRAGON: 'enemigos/dios_dragon.png'
 };
 const spritesDerrotados = new Map();
+const jefesConPausaDeDerrota = new Set([
+    'OGRO', 'GOLEM_RUNICO', 'VERDUGO_ESPECTRAL', 'DRAGON', 'DRAGON_ESCARCHA', 'DRAGON_OBSIDIANA', 'DIOS_DRAGON'
+]);
 
-function cargarSpriteDerrotado(tipo) {
-    if (!spritesDerrotados.has(tipo)) {
-        const cargar = async () => {
-            const imagen = new Image();
-            imagen.src = `imagenes/${spritesCombate[tipo].replace(/\.png(?=\?|$)/, '_vencido.png')}`;
-            try {
-                await imagen.decode();
-                return imagen.src;
-            } catch {
-                    // El sprite de este combatiente puede estar pendiente de dibujar.
-                return null;
-            }
-        };
-        spritesDerrotados.set(tipo, cargar());
+async function cargarSpriteDerrotado(tipo, precarga = false) {
+    const original = spritesCombate[tipo];
+    if (!original) return null;
+    const anterior = spritesDerrotados.get(tipo);
+    if (anterior) {
+        const ruta = await anterior;
+        if (ruta || precarga) return ruta;
+        if (spritesDerrotados.get(tipo) !== anterior) return spritesDerrotados.get(tipo);
     }
-    return spritesDerrotados.get(tipo);
+    const imagen = new Image();
+    imagen.src = `imagenes/${original.replace(/\.png(?=\?|$)/, '_vencido.png')}`;
+    const carga = imagen.decode().then(() => imagen.src, () => null);
+    spritesDerrotados.set(tipo, carga);
+    return carga;
 }
 const biografias = {
     GUERRERO: {
@@ -357,6 +358,13 @@ async function reproducirAcciones(eventos, nueva) {
     const figuras = new Map([...juego.querySelectorAll('[data-combatiente]')].map(luchador =>
         [luchador.dataset.combatiente, luchador.querySelector('.figura-combate')]));
     const muertesConDialogo = new Set(eventos.filter(evento => evento.habilidad === 'dialogo_muerte').map(evento => evento.actor));
+    const mostrarPosesTrasImpacto = async afectados => {
+        const visibles = afectados.filter(combatiente => figuras.has(combatiente.id));
+        await Promise.all(visibles.map(combatiente => mostrarSpriteCombatiente(combatiente, figuras.get(combatiente.id))));
+        if (visibles.some(combatiente => combatiente.pv === 0 && jefesConPausaDeDerrota.has(combatiente.tipo))) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+    };
     const combatientes = new Map(partida.heroes.concat(partida.enemigos)
         .map(combatiente => [combatiente.id, { ...combatiente }]));
     const lleganRefuerzos = eventos.some(evento => evento.habilidad === 'llegan_draconianos');
@@ -428,7 +436,8 @@ async function reproducirAcciones(eventos, nueva) {
             await new Promise(resolve => setTimeout(resolve, 5000));
             for (const ajuste of eventoPrincipal.ajustesPosteriores ?? []) aplicarAjuste(ajuste, 1);
             if (eventoPrincipal.habilidad === 'dialogo_muerte') {
-                await mostrarSpriteCombatiente(combatientes.get(eventoPrincipal.actor), figuras.get(eventoPrincipal.actor));
+                const derrotado = combatientes.get(eventoPrincipal.actor);
+                if (derrotado) await mostrarPosesTrasImpacto([derrotado]);
             }
             continue;
         }
@@ -528,8 +537,7 @@ async function reproducirAcciones(eventos, nueva) {
         for (const evento of accion) {
             for (const ajuste of evento.ajustesPosteriores ?? []) aplicarAjuste(ajuste, 1);
         }
-        await Promise.all([...cambios].filter(combatiente => combatiente.pv > 0 || !muertesConDialogo.has(combatiente.id))
-            .map(combatiente => mostrarSpriteCombatiente(combatiente, figuras.get(combatiente.id))));
+        await mostrarPosesTrasImpacto([...cambios].filter(combatiente => combatiente.pv > 0 || !muertesConDialogo.has(combatiente.id)));
         if (combatientes.get(actorDelTurno)?.pv === 0) marcarTurnoEnEscenario();
         if (!resultados.size && accion[0].habilidad !== 'golpe_interceptado') {
             await new Promise(resolve => setTimeout(resolve, 250));
@@ -801,7 +809,7 @@ const iconosPorObjeto = {
     coraza_runica: 'armaduras/armadura_runica.png',
     armadura_escarcha: 'armaduras/armadura_escarcha.png',
     capucha: 'armaduras/capucha.png',
-    capucha_funeraria: 'armaduras/capucha.png',
+    capucha_funeraria: 'armaduras/capucha_funeraria.png',
     botas: 'armaduras/botas.png',
     botas_basicas: 'armaduras/botas.png',
     guantes: 'armaduras/guantes.png',
@@ -1056,7 +1064,7 @@ function mostrarCombate() {
             const figura = juego.querySelector(`[data-combatiente="${combatiente.id}"] .figura-combate`);
             void mostrarSpriteCombatiente(combatiente, figura);
         } else if (spritesCombate[combatiente.tipo]) {
-            void cargarSpriteDerrotado(combatiente.tipo);
+            void cargarSpriteDerrotado(combatiente.tipo, true);
         }
     }
 }
