@@ -197,7 +197,7 @@ public final class CatalogoObjetos {
 
     private static List<String> codigosIniciales(ClaseHeroe clase) {
         return switch (clase) {
-            case GUERRERO -> List.of("espada_basica", "pesada_basica", "guantes", "botas_basicas");
+            case GUERRERO -> List.of("espada_basica", "pesada_basica", "escudo", "botas_basicas");
             case MAGO, SANADOR -> List.of("vara_aprendiz", "tunica_aprendiz", "sombrero_mago", "botas_basicas");
             case ARQUERO -> List.of("arco_corto", "ligera_basica", "capucha", "botas_basicas");
             case PICARO -> List.of("daga", "ropa", "capucha", "botas_basicas");
@@ -267,6 +267,8 @@ public final class CatalogoObjetos {
             arma("espada_esqueleto", "Espada antigua oxidada", "Espada antigua", "Espada antigua afilada",
                     6, 0, 0, 12, 0, 80, FamiliaArma.ESPADA, CORTE_ULTRATUMBA, false),
             armadura("escudo", "Escudo abollado", "Escudo", "Escudo reforzado", 2, 0, 0, 0, 0, 10, 0, 70, false),
+            armadura("escudo_antiguo", "Escudo antiguo agrietado", "Escudo antiguo", "Escudo antiguo restaurado", 1, 1, 0, 0, 0, 10, 0, 70, false),
+            armadura("escudo_magico", "Escudo mágico desgastado", "Escudo mágico", "Escudo mágico reforzado", 2, 0, 0, 0, 0, 10, 0, 120, true),
             armadura("antigua", "Armadura antigua agrietada", "Armadura antigua", "Armadura antigua restaurada", 7, 2, -1, 0, 0, 12, 0, 100, false),
             arma("maldita", "Espada maldita mellada", "Espada maldita", "Espada maldita ritual", 14, 0, 0, 20, 0, 250, FamiliaArma.ESPADA, FILO_MALDICION, false),
             armadura("oscura", "Armadura oscura agrietada", "Armadura oscura", "Armadura oscura templada", 15, 0, -4, 0, 0, 20, 0, 300, false),
@@ -308,7 +310,7 @@ public final class CatalogoObjetos {
                     case "guantes", "guantes_reforzados" -> RanuraEquipo.GUANTES;
                     case "botas", "botas_basicas" -> RanuraEquipo.BOTAS;
                     case "capucha", "casco", "casco_oscuro", "capucha_funeraria", "yelmo_espectral", "sombrero_mago" -> RanuraEquipo.CABEZA;
-                    case "escudo" -> RanuraEquipo.ESCUDO;
+                    case "escudo", "escudo_antiguo", "escudo_magico" -> RanuraEquipo.ESCUDO;
                     default -> RanuraEquipo.ARMADURAS;
                 }, false);
     }

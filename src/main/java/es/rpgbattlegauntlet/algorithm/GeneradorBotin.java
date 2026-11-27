@@ -34,7 +34,7 @@ public final class GeneradorBotin {
             Map.entry(GOBLIN, new Tabla(35, List.of(new Entrada("daga_curva", 45),
                     new Entrada("capucha", 30), new Entrada("ligera", 25)))),
             Map.entry(GOBLIN_ARQUERO, new Tabla(40, List.of(new Entrada("arco_goblin", 75), new Entrada("daga_curva", 25, false)))),
-            Map.entry(ESQUELETO, new Tabla(40, List.of(new Entrada("espada_esqueleto", 40), new Entrada("escudo", 35), new Entrada("antigua", 25)))),
+            Map.entry(ESQUELETO, new Tabla(40, List.of(new Entrada("espada_esqueleto", 40), new Entrada("escudo_antiguo", 35), new Entrada("antigua", 25)))),
             Map.entry(CHAMAN, new Tabla(50, List.of(new Entrada("vara_chaman", 30),
                     new Entrada("tunica_chaman", 30), new Entrada("proyectil", 40)))),
             Map.entry(OGRO, new Tabla(65, List.of(new Entrada("garrote", 50), new Entrada("pesada", 30), new Entrada("botas", 20)))),

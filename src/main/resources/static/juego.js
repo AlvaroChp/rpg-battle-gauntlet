@@ -101,6 +101,8 @@ const atributosBase = { fuerza: 'FUE', defensa: 'DEF', inteligencia: 'INT', resi
 const atributos = { ...atributosBase, critico: 'Crítico', esquiva: 'Esquiva', potenciaMagica: 'Potencia mágica' };
 const ranurasEquipo = { ARMAS: 'Arma', ESCUDO: 'Escudo', CABEZA: 'Cabeza',
     ARMADURAS: 'Torso', GUANTES: 'Guantes', BOTAS: 'Botas' };
+const familiasArma = { ESPADA: 'Espada', DAGA: 'Daga', GARROTE: 'Garrote', HACHA: 'Hacha',
+    VARA: 'Vara', ARCO: 'Arco', BALLESTA: 'Ballesta' };
 const clasesConEscudo = ['GUERRERO', 'PICARO'];
 const categorias = ['ARMAS', 'ARMADURAS', 'POCIONES', 'PERGAMINOS'];
 const paneles = { recompensas: 'Recompensas', estado: 'Grupo', inventario: 'Inventario', equipo: 'Equipamiento', tienda: 'Tienda', nivel: 'Nivel' };
@@ -112,6 +114,17 @@ const observarNombresCombate = new ResizeObserver(entradas => {
         if (anchoTexto > contentRect.width && contentRect.width > 0) {
             const tamanoBase = Number.parseFloat(getComputedStyle(titulo).fontSize);
             titulo.style.fontSize = `${tamanoBase * contentRect.width / anchoTexto}px`;
+        }
+    }
+});
+const observarTextosAtaque = new ResizeObserver(entradas => {
+    for (const { target: espacio, contentRect } of entradas) {
+        const texto = espacio.firstElementChild;
+        texto.style.removeProperty('font-size');
+        const anchoTexto = texto.getBoundingClientRect().width;
+        if (contentRect.width > 0 && anchoTexto > contentRect.width) {
+            const tamanoBase = Number.parseFloat(getComputedStyle(texto).fontSize);
+            texto.style.fontSize = `${tamanoBase * (contentRect.width - 0.5) / anchoTexto}px`;
         }
     }
 });
@@ -591,12 +604,14 @@ function volverAlInicio() {
     mostrar();
 }
 
-function boton(texto, accion, valor = '', opciones = '') {
-    return `<button type="button" data-accion="${accion}" data-valor="${escapar(valor)}" ${opciones}>${escapar(texto)}</button>`;
+function boton(texto, accion, valor = '', opciones = '', icono = '') {
+    const contenido = icono ? `<span class="accion-con-icono">${icono}<span class="espacio-texto-ataque"><span>${escapar(texto)}</span></span></span>` : escapar(texto);
+    return `<button type="button" data-accion="${accion}" data-valor="${escapar(valor)}" ${opciones}>${contenido}</button>`;
 }
 
 function mostrar() {
     observarNombresCombate.disconnect();
+    observarTextosAtaque.disconnect();
     resumen.innerHTML = partida ? `
         ${partida.ronda ? `<span>${dificultades[partida.dificultad] ?? dificultades.FACIL}</span><span>Ronda ${partida.ronda} de ${partida.totalRondas}</span><span>${partida.oroIlimitado && partida.estado !== 'CAMPAMENTO_INICIAL' ? '∞' : partida.oro} MO</span>` : ''}
         ${boton('Reiniciar', 'reiniciar')}` : '';
@@ -605,7 +620,7 @@ function mostrar() {
     } else if (!partida) {
         juego.innerHTML = `<section class="inicio">
             <div class="insignia" aria-hidden="true">⚔</div><h1>RPG Battle Gauntlet</h1>
-            <p>Reúne a tres héroes y derrota al dragón. Juega diez rondas en Normal o quince en Difícil, Experto y Pruebas.</p>
+            <p>Reúne a tres héroes y ábrete paso a espadazos y hechizos hasta Azrath, el temible dragón que lleva un siglo atemorizando a la región.</p>
             ${boton('Nueva partida', 'crear', '', 'class="principal"')}
         </section>`;
     } else if (partida.estado === 'SELECCION_PERSONAJES') {
@@ -670,10 +685,10 @@ function mostrarSeleccion() {
                     <summary><span>Ver conceptos básicos</span><span>Ocultar conceptos básicos</span></summary>
                     <p><strong>Equipo y turnos.</strong> Elige tres héroes y supera diez rondas en Normal o quince en Difícil, Experto y Pruebas. La velocidad (VEL) decide el orden. En cada turno puedes atacar, usar una habilidad o un objeto, o defenderte.</p>
                     <p><strong>Vida y concentración.</strong> Los Puntos de Vida (PV) son la salud de nuestro personaje. Con 0 PV, el héroe cae. Los puntos de concentración (PC) se gastan al usar habilidades. La poción roja recupera 80 PV, la verde recupera 50 PC y la azul recupera 50 PV y 30 PC. El ataque básico y Defenderse son gratuitos.</p>
-                    <p><strong>Interceptar.</strong> Therakos puede gastar 4 PC para proteger el próximo golpe que reciba o ponerse en el lugar de un aliado ante un ataque individual. La postura termina al empezar su siguiente turno. Un escudo equipado eleva la reducción de Defenderse y del golpe interceptado del 40 % al 65 %.</p>
+                    <p><strong>Interceptar.</strong> Therakos puede gastar 4 PC para proteger el próximo golpe que reciba o ponerse en el lugar de un aliado ante un ataque individual. La postura termina al empezar su siguiente turno. Un escudo equipado eleva del 40 % al 65 % la reducción del daño físico al Defenderse y la del daño del golpe interceptado. Al Defenderse, los magos, los sanadores y quienes llevan un escudo mágico reducen también el daño mágico un 40 %.</p>
                     <p><strong>Daño físico.</strong> La fuerza (FUE) aumenta el daño y la defensa (DEF) lo reduce.</p>
                     <p><strong>Magia.</strong> La inteligencia (INT) mejora el daño mágico y la curación. La resistencia (RES) reduce el daño mágico. Los ataques mágicos siempre aciertan y carecen de crítico.</p>
-                    <p><strong>Quemadura y veneno.</strong> El fuego y Flecha envenenada pueden aplicar un estado con un 50 % de probabilidad, o un 25 % con Defenderse o Bendición. Incendio de ceniza quema con un 100 % de probabilidad, o un 50 % con alguna de esas protecciones. El daño dura dos turnos del objetivo.</p>
+                    <p><strong>Quemadura y veneno.</strong> El fuego y Flecha envenenada pueden aplicar un estado con un 50 % de probabilidad, o un 25 % con Defenderse o Bendición. Incendio de ceniza quema con un 100 % de probabilidad, o un 50 % con alguna de esas protecciones. El daño dura dos turnos del objetivo. El veneno quita un 2 % de sus PV máximos por turno (mínimo 1 PV).</p>
                     <p><strong>Esquiva.</strong> Es la probabilidad de evitar un golpe físico por completo. Una prenda como la capucha puede aumentarla. La precisión del arma o del ataque puede reducir la esquiva del objetivo para ese golpe.</p>
                     <p><strong>Crítico.</strong> Cuando un golpe físico acierta, puede infligir un 50 % más de daño. Cada punto de destreza (DES) aporta un punto porcentual de crítico base. El equipo y el ataque pueden añadir bonos, como los de la daga y su Estocada rápida.</p>
                     <p><strong>Campamento.</strong> Entre rondas puedes recoger botín, comprar equipo y gastar puntos de nivel. Cada arma concede un ataque propio. La Poción dorada revive a un aliado caído con el 25 % de sus PV máximos.</p>
@@ -787,8 +802,11 @@ function luchador(datos, enCampamento = false) {
 }
 
 const iconosPorObjeto = {
+    aguijon_riscos: 'armas/daga_veneno.png',
     cetro_invierno: 'armas/cetro_invierno.png',
+    cimitarra_draconica: 'armas/cimitarra.png',
     daga_curva: 'armas/daga_curva.png',
+    maldita: 'armas/espada_maldita.png',
     roja: 'pociones/pocion_roja.png',
     verde: 'pociones/pocion_verde.png',
     azul: 'pociones/pocion_azul.png',
@@ -818,6 +836,8 @@ const iconosPorObjeto = {
     casco_oscuro: 'armaduras/yelmo.png',
     yelmo_espectral: 'armaduras/yelmo.png',
     escudo: 'armaduras/escudo.png',
+    escudo_antiguo: 'armaduras/escudo_esqueleto.png',
+    escudo_magico: 'armaduras/escudo_magico.png',
     sombrero_mago: 'armaduras/sombrero_mago.png',
     tunica_aprendiz: 'armaduras/tunica_mago.png',
     tunica_mago: 'armaduras/tunica_mago.png',
@@ -843,6 +863,16 @@ function iconoObjeto(objeto) {
     const calidad = escapar(objeto.calidad ?? 'SIN_CALIDAD');
     if (!ruta) return `<span class="icono-objeto" data-calidad="${calidad}" aria-hidden="true"></span>`;
     return `<img class="icono-objeto" data-calidad="${calidad}" src="imagenes/${ruta}?v=consumibles-44" alt="" width="40" height="40">`;
+}
+
+function iconoAtaque(arma, basico) {
+    if (!arma) return '';
+    if (arma.familiaArma === 'HACHA') {
+        return `<span class="icono-objeto"${basico ? ' data-calidad="SIN_CALIDAD"' : ''} aria-hidden="true">🪓</span>`;
+    }
+    if (!basico) return iconoObjeto(arma);
+    const ruta = iconosPorFamilia[arma.familiaArma];
+    return ruta ? `<img class="icono-objeto" data-calidad="SIN_CALIDAD" src="imagenes/${ruta}?v=consumibles-44" alt="" width="40" height="40">` : '';
 }
 
 const nombrePergaminoDragon = 'Pergamino de Dragón';
@@ -976,6 +1006,9 @@ function puedeRecibirPocion(heroe, efecto) {
 }
 
 function menuAcciones(actor) {
+    const armaEquipada = actor.equipo?.ARMAS;
+    const escudoEquipado = actor.equipo?.ESCUDO;
+    const especial = armaEquipada?.habilidad?.id;
     const consumibles = agruparConsumibles(partida.inventario.filter(objeto => objeto.efecto));
     const aliadosCaidos = partida.heroes.filter(heroe => heroe.pv === 0);
     const dragonesVivos = partida.enemigos.filter(enemigo => partida.ronda !== 16 && enemigo.tipo === 'DRAGON' && enemigo.pv > 0);
@@ -1000,12 +1033,15 @@ function menuAcciones(actor) {
         : accion.objetivo === 'ENEMIGO' ? partida.enemigos.filter(enemigo => enemigo.pv > 0)
         : accion.objetivo === 'ALIADO' ? partida.heroes.filter(heroe => heroe.pv > 0) : [];
     const botonAccion = accion => {
+        const basico = accion.id === 'ataque_basico';
+        const icono = basico || accion.id === especial ? iconoAtaque(armaEquipada, basico)
+            : accion.id === 'defender' && escudoEquipado ? iconoObjeto(escudoEquipado) : '';
         const abierta = accion.id === accionElegida && !accion.avisoBloqueo;
         const descripcion = accion.descripcion + (accion.id === 'robar' ? ` Probabilidad: ${actor.probabilidadRobo} %.` : '');
         const atributos = `data-habilidad="${escapar(accion.id)}" data-objeto="${escapar(accion.objeto?.id ?? '')}"`;
         if (accion.objetivo === 'PROPIO') {
             return boton(accion.texto, 'ejecutar-accion', actor.id,
-                `${atributos} title="${escapar(accion.avisoBloqueo || descripcion)}" ${accion.avisoBloqueo ? 'disabled' : ''}`);
+                `${atributos} title="${escapar(accion.avisoBloqueo || descripcion)}" ${accion.avisoBloqueo ? 'disabled' : ''}`, icono);
         }
         const grupo = accion.objetivo === 'ENEMIGOS' ? 'Todos los enemigos'
             : accion.objetivo === 'ALIADOS' ? 'Todo el grupo' : '';
@@ -1014,12 +1050,11 @@ function menuAcciones(actor) {
                 `${nombre(objetivo.tipo)} · ${objetivo.pv} PV`, 'ejecutar-accion', objetivo.id, atributos)).join('');
         return `<div class="opcion-combate">
             ${boton(accion.texto, 'elegir-accion', accion.id,
-                `aria-expanded="${abierta}" title="${escapar(accion.avisoBloqueo || descripcion)}" ${accion.avisoBloqueo ? 'disabled' : ''}`)}
+                `aria-expanded="${abierta}" title="${escapar(accion.avisoBloqueo || descripcion)}" ${accion.avisoBloqueo ? 'disabled' : ''}`, icono)}
             ${abierta ? `<div class="objetivos-accion" role="group" aria-label="Objetivos">
                 <small>${escapar(descripcion)}</small>${destinos()}</div>` : ''}
         </div>`;
     };
-    const especial = actor.equipo?.ARMAS?.habilidad?.id;
     const basicas = habilidades.filter(accion => ['ataque_basico', 'defender'].includes(accion.id));
     const arma = habilidades.filter(accion => accion.id === especial);
     const propias = habilidades.filter(accion => !basicas.includes(accion) && accion.id !== especial);
@@ -1036,6 +1071,7 @@ function menuAcciones(actor) {
 
 function mostrarCombate() {
     observarNombresCombate.disconnect();
+    observarTextosAtaque.disconnect();
     const actor = partida.heroes.find(heroe => heroe.id === partida.orden[0]);
     if (!actor) return;
     const ultimoTurno = partida.historial.findLast(evento => !esDialogo(evento))?.turno;
@@ -1059,6 +1095,7 @@ function mostrarCombate() {
             </div>
         </section>${historial()}`;
     juego.querySelectorAll('.escenario .luchador h3').forEach(titulo => observarNombresCombate.observe(titulo));
+    juego.querySelectorAll('.espacio-texto-ataque').forEach(espacio => observarTextosAtaque.observe(espacio));
     for (const combatiente of partida.heroes.concat(partida.enemigos)) {
         if (combatiente.pv === 0) {
             const figura = juego.querySelector(`[data-combatiente="${combatiente.id}"] .figura-combate`);
@@ -1073,7 +1110,9 @@ function actualizarMenuAcciones(accion, valor) {
     const actor = partida.heroes.find(heroe => heroe.id === partida.orden[0]);
     const menu = juego.querySelector('.menu-acciones');
     const desplazamientoObjetos = menu.querySelector('.objetos-combate')?.scrollTop ?? 0;
+    observarTextosAtaque.disconnect();
     menu.innerHTML = menuAcciones(actor);
+    menu.querySelectorAll('.espacio-texto-ataque').forEach(espacio => observarTextosAtaque.observe(espacio));
     const objetos = menu.querySelector('.objetos-combate');
     if (objetos) objetos.scrollTop = desplazamientoObjetos;
     const boton = menu.querySelector(`[data-accion="${accion}"][data-valor="${CSS.escape(valor)}"]`);
@@ -1103,15 +1142,20 @@ function describir(objeto) {
 function articulo(objeto, controles, detalle = '', cantidad = 1) {
     const calidad = objeto.calidad;
     const clases = objeto.clasesCompatibles?.map(nombre).join(', ') || 'Todos';
+    const ranura = ranurasEquipo[objeto.ranura];
+    const familia = familiasArma[objeto.familiaArma];
+    const tipoEquipo = objeto.ranura === 'ARMAS' ? (familia ? `Arma - ${familia}` : ranura)
+        : ranura && `Equipamiento - ${ranura}`;
     const exigeAtributos = partida.dificultad !== 'PRUEBAS';
     const requisitos = [exigeAtributos && objeto.fuerzaMinima && `FUE base ${objeto.fuerzaMinima}`,
         exigeAtributos && objeto.inteligenciaMinima && `INT base ${objeto.inteligenciaMinima}`].filter(Boolean).join(' · ');
     return `<article class="tarjeta articulo"><div class="cabecera-objeto">${iconoObjeto(objeto)}<h3>${escapar(nombreConCantidad(objeto, cantidad))}</h3></div>
         ${objeto.ranura ? `<small>${escapar(clases)}</small>` : ''}
         ${calidad ? `<small>Calidad: ${escapar(nombre(calidad))}</small>` : ''}
-        ${objeto.ranura ? `<small>${ranurasEquipo[objeto.ranura]}${objeto.dosManos ? ' · Dos manos' : ''}</small>` : ''}
+        ${tipoEquipo ? `<small>${tipoEquipo}${objeto.dosManos && objeto.familiaArma !== 'VARA' ? ' · Dos manos' : ''}</small>` : ''}
         <small>${escapar(describir(objeto))}</small>${requisitos ? `<small>Requisitos · ${requisitos}</small>` : ''}
-        ${objeto.ranura === 'ESCUDO' ? '<small>Requiere un arma de una mano. Defenderse e Interceptar reducen el daño un 65 % con el escudo equipado.</small>' : ''}
+        ${objeto.ranura === 'ESCUDO' ? '<small>Requiere un arma de una mano. Con escudo, Defenderse reduce el daño físico un 65 % e Interceptar reduce el daño del golpe un 65 %.</small>' : ''}
+        ${objeto.codigo === 'escudo_magico' ? '<small>Defenderse reduce también el daño mágico un 40 %.</small>' : ''}
         ${objeto.bonoMaximoFuriaMaldita ? `<small>Furia maldita · El daño físico aumenta hasta un ${objeto.bonoMaximoFuriaMaldita} % según los PV perdidos.</small>` : ''}
         ${objeto.habilidad ? `<details class="habilidad-arma">
             <summary><strong>${escapar(objeto.habilidad.nombre)}</strong> · ${objeto.habilidad.costePm} PC</summary>

@@ -6,7 +6,7 @@ public enum EstadoTemporal {
     BENDICION(25, 0, 0),
     EVASION(0, 50, 0),
     RALENTIZACION(0, 0, -4),
-    ENVENENADO(0, 0, 0, 4, "veneno"),
+    ENVENENADO(0, 0, 0, 0, "veneno"),
     QUEMADO(0, 0, 0, 5, "quemadura"),
     ESCARCHA(0, 0, 0),
     CARGA_NUBE_PONZONOSA(0, 0, 0),
@@ -57,6 +57,10 @@ public enum EstadoTemporal {
 
     public int danioPeriodico() {
         return danioPeriodico;
+    }
+
+    public boolean causaDanioPeriodico() {
+        return eventoDanio != null;
     }
 
     public String eventoDanio() {

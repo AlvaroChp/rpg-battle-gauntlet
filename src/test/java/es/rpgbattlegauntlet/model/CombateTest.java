@@ -191,6 +191,29 @@ class CombateTest {
         assertEquals(15, guerrero.getPmActuales());
     }
 
+    @ParameterizedTest
+    @CsvSource({"GUERRERO,escudo_magico,40", "PICARO,escudo_magico,40", "GUERRERO,escudo,0",
+            "PICARO,escudo,0", "MAGO,,40", "SANADOR,,40", "ARQUERO,,0"})
+    void defenderseReduceLaMagiaSegunLaClaseYElEscudo(ClaseHeroe clase, String escudo, int reduccion) {
+        var heroe = CatalogoHeroes.crearHeroe(clase);
+        if (escudo != null) {
+            heroe.equipar(CatalogoObjetos.equipo("daga", Calidad.NORMAL, true));
+            heroe.equipar(CatalogoObjetos.equipo(escudo, Calidad.NORMAL, false));
+        }
+        var enemigo = rival(100, 20, 0, 0, 1, 0);
+        var combate = new Combate(List.of(heroe), List.of(enemigo), azar());
+        var hechizo = CatalogoEnemigos.BOLA_FUEGO;
+        int danioInicial = CalculoCombate.danio(enemigo, heroe, hechizo, false);
+        int danioPergaminoInicial = CalculoCombate.danioPergamino(heroe, 100);
+
+        actuar(combate, heroe, "defender", null);
+
+        assertEquals(Math.round(danioInicial * (100 - reduccion) / 100.0),
+                CalculoCombate.danio(enemigo, heroe, hechizo, false));
+        assertEquals(Math.round(danioPergaminoInicial * (100 - reduccion) / 100.0),
+                CalculoCombate.danioPergamino(heroe, 100));
+    }
+
     @Test
     void descargaArcanaResuelveCadaEnemigoYOmiteDerrotadosEnLaCola() {
         var mago = CatalogoHeroes.crearHeroe(MAGO);

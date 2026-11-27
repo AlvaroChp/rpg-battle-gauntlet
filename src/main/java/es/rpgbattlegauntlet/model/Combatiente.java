@@ -92,8 +92,16 @@ public class Combatiente {
     }
 
     public int getReduccionDanio() {
+        return reduccionDanio(false);
+    }
+
+    public int reduccionDanio(boolean magico) {
         return estados.keySet().stream().mapToInt(estado -> estado == EstadoTemporal.DEFENSA
-                ? reduccionAlDefenderse() : estado.reduccionDanio()).max().orElse(0);
+                ? (magico ? reduccionMagicaAlDefenderse() : reduccionAlDefenderse()) : estado.reduccionDanio()).max().orElse(0);
+    }
+
+    int reduccionMagicaAlDefenderse() {
+        return reduccionAlDefenderse();
     }
 
     int reduccionAlDefenderse() {
@@ -137,7 +145,7 @@ public class Combatiente {
     }
 
     List<EstadoTemporal> terminarTurno() {
-        var danios = estados.keySet().stream().filter(estado -> estado.danioPeriodico() > 0).toList();
+        var danios = estados.keySet().stream().filter(EstadoTemporal::causaDanioPeriodico).toList();
         estados.replaceAll((estado, restantes) -> restantes - 1);
         estados.values().removeIf(restantes -> restantes == 0);
         return danios;

@@ -140,6 +140,13 @@ class EncuentrosTest {
                     int oro = partida.getOro();
                     partida.comprar("requiem_dragon", null);
                     assertEquals(dificultad == Dificultad.PRUEBAS ? oro : oro - 1000, partida.getOro());
+                    // El grupo se defiende mientras espera la llegada de los draconianos.
+                    for (var heroe : partida.getEquipo()) {
+                        if (heroe.getClase() == PICARO || heroe.getClase() == GUERRERO) {
+                            heroe.equipar(es.rpgbattlegauntlet.config.CatalogoObjetos.equipo(
+                                    "escudo_magico", es.rpgbattlegauntlet.enums.Calidad.NORMAL, false));
+                        }
+                    }
                 }
             }
             partida.getEquipo().forEach(heroe -> heroe.recibirCuracion(heroe.getEstadisticasBase().pvMaximos()));

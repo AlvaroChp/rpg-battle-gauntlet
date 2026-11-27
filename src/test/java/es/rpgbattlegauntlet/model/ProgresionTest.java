@@ -49,7 +49,9 @@ class ProgresionTest {
         var arquero = partida.getEquipo().get(1);
         var mago = partida.getEquipo().getLast();
         assertEquals(19, guerrero.getEstadisticasBase().fuerza() + guerrero.getBonificaciones().fuerza());
-        assertEquals(25, guerrero.getDefensaEfectiva());
+        assertEquals("escudo", guerrero.getEquipo().get(RanuraEquipo.ESCUDO).codigo());
+        assertFalse(guerrero.getEquipo().containsKey(RanuraEquipo.GUANTES));
+        assertEquals(26, guerrero.getDefensaEfectiva());
         assertEquals(3, guerrero.getVelocidadEfectiva());
         assertEquals(5, mago.getBonificaciones().potenciaMagica());
 
@@ -165,14 +167,14 @@ class ProgresionTest {
         assertEquals(2, rival.getEstados().get(EstadoTemporal.ENVENENADO));
 
         combate.ejecutar(new AccionCombate(combate.getTurno(), rival.getId(), "defender", null));
-        assertEquals(56, rival.getPvActuales());
+        assertEquals(58, rival.getPvActuales());
         assertEquals(1, rival.getEstados().get(EstadoTemporal.ENVENENADO));
         combate.ejecutar(new AccionCombate(combate.getTurno(), arquera.getId(), "defender", null));
-        assertEquals(56, rival.getPvActuales());
+        assertEquals(58, rival.getPvActuales());
         combate.ejecutar(new AccionCombate(combate.getTurno(), rival.getId(), "defender", null));
-        assertEquals(52, rival.getPvActuales());
+        assertEquals(56, rival.getPvActuales());
         assertFalse(rival.getEstados().containsKey(EstadoTemporal.ENVENENADO));
-        assertEquals(List.of(4, 4), combate.getHistorial().stream().filter(e -> e.habilidad().equals("veneno")).map(EventoCombate::danio).toList());
+        assertEquals(List.of(2, 2), combate.getHistorial().stream().filter(e -> e.habilidad().equals("veneno")).map(EventoCombate::danio).toList());
     }
 
     @Test
@@ -307,7 +309,7 @@ class ProgresionTest {
         var ofertas = new Tienda().ofertas(false, false, false);
         assertEquals(4, ofertas.stream().map(oferta -> oferta.objeto().categoria()).distinct().count());
         assertEquals(8, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == ARMAS).count());
-        assertEquals(7, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == ARMADURAS).count());
+        assertEquals(9, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == ARMADURAS).count());
         assertEquals(4, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == POCIONES).count());
         assertEquals(10, ofertas.stream().filter(oferta -> oferta.objeto().categoria() == PERGAMINOS).count());
         assertTrue(ofertas.stream().filter(oferta -> oferta.objeto().categoria() == PERGAMINOS)

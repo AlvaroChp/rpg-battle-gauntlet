@@ -524,7 +524,7 @@ public final class Combate {
     private void aplicarEstado(Combatiente objetivo, EstadoTemporal estado, int duracion, int probabilidad, boolean interceptando) {
         if (!objetivo.estaVivo()) return;
         boolean protegido = interceptando || objetivo.tieneEstado(DEFENSA) || objetivo.tieneEstado(BENDICION);
-        int efectiva = estado.danioPeriodico() > 0 && protegido ? probabilidad / 2 : probabilidad;
+        int efectiva = estado.causaDanioPeriodico() && protegido ? probabilidad / 2 : probabilidad;
         if (efectiva >= 100 || azar.nextInt(100) < efectiva) objetivo.aplicarEstado(estado, duracion);
     }
 
@@ -533,7 +533,11 @@ public final class Combate {
         if (!daniosPendientes.isEmpty() && actor.estaVivo() && heroes.stream().anyMatch(Combatiente::estaVivo)
                 && enemigos.stream().anyMatch(Combatiente::estaVivo)) {
             for (EstadoTemporal estado : daniosPendientes) {
-                int potencia = estado == QUEMADO ? CalculoCombate.danioQuemadura(actor) : estado.danioPeriodico();
+                int potencia = switch (estado) {
+                    case ENVENENADO -> CalculoCombate.danioVeneno(actor);
+                    case QUEMADO -> CalculoCombate.danioQuemadura(actor);
+                    default -> estado.danioPeriodico();
+                };
                 int danio = infligirDanio(actor, potencia);
                 historial.add(new EventoCombate(turno, actor.getId(), tipo(actor), estado.eventoDanio(), actor.getId(),
                         tipo(actor), danio, 0, 0, false, false, null));

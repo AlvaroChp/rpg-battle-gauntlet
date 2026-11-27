@@ -17,7 +17,7 @@ public final class CatalogoHabilidades {
             0, ENEMIGO, DANIO_FISICO, 0, 0, 0, 0, null, 0);
 
     public static final Habilidad DEFENDER = new Habilidad(
-            "defender", "Defenderse", "Reduce el daño recibido un 40 % durante un turno, o un 65 % con un escudo equipado.",
+            "defender", "Defenderse", "Durante un turno, reduce el daño físico un 40 %, o un 65 % con escudo. Magos, sanadores y portadores de un escudo mágico reducen también el daño mágico un 40 %.",
             0, PROPIO, ESTADO, 0, 0, 0, 0, DEFENSA, 1);
 
     private static final Map<ClaseHeroe, List<Habilidad>> POR_CLASE = Map.of(

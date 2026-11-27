@@ -431,6 +431,21 @@ progress.magia { accent-color: #77a9e2; }
 .opcion-combate { position: relative; }
 .opcion-combate > button { width: 100%; }
 .menu-acciones button { overflow-wrap: anywhere; }
+.menu-acciones button:has(> .accion-con-icono) { padding-block: 0; }
+.accion-con-icono {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-rows: 44px;
+    align-items: center;
+    gap: .35rem;
+}
+.accion-con-icono > .icono-objeto { width: 44px; height: 44px; }
+.espacio-texto-ataque {
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+}
 .menu-acciones button[aria-expanded="true"] { border-color: var(--oro); background: #423024; }
 .objetos-combate, .objetivos-accion {
     position: absolute;
@@ -531,8 +546,8 @@ button.accion-confirmada, button.accion-confirmada:hover:not(:disabled) {
     background-color: var(--fondo-calidad, #101010);
     border: 1px solid var(--borde);
 }
-.icono-objeto[data-calidad="INFERIOR"] { --fondo-calidad: #3b414c; }
-.icono-objeto[data-calidad="NORMAL"] { --fondo-calidad: #25874e; }
+.icono-objeto[data-calidad="INFERIOR"] { --fondo-calidad: #484848; }
+.icono-objeto[data-calidad="NORMAL"] { --fondo-calidad: #365b7d; }
 .icono-objeto[data-calidad="SUPERIOR"] { --fondo-calidad: #975ad7; }
 .rejilla-equipamiento {
     display: grid;

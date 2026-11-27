@@ -80,6 +80,17 @@ public final class Heroe extends Combatiente {
         return equipo.containsKey(RanuraEquipo.ESCUDO) ? Equilibrio.REDUCCION_ESCUDO : super.reduccionAlDefenderse();
     }
 
+    @Override
+    int reduccionMagicaAlDefenderse() {
+        Objeto escudo = equipo.get(RanuraEquipo.ESCUDO);
+        return switch (clase) {
+            case MAGO, SANADOR -> super.reduccionAlDefenderse();
+            case GUERRERO, PICARO -> escudo != null && escudo.codigo().equals("escudo_magico")
+                    ? super.reduccionAlDefenderse() : 0;
+            case ARQUERO -> 0;
+        };
+    }
+
     List<Objeto> equipar(Objeto objeto) {
         return equipar(objeto, false);
     }

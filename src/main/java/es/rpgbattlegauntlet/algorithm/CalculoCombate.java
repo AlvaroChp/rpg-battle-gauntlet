@@ -36,7 +36,7 @@ public final class CalculoCombate {
             double fraccionVidaPerdida = 1 - (double) atacante.getPvActuales() / origen.pvMaximos();
             multiplicador *= 1 + fraccionVidaPerdida * atacante.getBonoMaximoFuriaMaldita() / 100;
         }
-        int reduccion = Math.max(objetivo.getReduccionDanio(), reduccionMinima);
+        int reduccion = Math.max(objetivo.reduccionDanio(magico), reduccionMinima);
         if (objetivo instanceof Enemigo enemigo && enemigo.getTipo().esDragon()) {
             multiplicador *= habilidad.multiplicadorContraDragones();
         }
@@ -50,11 +50,15 @@ public final class CalculoCombate {
 
     public static int danioPergamino(Combatiente objetivo, int potencia, boolean incendiario) {
         double multiplicador = vulnerabilidad(objetivo) * (incendiario ? multiplicadorFuego(objetivo) : 1);
-        return aplicarMitigacion(potencia, objetivo.getResistenciaEfectiva(), false, multiplicador, objetivo.getReduccionDanio());
+        return aplicarMitigacion(potencia, objetivo.getResistenciaEfectiva(), false, multiplicador, objetivo.reduccionDanio(true));
     }
 
     public static int danioQuemadura(Combatiente objetivo) {
         return (int) Math.round(QUEMADO.danioPeriodico() * multiplicadorFuego(objetivo));
+    }
+
+    public static int danioVeneno(Combatiente objetivo) {
+        return Math.max(1, (int) (objetivo.getEstadisticasBase().pvMaximos() * 2L / 100));
     }
 
     private static double multiplicadorFuego(Combatiente objetivo) {
